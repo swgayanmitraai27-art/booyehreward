@@ -101,6 +101,7 @@ class UserModel {
   String inGameName;
   String inGameUid;
   int inGameLevel; // Minimum Level 40+ for Anti-Hack protection
+  String password;
   UserWallet wallet;
   AdTracker adTracker;
   UserStats stats;
@@ -114,10 +115,11 @@ class UserModel {
     required this.inGameName,
     required this.inGameUid,
     this.inGameLevel = 52,
+    this.password = '',
     required this.wallet,
     required this.adTracker,
     required this.stats,
-    this.role = 'admin',
+    this.role = 'user',
   });
 
   Map<String, dynamic> toJson() => {
@@ -128,6 +130,7 @@ class UserModel {
     'inGameName': inGameName,
     'inGameUid': inGameUid,
     'inGameLevel': inGameLevel,
+    'password': password,
     'wallet': wallet.toJson(),
     'adTracker': adTracker.toJson(),
     'stats': stats.toJson(),
@@ -136,15 +139,16 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
     uid: json['uid'] ?? 'user_01',
-    displayName: json['displayName'] ?? 'Aman Sharma',
-    email: json['email'] ?? 'booyah.gamer@gmail.com',
-    phoneNumber: json['phoneNumber'] ?? '+91 98765 43210',
-    inGameName: json['inGameName'] ?? '⚡BOOYAH_KILLER⚡',
-    inGameUid: json['inGameUid'] ?? '284719284',
-    inGameLevel: (json['inGameLevel'] ?? 52) as int,
+    displayName: json['displayName'] ?? 'Gamer',
+    email: json['email'] ?? 'gamer@booyah.com',
+    phoneNumber: json['phoneNumber'] ?? '',
+    inGameName: json['inGameName'] ?? 'FF_WARRIOR',
+    inGameUid: json['inGameUid'] ?? '10000000',
+    inGameLevel: (json['inGameLevel'] ?? 45) as int,
+    password: json['password'] ?? '',
     wallet: UserWallet.fromJson(json['wallet'] ?? {}),
     adTracker: AdTracker.fromJson(json['adTracker'] ?? {}),
     stats: UserStats.fromJson(json['stats'] ?? {}),
-    role: json['role'] ?? 'admin',
+    role: json['role'] ?? 'user',
   );
 }

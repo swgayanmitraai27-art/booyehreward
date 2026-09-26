@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../models/match_model.dart';
 import '../models/team_model.dart';
@@ -16,6 +17,8 @@ class AppState extends ChangeNotifier {
   List<WithdrawalModel> withdrawals = [];
   List<VoucherClaim> voucherClaims = [];
   bool isLiveSyncing = false;
+  bool isAuthenticated = false;
+  bool isLoadingAuth = true;
 
   // Rewards Store with exact rates (10 Reward Coins = ₹1 Value, Min ₹10 Play Code = 100 Coins)
   List<StoreItem> storeItems = [
@@ -96,482 +99,58 @@ class AppState extends ChangeNotifier {
     _syncWithFirestore();
   }
 
+  void setUser(UserModel u) {
+    user = u;
+    isAuthenticated = true;
+    notifyListeners();
+    _syncUser();
+  }
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('saved_uid');
+    isAuthenticated = false;
+    _initData();
+    notifyListeners();
+  }
+
   void _initData() {
-    // 1. Initial User (4-Wallet System)
+    // 1. Initial Default Placeholder User
     user = UserModel(
-      uid: 'user_gamer_01',
-      displayName: 'Aman Sharma',
-      email: 'booyah.gamer@gmail.com',
-      phoneNumber: '+91 98765 43210',
-      inGameName: '⚡BOOYAH_KILLER⚡',
+      uid: 'user_guest',
+      displayName: 'Free Fire Gamer',
+      email: 'gamer@booyah.com',
+      phoneNumber: '',
+      inGameName: '⚡BOOYAH_WARRIOR⚡',
       inGameUid: '284719284',
+      inGameLevel: 52,
       wallet: UserWallet(
-        adCoins: 15,        // 15 🟡 Ad Coins (Ready to join 3 Free matches)
-        rewardCoins: 240,   // 240 🎟️ Reward Coins (Won from Free matches)
-        depositCash: 150.0, // 💵 ₹150 Deposit Cash (Paid match entry)
-        winningCash: 320.0, // 🏆 ₹320 Winning Cash (UPI withdrawable)
+        adCoins: 5,        // 5 Ad Coins Welcome Bonus
+        rewardCoins: 0,
+        depositCash: 0.0,
+        winningCash: 0.0,
       ),
       adTracker: AdTracker(
-        adsWatchedToday: 4,
-        adsWatchedSinceLastCoin: 1,
-        dailyLimitRemaining: 26,
+        adsWatchedToday: 0,
+        adsWatchedSinceLastCoin: 0,
+        dailyLimitRemaining: 30,
       ),
       stats: UserStats(
-        matchesPlayed: 14,
-        matchesWon: 5,
-        totalKills: 42,
-        totalWinningsCash: 960.0,
-        totalRewardCoinsWon: 480,
-        totalCoinsEarned: 24,
+        matchesPlayed: 0,
+        matchesWon: 0,
+        totalKills: 0,
+        totalWinningsCash: 0.0,
+        totalRewardCoinsWon: 0,
+        totalCoinsEarned: 5,
       ),
-      role: 'admin',
+      role: 'user',
     );
 
-    // 2. Initial Matches with exact banners & modes
-    matches = [
-      // 1. Full Map BR Solo - 5 Ad Coins Entry
-      MatchModel(
-        id: 'match_ff_001',
-        title: '🔥 Daily Free Full Map BR #102',
-        bannerImage: 'imgasest/brhomescreen .png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.br,
-        teamType: TeamType.solo,
-        matchFormat: MatchFormat.solo,
-        map: MapType.bermuda,
-        matchType: MatchType.free,
-        entryFeeType: EntryFeeType.adCoins,
-        entryFee: 5.0,
-        prizePool: PrizePool(
-          totalPool: 200,
-          perKill: 0,
-          firstPlace: 100,
-          secondPlace: 50,
-          thirdPlace: 30,
-          fourthPlace: 10,
-          fifthPlace: 10,
-        ),
-        maxSlots: 48,
-        filledSlots: 38,
-        credentials: MatchCredentials(
-          roomId: '9482710',
-          roomPassword: 'ffpass#free',
-          isRevealed: true,
-        ),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(minutes: 45)),
-        participants: [
-          MatchParticipant(
-            uid: 'user_gamer_01',
-            inGameName: '⚡BOOYAH_KILLER⚡',
-            inGameUid: '284719284',
-            slotNumber: 7,
-            paidWith: 'AD_COINS',
-            amountPaid: 5,
-            joinedAt: DateTime.now().subtract(const Duration(minutes: 20)),
-          ),
-          MatchParticipant(
-            uid: 'user_02',
-            inGameName: '亗 VIP_RAHUL 亗',
-            inGameUid: '839201948',
-            slotNumber: 12,
-            paidWith: 'AD_COINS',
-            amountPaid: 5,
-            joinedAt: DateTime.now().subtract(const Duration(minutes: 15)),
-          ),
-        ],
-      ),
-
-      // 2. Paid Full Map BR Squad - ₹50 Entry 70/30 Engine
-      MatchModel(
-        id: 'match_ff_002',
-        title: '👑 BR Squad Grand Championship',
-        bannerImage: 'imgasest/brhomescreen .png',
-        gameType: GameType.freeFireMax,
-        mode: MatchMode.br,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.squad,
-        map: MapType.purgatory,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 50.0,
-        prizePool: PrizePool(
-          totalPool: 1680, // 70% of 48 * 50 = 2400 (70% = 1680)
-          perKill: 10,
-          firstPlace: 840,
-          secondPlace: 504,
-          thirdPlace: 336,
-        ),
-        maxSlots: 48,
-        filledSlots: 8,
-        credentials: MatchCredentials(
-          roomId: '8371920',
-          roomPassword: 'squad#pass',
-          isRevealed: false,
-        ),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(hours: 3)),
-        participants: [],
-      ),
-
-      // 3. Clash Squad 4v4 Free Showdown
-      MatchModel(
-        id: 'match_ff_003',
-        title: '⚔️ CS 4v4 Free Squad Showdown',
-        bannerImage: 'imgasest/cshomescreen.png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.cs,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.cs4v4,
-        map: MapType.bermuda,
-        matchType: MatchType.free,
-        entryFeeType: EntryFeeType.adCoins,
-        entryFee: 5.0,
-        prizePool: PrizePool(
-          totalPool: 40,
-          perKill: 0,
-          firstPlace: 40,
-        ),
-        maxSlots: 8,
-        filledSlots: 6,
-        credentials: MatchCredentials(
-          roomId: '448201',
-          roomPassword: 'cs#war4v4',
-          isRevealed: true,
-        ),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(hours: 1)),
-        participants: [
-          MatchParticipant(
-            uid: 'user_gamer_01',
-            inGameName: '⚡BOOYAH_KILLER⚡',
-            inGameUid: '284719284',
-            slotNumber: 1,
-            paidWith: 'AD_COINS',
-            amountPaid: 5,
-            joinedAt: DateTime.now().subtract(const Duration(minutes: 30)),
-          ),
-        ],
-      ),
-
-      // 4. Paid CS 4v4 Pro Clash (₹50 Entry -> ₹280 Winning Team Pool)
-      MatchModel(
-        id: 'match_ff_004',
-        title: '⚔️ Pro CS 4v4 Cash Derby',
-        bannerImage: 'imgasest/cshomescreen.png',
-        gameType: GameType.freeFireMax,
-        mode: MatchMode.cs,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.cs4v4,
-        map: MapType.bermuda,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 50.0,
-        prizePool: PrizePool(
-          totalPool: 280, // 70% of 8 * 50 = 400 (70% = 280)
-          perKill: 0,
-          firstPlace: 280,
-        ),
-        maxSlots: 8,
-        filledSlots: 4,
-        credentials: MatchCredentials(roomId: '', roomPassword: '', isRevealed: false),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(hours: 2)),
-        participants: [],
-      ),
-
-      // 5. Lone Wolf 1v1 Free Duel
-      MatchModel(
-        id: 'match_ff_005',
-        title: '🐺 Lone Wolf 1v1 Quick Duel',
-        bannerImage: 'imgasest/lonewolfhomescreen.png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.loneWolf,
-        teamType: TeamType.solo,
-        matchFormat: MatchFormat.loneWolf1v1,
-        map: MapType.bermuda,
-        matchType: MatchType.free,
-        entryFeeType: EntryFeeType.adCoins,
-        entryFee: 5.0,
-        prizePool: PrizePool(
-          totalPool: 10,
-          perKill: 0,
-          firstPlace: 10,
-        ),
-        maxSlots: 2,
-        filledSlots: 1,
-        credentials: MatchCredentials(roomId: '', roomPassword: '', isRevealed: false),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(minutes: 30)),
-        participants: [],
-      ),
-
-      // 6. Paid Lone Wolf 2v2 Duo Battle (₹40 Entry -> ₹112 Pool)
-      MatchModel(
-        id: 'match_ff_006',
-        title: '🐺 Lone Wolf 2v2 Duo Clash',
-        bannerImage: 'imgasest/lonewolfhomescreen.png',
-        gameType: GameType.freeFireMax,
-        mode: MatchMode.loneWolf,
-        teamType: TeamType.duo,
-        matchFormat: MatchFormat.loneWolf2v2,
-        map: MapType.bermuda,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 40.0,
-        prizePool: PrizePool(
-          totalPool: 112, // 70% of 4 * 40 = 160 (70% = 112)
-          perKill: 0,
-          firstPlace: 112,
-        ),
-        maxSlots: 4,
-        filledSlots: 2,
-        credentials: MatchCredentials(roomId: '', roomPassword: '', isRevealed: false),
-        status: MatchStatus.upcoming,
-        matchTime: DateTime.now().add(const Duration(hours: 4)),
-        participants: [],
-      ),
-
-      // 7. COMPLETED MATCH (TODAY): Paid CS 4v4 Showdown
-      MatchModel(
-        id: 'match_comp_001',
-        title: '⚔️ CS 4v4 Pro Cash Clash #88',
-        bannerImage: 'imgasest/cshomescreen.png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.cs,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.cs4v4,
-        map: MapType.bermuda,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 50.0,
-        prizePool: PrizePool(totalPool: 280, perKill: 0, firstPlace: 280),
-        maxSlots: 8,
-        filledSlots: 8,
-        credentials: MatchCredentials(roomId: '9482910', roomPassword: 'cs#pass', isRevealed: true),
-        status: MatchStatus.completed,
-        completedAt: DateTime.now().subtract(const Duration(hours: 2)),
-        hostName: 'Aman Sharma (Host)',
-        financialBreakdown: FinancialBreakdown.calculate(totalCollection: 400.0), // 8 * 50 = ₹400
-        matchTime: DateTime.now().subtract(const Duration(hours: 3)),
-        participants: [
-          MatchParticipant(
-            uid: 'user_gamer_01',
-            inGameName: '⚡BOOYAH_KILLER⚡',
-            inGameUid: '284719284',
-            slotNumber: 1,
-            paidWith: 'DEPOSIT_CASH',
-            amountPaid: 50,
-            joinedAt: DateTime.now().subtract(const Duration(hours: 4)),
-            isWinner: true,
-            rank: 1,
-            prizeAwarded: 70,
-            teamName: 'Team A',
-          ),
-          MatchParticipant(
-            uid: 'user_02',
-            inGameName: '亗 VIP_RAHUL 亗',
-            inGameUid: '839201948',
-            slotNumber: 2,
-            paidWith: 'DEPOSIT_CASH',
-            amountPaid: 50,
-            joinedAt: DateTime.now().subtract(const Duration(hours: 4)),
-            isWinner: true,
-            rank: 1,
-            prizeAwarded: 70,
-            teamName: 'Team A',
-          ),
-        ],
-      ),
-
-      // 8. COMPLETED MATCH (2 DAYS AGO): Paid BR Squad Mega Championship
-      MatchModel(
-        id: 'match_comp_002',
-        title: '👑 BR Squad Grand Championship #99',
-        bannerImage: 'imgasest/brhomescreen .png',
-        gameType: GameType.freeFireMax,
-        mode: MatchMode.br,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.squad,
-        map: MapType.purgatory,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 50.0,
-        prizePool: PrizePool(totalPool: 1680, perKill: 10, firstPlace: 840, secondPlace: 504, thirdPlace: 336),
-        maxSlots: 48,
-        filledSlots: 48,
-        credentials: MatchCredentials(roomId: '8371900', roomPassword: 'br#pass', isRevealed: true),
-        status: MatchStatus.completed,
-        completedAt: DateTime.now().subtract(const Duration(days: 2, hours: 4)),
-        hostName: 'Booyah Esports Admin',
-        financialBreakdown: FinancialBreakdown.calculate(totalCollection: 2400.0), // 48 * 50 = ₹2400
-        matchTime: DateTime.now().subtract(const Duration(days: 2, hours: 5)),
-        participants: [
-          MatchParticipant(
-            uid: 'user_gamer_01',
-            inGameName: '⚡BOOYAH_KILLER⚡',
-            inGameUid: '284719284',
-            slotNumber: 5,
-            paidWith: 'DEPOSIT_CASH',
-            amountPaid: 50,
-            joinedAt: DateTime.now().subtract(const Duration(days: 2, hours: 6)),
-            isWinner: true,
-            rank: 1,
-            kills: 5,
-            prizeAwarded: 260,
-          ),
-        ],
-      ),
-
-      // 9. COMPLETED MATCH (5 DAYS AGO): Lone Wolf 1v1 Duel
-      MatchModel(
-        id: 'match_comp_003',
-        title: '🐺 Lone Wolf 1v1 High Stakes Duel',
-        bannerImage: 'imgasest/lonewolfhomescreen.png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.loneWolf,
-        teamType: TeamType.solo,
-        matchFormat: MatchFormat.loneWolf1v1,
-        map: MapType.bermuda,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 100.0,
-        prizePool: PrizePool(totalPool: 140, perKill: 0, firstPlace: 140),
-        maxSlots: 2,
-        filledSlots: 2,
-        credentials: MatchCredentials(roomId: '7281900', roomPassword: 'lw#pass', isRevealed: true),
-        status: MatchStatus.completed,
-        completedAt: DateTime.now().subtract(const Duration(days: 5, hours: 1)),
-        hostName: 'Tournament Moderator',
-        financialBreakdown: FinancialBreakdown.calculate(totalCollection: 200.0), // 2 * 100 = ₹200
-        matchTime: DateTime.now().subtract(const Duration(days: 5, hours: 2)),
-        participants: [],
-      ),
-
-      // 10. COMPLETED MATCH (12 DAYS AGO): Paid CS Duo Championship
-      MatchModel(
-        id: 'match_comp_004',
-        title: '🔥 Clash Squad 4v4 Weekend Cup #55',
-        bannerImage: 'imgasest/cshomescreen.png',
-        gameType: GameType.freeFire,
-        mode: MatchMode.cs,
-        teamType: TeamType.squad,
-        matchFormat: MatchFormat.cs4v4,
-        map: MapType.kalahari,
-        matchType: MatchType.paid,
-        entryFeeType: EntryFeeType.cash,
-        entryFee: 125.0,
-        prizePool: PrizePool(totalPool: 700, perKill: 0, firstPlace: 700),
-        maxSlots: 8,
-        filledSlots: 8,
-        credentials: MatchCredentials(roomId: '6182900', roomPassword: 'wk#pass', isRevealed: true),
-        status: MatchStatus.completed,
-        completedAt: DateTime.now().subtract(const Duration(days: 12, hours: 3)),
-        hostName: 'Aman Sharma (Host)',
-        financialBreakdown: FinancialBreakdown.calculate(totalCollection: 1000.0), // 8 * 125 = ₹1000 (Exact Spec: ₹1000 collection, ₹300 gross, ₹23.60 gateway fee, ₹276.40 net)
-        matchTime: DateTime.now().subtract(const Duration(days: 12, hours: 4)),
-        participants: [],
-      ),
-    ];
-
-    // 3. Initial Transactions
-    transactions = [
-      TransactionModel(
-        id: 'txn_001',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchWinningCash,
-        walletAffected: WalletType.winningCash,
-        amount: 320,
-        currency: 'INR',
-        balanceBefore: 0,
-        balanceAfter: 320,
-        status: 'SUCCESS',
-        description: 'Prize Money: Rank #1 in Paid Solo Purgatory',
-        createdAt: DateTime.now().subtract(const Duration(days: 1)),
-      ),
-      TransactionModel(
-        id: 'txn_002',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchWinningRewardCoins,
-        walletAffected: WalletType.rewardCoins,
-        amount: 100,
-        currency: 'REWARD_COINS',
-        balanceBefore: 140,
-        balanceAfter: 240,
-        status: 'SUCCESS',
-        description: 'Won Rank #1 (Booyah): 100 🎟️ Reward Coins in Daily Free BR',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      TransactionModel(
-        id: 'txn_003',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.deposit,
-        walletAffected: WalletType.depositCash,
-        amount: 150,
-        currency: 'INR',
-        balanceBefore: 0,
-        balanceAfter: 150,
-        status: 'SUCCESS',
-        description: 'Added Cash via Razorpay UPI (pay_RZP98421048)',
-        createdAt: DateTime.now().subtract(const Duration(days: 2)),
-      ),
-      TransactionModel(
-        id: 'txn_004',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.adReward,
-        walletAffected: WalletType.adCoins,
-        amount: 1,
-        currency: 'AD_COINS',
-        balanceBefore: 14,
-        balanceAfter: 15,
-        status: 'SUCCESS',
-        description: 'Earned 1 Ad Coin by watching 3 Rewarded Ads',
-        createdAt: DateTime.now().subtract(const Duration(hours: 3)),
-      ),
-    ];
-
-    // 4. Initial Withdrawals
-    withdrawals = [
-      WithdrawalModel(
-        id: 'wreq_901',
-        userId: 'user_02',
-        userName: 'Rahul Verma (亗 VIP_RAHUL 亗)',
-        userPhone: '+91 91234 56789',
-        amount: 150,
-        upiId: 'rahulverma@okaxis',
-        status: WithdrawalStatus.pending,
-        requestedAt: DateTime.now().subtract(const Duration(minutes: 40)),
-      ),
-      WithdrawalModel(
-        id: 'wreq_902',
-        userId: 'user_03',
-        userName: 'Vikram Singh (⚡SNIPER_GOD⚡)',
-        userPhone: '+91 88776 65544',
-        amount: 250,
-        upiId: 'vikram.singh@paytm',
-        status: WithdrawalStatus.pending,
-        requestedAt: DateTime.now().subtract(const Duration(hours: 2)),
-      ),
-    ];
-
-    // 5. Initial Voucher Claims
-    voucherClaims = [
-      VoucherClaim(
-        id: 'vclaim_101',
-        userId: 'user_02',
-        userName: 'Rahul Verma',
-        inGameUid: '839201948',
-        whatsappNumber: '+91 91234 56789',
-        itemTitle: '₹10 Google Play Redeem Code',
-        rewardCoinsSpent: 100,
-        status: VoucherClaimStatus.pending,
-        requestedAt: DateTime.now().subtract(const Duration(minutes: 30)),
-      ),
-    ];
+    // Matches, Transactions, Withdrawals, Voucher Claims will be populated directly from Firestore
+    matches = [];
+    transactions = [];
+    withdrawals = [];
+    voucherClaims = [];
   }
 
   // --- GETTERS ---
@@ -1688,13 +1267,20 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedUid = prefs.getString('saved_uid');
+
       // 1. Sync User Profile from Firestore
-      final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, user.uid);
-      if (userDoc != null && userDoc.isNotEmpty) {
-        user = UserModel.fromJson(userDoc);
+      if (savedUid != null && savedUid.isNotEmpty) {
+        final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, savedUid);
+        if (userDoc != null && userDoc.isNotEmpty) {
+          user = UserModel.fromJson(userDoc);
+          isAuthenticated = true;
+        } else {
+          isAuthenticated = false;
+        }
       } else {
-        // Seed initial user to Firestore
-        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
+        isAuthenticated = false;
       }
 
       // 2. Sync Live Matches from Firestore
@@ -1703,32 +1289,36 @@ class AppState extends ChangeNotifier {
         final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
         matches = firestoreMatches;
       } else {
-        // Seed initial tournament matches to Firestore
-        for (var m in matches) {
-          await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
-        }
+        matches = []; // Real live: empty if admin hasn't created any
       }
 
       // 3. Sync Transactions
       final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
       if (txnDocs.isNotEmpty) {
         transactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+      } else {
+        transactions = [];
       }
 
       // 4. Sync Withdrawals
       final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
       if (withDocs.isNotEmpty) {
         withdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+      } else {
+        withdrawals = [];
       }
 
       // 5. Sync Voucher Claims
       final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
       if (claimDocs.isNotEmpty) {
         voucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+      } else {
+        voucherClaims = [];
       }
     } catch (e) {
       debugPrint('[AppState] Firestore live sync error: $e');
     } finally {
+      isLoadingAuth = false;
       isLiveSyncing = false;
       notifyListeners();
     }

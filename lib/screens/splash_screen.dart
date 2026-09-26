@@ -4,6 +4,7 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import 'home_screen.dart';
+import 'auth_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final AppState appState;
@@ -41,9 +42,13 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     Timer(const Duration(milliseconds: 2200), () {
       if (mounted) {
+        final targetScreen = widget.appState.isAuthenticated
+            ? HomeScreen(appState: widget.appState)
+            : AuthScreen(appState: widget.appState);
+
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, anim, secAnim) => HomeScreen(appState: widget.appState),
+            pageBuilder: (context, anim, secAnim) => targetScreen,
             transitionsBuilder: (context, anim, secAnim, child) {
               return FadeTransition(opacity: anim, child: child);
             },

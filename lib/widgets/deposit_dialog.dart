@@ -3,6 +3,8 @@ import '../services/app_state.dart';
 import '../services/payment_service.dart';
 import '../theme/app_theme.dart';
 
+import '../services/razorpay_checkout_service.dart';
+
 class DepositDialog extends StatefulWidget {
   final AppState appState;
 
@@ -38,7 +40,7 @@ class _DepositDialogState extends State<DepositDialog> {
     setState(() {
       isProcessing = true;
       errorMsg = null;
-      processingStep = 'Creating Razorpay Order via Server...';
+      processingStep = 'Creating Razorpay Live Order...';
     });
 
     final user = widget.appState.user;
@@ -63,25 +65,43 @@ class _DepositDialogState extends State<DepositDialog> {
     }
 
     setState(() {
-      processingStep = 'Opening Razorpay Gateway (${orderRes.orderId})...';
+      processingStep = 'Waiting for Razorpay Payment Window...';
     });
 
-    // STEP 2: Simulate Razorpay SDK Checkout / Payment
-    await Future.delayed(const Duration(milliseconds: 1400));
+    // STEP 2: Open Real Razorpay Web SDK Gateway Modal
+    final paymentResult = await RazorpayCheckoutService.openCheckout(
+      keyId: orderRes.keyId,
+      orderId: orderRes.orderId,
+      amount: amount,
+      name: 'Booyah Rewards (SkillWinner)',
+      description: 'Add ₹${amount.toInt()} (+₹${orderRes.bonusCoins.toInt()} Bonus)',
+      userEmail: user.email,
+      userPhone: user.phoneNumber,
+      userName: user.displayName,
+    );
+
     if (!mounted) return;
 
-    final mockPaymentId = 'pay_${DateTime.now().millisecondsSinceEpoch.toString().substring(3)}';
-    final mockSignature = 'sig_${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}';
+    if (!paymentResult.success) {
+      setState(() {
+        isProcessing = false;
+        errorMsg = paymentResult.error ?? 'Payment was cancelled or failed.';
+      });
+      return;
+    }
+
+    final realPaymentId = paymentResult.paymentId ?? 'pay_${DateTime.now().millisecondsSinceEpoch}';
+    final realSignature = paymentResult.signature ?? 'sig_${DateTime.now().millisecondsSinceEpoch}';
 
     setState(() {
-      processingStep = 'Verifying HMAC Signature & Crediting Wallet...';
+      processingStep = 'Verifying Payment & Crediting Wallet...';
     });
 
-    // STEP 3: Call API 2 -> Verify Payment & Auto-Credit (swgayanbhumi.in)
+    // STEP 3: Call API 2 -> Verify Payment & Auto-Credit
     final verifyRes = await PaymentService.verifyPayment(
       orderId: orderRes.orderId,
-      paymentId: mockPaymentId,
-      signature: mockSignature,
+      paymentId: realPaymentId,
+      signature: realSignature,
       userId: user.uid,
       amount: amount,
       bonusCoins: orderRes.bonusCoins > 0 ? orderRes.bonusCoins : bonusCoins,
@@ -89,15 +109,15 @@ class _DepositDialogState extends State<DepositDialog> {
 
     if (!mounted) return;
 
-    // Credit in local AppState
+    // Credit in local AppState & sync to Firestore
     final finalBonus = verifyRes.addedBonus > 0 ? verifyRes.addedBonus : bonusCoins;
-    widget.appState.depositCash(amount, mockPaymentId, bonusCoins: finalBonus);
+    widget.appState.depositCash(amount, realPaymentId, bonusCoins: finalBonus);
 
     setState(() {
       isProcessing = false;
       successData = {
         'orderId': orderRes.orderId,
-        'paymentId': mockPaymentId,
+        'paymentId': realPaymentId,
         'addedReal': amount,
         'addedBonus': finalBonus,
         'totalAdded': amount + finalBonus,

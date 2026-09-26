@@ -3,6 +3,7 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/match_rules_card.dart';
+import 'auth_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AppState appState;
@@ -325,6 +326,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
+
+              // Logout Button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await widget.appState.logout();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => AuthScreen(appState: widget.appState)),
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.logout, color: Colors.redAccent, size: 18),
+                  label: const Text(
+                    'LOGOUT ACCOUNT',
+                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w800, color: Colors.redAccent),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFFFECDD3)),
+                    backgroundColor: const Color(0xFFFFF1F2),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
             ],
           ),
         ),
