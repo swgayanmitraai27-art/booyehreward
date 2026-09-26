@@ -6,6 +6,8 @@ import '../models/team_model.dart';
 import '../models/transaction_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
+import 'firestore_rest_service.dart';
+import 'firebase_config.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
@@ -13,6 +15,7 @@ class AppState extends ChangeNotifier {
   List<TransactionModel> transactions = [];
   List<WithdrawalModel> withdrawals = [];
   List<VoucherClaim> voucherClaims = [];
+  bool isLiveSyncing = false;
 
   // Rewards Store with exact rates (10 Reward Coins = ₹1 Value, Min ₹10 Play Code = 100 Coins)
   List<StoreItem> storeItems = [
@@ -90,6 +93,7 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _initData();
+    _syncWithFirestore();
   }
 
   void _initData() {
@@ -692,6 +696,10 @@ class AppState extends ChangeNotifier {
       ),
     );
 
+    _syncUser();
+    _syncMatch(match);
+    _syncTransaction(transactions.first);
+
     notifyListeners();
     return {
       'success': true,
@@ -832,6 +840,10 @@ class AppState extends ChangeNotifier {
       ),
     );
 
+    _syncUser();
+    _syncMatch(match);
+    _syncTransaction(transactions.first);
+
     notifyListeners();
     return {
       'success': true,
@@ -961,6 +973,10 @@ class AppState extends ChangeNotifier {
       ),
     );
 
+    _syncUser();
+    _syncMatch(match);
+    _syncTransaction(transactions.first);
+
     notifyListeners();
     return {
       'success': true,
@@ -1025,6 +1041,10 @@ class AppState extends ChangeNotifier {
         createdAt: DateTime.now(),
       ),
     );
+
+    _syncUser();
+    _syncTransaction(transactions.first);
+    _syncVoucherClaim(claim);
 
     notifyListeners();
     return {
@@ -1105,6 +1125,9 @@ class AppState extends ChangeNotifier {
           createdAt: DateTime.now(),
         ),
       );
+
+      _syncUser();
+      _syncTransaction(transactions.first);
     }
 
     notifyListeners();
@@ -1120,48 +1143,47 @@ class AppState extends ChangeNotifier {
     final balBefore = user.wallet.depositCash;
     user.wallet.depositCash += amount;
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.deposit,
-        walletAffected: WalletType.depositCash,
-        amount: amount,
-        currency: 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: user.wallet.depositCash,
-        status: 'SUCCESS',
-        description: 'Added ₹${amount.toInt()} Real Cash via Razorpay ($paymentId)',
-        createdAt: DateTime.now(),
-      ),
+    final depositTxn = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.deposit,
+      walletAffected: WalletType.depositCash,
+      amount: amount,
+      currency: 'INR',
+      balanceBefore: balBefore,
+      balanceAfter: user.wallet.depositCash,
+      status: 'SUCCESS',
+      description: 'Added ₹${amount.toInt()} Real Cash via Razorpay ($paymentId)',
+      createdAt: DateTime.now(),
     );
+    transactions.insert(0, depositTxn);
+    _syncTransaction(depositTxn);
 
     if (bonusCoins > 0) {
       final adBalBefore = user.wallet.adCoins.toDouble();
       user.wallet.adCoins += bonusCoins.toInt();
       user.stats.totalCoinsEarned += bonusCoins.toInt();
 
-      transactions.insert(
-        0,
-        TransactionModel(
-          id: 'txn_bonus_${DateTime.now().millisecondsSinceEpoch}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.adReward,
-          walletAffected: WalletType.adCoins,
-          amount: bonusCoins,
-          currency: 'AD_COINS',
-          balanceBefore: adBalBefore,
-          balanceAfter: user.wallet.adCoins.toDouble(),
-          status: 'SUCCESS',
-          description: '🎁 50% Instant Bonus: +${bonusCoins.toInt()} 🟡 Ad Coins on ₹${amount.toInt()} Recharge',
-          createdAt: DateTime.now(),
-        ),
+      final bonusTxn = TransactionModel(
+        id: 'txn_bonus_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.adReward,
+        walletAffected: WalletType.adCoins,
+        amount: bonusCoins,
+        currency: 'AD_COINS',
+        balanceBefore: adBalBefore,
+        balanceAfter: user.wallet.adCoins.toDouble(),
+        status: 'SUCCESS',
+        description: '🎁 50% Instant Bonus: +${bonusCoins.toInt()} 🟡 Ad Coins on ₹${amount.toInt()} Recharge',
+        createdAt: DateTime.now(),
       );
+      transactions.insert(0, bonusTxn);
+      _syncTransaction(bonusTxn);
     }
 
+    _syncUser();
     notifyListeners();
   }
 
@@ -1194,23 +1216,25 @@ class AppState extends ChangeNotifier {
 
     withdrawals.insert(0, newRequest);
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.withdrawalRequest,
-        walletAffected: WalletType.winningCash,
-        amount: -amount,
-        currency: 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: user.wallet.winningCash,
-        status: 'PENDING',
-        description: 'Withdrawal Request to UPI $upiId',
-        createdAt: DateTime.now(),
-      ),
+    final withTxn = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.withdrawalRequest,
+      walletAffected: WalletType.winningCash,
+      amount: -amount,
+      currency: 'INR',
+      balanceBefore: balBefore,
+      balanceAfter: user.wallet.winningCash,
+      status: 'PENDING',
+      description: 'Withdrawal Request to UPI $upiId',
+      createdAt: DateTime.now(),
     );
+    transactions.insert(0, withTxn);
+
+    _syncUser();
+    _syncWithdrawal(newRequest);
+    _syncTransaction(withTxn);
 
     notifyListeners();
     return {
@@ -1225,6 +1249,7 @@ class AppState extends ChangeNotifier {
     match.credentials.roomId = roomId;
     match.credentials.roomPassword = roomPass;
     match.credentials.isRevealed = true;
+    _syncMatch(match);
     notifyListeners();
   }
 
@@ -1268,46 +1293,44 @@ class AppState extends ChangeNotifier {
           user.stats.totalWinningsCash += prizePerPlayer;
           user.stats.matchesWon += 1;
 
-          transactions.insert(
-            0,
-            TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningCash,
-              walletAffected: WalletType.winningCash,
-              amount: prizePerPlayer,
-              currency: 'INR',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.winningCash,
-              status: 'SUCCESS',
-              description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Winning Cash) in "${match.title}"',
-              createdAt: DateTime.now(),
-            ),
+          final winTxn = TransactionModel(
+            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+            userId: user.uid,
+            userName: user.displayName,
+            type: TransactionType.matchWinningCash,
+            walletAffected: WalletType.winningCash,
+            amount: prizePerPlayer,
+            currency: 'INR',
+            balanceBefore: balBefore,
+            balanceAfter: user.wallet.winningCash,
+            status: 'SUCCESS',
+            description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Winning Cash) in "${match.title}"',
+            createdAt: DateTime.now(),
           );
+          transactions.insert(0, winTxn);
+          _syncTransaction(winTxn);
         } else {
           final balBefore = user.wallet.rewardCoins.toDouble();
           user.wallet.rewardCoins += prizePerPlayer.toInt();
           user.stats.totalRewardCoinsWon += prizePerPlayer.toInt();
           user.stats.matchesWon += 1;
 
-          transactions.insert(
-            0,
-            TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningRewardCoins,
-              walletAffected: WalletType.rewardCoins,
-              amount: prizePerPlayer,
-              currency: 'REWARD_COINS',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.rewardCoins.toDouble(),
-              status: 'SUCCESS',
-              description: '🏆 $winningTeam Winner (+${prizePerPlayer.toInt()} 🎟️ Reward Coins) in "${match.title}"',
-              createdAt: DateTime.now(),
-            ),
+          final winTxn = TransactionModel(
+            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+            userId: user.uid,
+            userName: user.displayName,
+            type: TransactionType.matchWinningRewardCoins,
+            walletAffected: WalletType.rewardCoins,
+            amount: prizePerPlayer,
+            currency: 'REWARD_COINS',
+            balanceBefore: balBefore,
+            balanceAfter: user.wallet.rewardCoins.toDouble(),
+            status: 'SUCCESS',
+            description: '🏆 $winningTeam Winner (+${prizePerPlayer.toInt()} 🎟️ Reward Coins) in "${match.title}"',
+            createdAt: DateTime.now(),
           );
+          transactions.insert(0, winTxn);
+          _syncTransaction(winTxn);
         }
       }
     }
@@ -1319,6 +1342,8 @@ class AppState extends ChangeNotifier {
       p.prizeAwarded = 0;
     }
 
+    _syncUser();
+    _syncMatch(match);
     notifyListeners();
   }
 
@@ -1363,23 +1388,22 @@ class AppState extends ChangeNotifier {
             user.stats.totalKills += kills;
             if (rank == 1) user.stats.matchesWon += 1;
 
-            transactions.insert(
-              0,
-              TransactionModel(
-                id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-                userId: user.uid,
-                userName: user.displayName,
-                type: TransactionType.matchWinningCash,
-                walletAffected: WalletType.winningCash,
-                amount: totalPrize,
-                currency: 'INR',
-                balanceBefore: balBefore,
-                balanceAfter: user.wallet.winningCash,
-                status: 'SUCCESS',
-                description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Cash) in "${match.title}"',
-                createdAt: DateTime.now(),
-              ),
+            final winTxn = TransactionModel(
+              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+              userId: user.uid,
+              userName: user.displayName,
+              type: TransactionType.matchWinningCash,
+              walletAffected: WalletType.winningCash,
+              amount: totalPrize,
+              currency: 'INR',
+              balanceBefore: balBefore,
+              balanceAfter: user.wallet.winningCash,
+              status: 'SUCCESS',
+              description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Cash) in "${match.title}"',
+              createdAt: DateTime.now(),
             );
+            transactions.insert(0, winTxn);
+            _syncTransaction(winTxn);
           } else {
             final balBefore = user.wallet.rewardCoins.toDouble();
             user.wallet.rewardCoins += totalPrize.toInt();
@@ -1387,28 +1411,29 @@ class AppState extends ChangeNotifier {
             user.stats.totalKills += kills;
             if (rank == 1) user.stats.matchesWon += 1;
 
-            transactions.insert(
-              0,
-              TransactionModel(
-                id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-                userId: user.uid,
-                userName: user.displayName,
-                type: TransactionType.matchWinningRewardCoins,
-                walletAffected: WalletType.rewardCoins,
-                amount: totalPrize,
-                currency: 'REWARD_COINS',
-                balanceBefore: balBefore,
-                balanceAfter: user.wallet.rewardCoins.toDouble(),
-                status: 'SUCCESS',
-                description: '🏆 Rank #$rank (+${totalPrize.toInt()} 🎟️ Coins) in "${match.title}"',
-                createdAt: DateTime.now(),
-              ),
+            final winTxn = TransactionModel(
+              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+              userId: user.uid,
+              userName: user.displayName,
+              type: TransactionType.matchWinningRewardCoins,
+              walletAffected: WalletType.rewardCoins,
+              amount: totalPrize,
+              currency: 'REWARD_COINS',
+              balanceBefore: balBefore,
+              balanceAfter: user.wallet.rewardCoins.toDouble(),
+              status: 'SUCCESS',
+              description: '🏆 Rank #$rank (+${totalPrize.toInt()} 🎟️ Coins) in "${match.title}"',
+              createdAt: DateTime.now(),
             );
+            transactions.insert(0, winTxn);
+            _syncTransaction(winTxn);
           }
         }
       }
     }
 
+    _syncUser();
+    _syncMatch(match);
     notifyListeners();
   }
 
@@ -1481,6 +1506,7 @@ class AppState extends ChangeNotifier {
     req.payoutTxnRef = utrRef.isEmpty ? 'UTR-${DateTime.now().millisecondsSinceEpoch}' : utrRef;
     req.adminNotes = notes.isEmpty ? 'Paid via UPI Transfer' : notes;
     req.processedAt = DateTime.now();
+    _syncWithdrawal(req);
     notifyListeners();
   }
 
@@ -1494,25 +1520,26 @@ class AppState extends ChangeNotifier {
       final balBefore = user.wallet.winningCash;
       user.wallet.winningCash += req.amount;
 
-      transactions.insert(
-        0,
-        TransactionModel(
-          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.withdrawalRefund,
-          walletAffected: WalletType.winningCash,
-          amount: req.amount,
-          currency: 'INR',
-          balanceBefore: balBefore,
-          balanceAfter: user.wallet.winningCash,
-          status: 'SUCCESS',
-          description: 'Refund for rejected withdrawal: $reason',
-          createdAt: DateTime.now(),
-        ),
+      final refTxn = TransactionModel(
+        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.withdrawalRefund,
+        walletAffected: WalletType.winningCash,
+        amount: req.amount,
+        currency: 'INR',
+        balanceBefore: balBefore,
+        balanceAfter: user.wallet.winningCash,
+        status: 'SUCCESS',
+        description: 'Refund for rejected withdrawal: $reason',
+        createdAt: DateTime.now(),
       );
+      transactions.insert(0, refTxn);
+      _syncTransaction(refTxn);
+      _syncUser();
     }
 
+    _syncWithdrawal(req);
     notifyListeners();
   }
 
@@ -1522,11 +1549,13 @@ class AppState extends ChangeNotifier {
     claim.status = VoucherClaimStatus.delivered;
     claim.redeemCode = code.isEmpty ? 'GP-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}' : code;
     claim.deliveredAt = DateTime.now();
+    _syncVoucherClaim(claim);
     notifyListeners();
   }
 
   void adminCreateMatch(MatchModel newMatch) {
     matches.insert(0, newMatch);
+    _syncMatch(newMatch);
     notifyListeners();
   }
 
@@ -1649,6 +1678,79 @@ class AppState extends ChangeNotifier {
     if (inGameLevel != null) {
       user.inGameLevel = inGameLevel;
     }
+    _syncUser();
     notifyListeners();
+  }
+
+  // --- LIVE FIRESTORE DATABASE SYNCHRONIZATION (SW-GYANMITRA-FINALL2) ---
+  Future<void> _syncWithFirestore() async {
+    isLiveSyncing = true;
+    notifyListeners();
+
+    try {
+      // 1. Sync User Profile from Firestore
+      final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, user.uid);
+      if (userDoc != null && userDoc.isNotEmpty) {
+        user = UserModel.fromJson(userDoc);
+      } else {
+        // Seed initial user to Firestore
+        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
+      }
+
+      // 2. Sync Live Matches from Firestore
+      final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
+      if (matchDocs.isNotEmpty) {
+        final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
+        matches = firestoreMatches;
+      } else {
+        // Seed initial tournament matches to Firestore
+        for (var m in matches) {
+          await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
+        }
+      }
+
+      // 3. Sync Transactions
+      final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
+      if (txnDocs.isNotEmpty) {
+        transactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+      }
+
+      // 4. Sync Withdrawals
+      final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
+      if (withDocs.isNotEmpty) {
+        withdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+      }
+
+      // 5. Sync Voucher Claims
+      final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
+      if (claimDocs.isNotEmpty) {
+        voucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+      }
+    } catch (e) {
+      debugPrint('[AppState] Firestore live sync error: $e');
+    } finally {
+      isLiveSyncing = false;
+      notifyListeners();
+    }
+  }
+
+  void _syncUser() {
+    FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
+  }
+
+  void _syncMatch(MatchModel m) {
+    FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
+  }
+
+  void _syncTransaction(TransactionModel txn) {
+    FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, txn.id, txn.toJson());
+  }
+
+  void _syncWithdrawal(WithdrawalModel w) {
+    FirestoreRestService.setDocument('skillwinner_withdrawals', w.id, w.toJson());
+  }
+
+  void _syncVoucherClaim(VoucherClaim claim) {
+    FirestoreRestService.setDocument('skillwinner_voucher_claims', claim.id, claim.toJson());
   }
 }
