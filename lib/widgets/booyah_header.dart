@@ -1,0 +1,231 @@
+import 'package:flutter/material.dart';
+import '../services/app_state.dart';
+import '../theme/app_theme.dart';
+import 'deposit_dialog.dart';
+import 'withdraw_dialog.dart';
+
+class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
+  final AppState appState;
+  final Function(int)? onTabChange;
+
+  const BooyahHeader({
+    super.key,
+    required this.appState,
+    this.onTabChange,
+  });
+
+  @override
+  Size get preferredSize => const Size.fromHeight(68);
+
+  @override
+  Widget build(BuildContext context) {
+    final user = appState.user;
+
+    return AppBar(
+      backgroundColor: Colors.white,
+      elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1),
+        child: Container(
+          color: const Color(0xFFE2E8F0),
+          height: 1,
+        ),
+      ),
+      titleSpacing: 12,
+      title: Row(
+        children: [
+          // Top Header Branding: BOOYAH_ICON.PNG.png centered/scaled cleanly
+          InkWell(
+            onTap: () => onTabChange?.call(0),
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
+              child: Image.asset(
+                'imgasest/BOOYAH_ICON.PNG.png',
+                height: 38,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryAmber,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Center(
+                          child: Text('B', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.black, fontSize: 18)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text('BOOYAH', style: AppTheme.gamingTitle(fontSize: 18)),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+          const Spacer(),
+
+          // 3-Wallet Status Chips (Clean High-Contrast Light Theme)
+          // 🟡 1. Ad Coins
+          InkWell(
+            onTap: () => onTabChange?.call(2), // Earn coins tab
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withAlpha(25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Text('🟡', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${user.wallet.adCoins}',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF92400E),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // 💵 2. Deposit Cash
+          InkWell(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => DepositDialog(appState: appState),
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.blue.withAlpha(20),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.account_balance_wallet, size: 13, color: Color(0xFF2563EB)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '₹${user.wallet.depositCash.toInt()}',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF1E40AF),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // 🏆 3. Winning Cash (UPI Withdrawable)
+          InkWell(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => WithdrawDialog(appState: appState),
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFA7F3D0)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.green.withAlpha(20),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.emoji_events, size: 13, color: Color(0xFF10B981)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '₹${user.wallet.winningCash.toInt()}',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF065F46),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Role Switcher (User / Admin)
+          InkWell(
+            onTap: () {
+              appState.toggleRole();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  duration: const Duration(seconds: 1),
+                  content: Text('Switched to ${user.role.toUpperCase()} MODE'),
+                ),
+              );
+            },
+            borderRadius: BorderRadius.circular(8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+              decoration: BoxDecoration(
+                color: user.role == 'admin' ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: user.role == 'admin' ? Colors.black : const Color(0xFFCBD5E1),
+                ),
+              ),
+              child: Text(
+                user.role == 'admin' ? 'ADMIN' : 'USER',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w900,
+                  color: user.role == 'admin' ? AppTheme.primaryAmber : const Color(0xFF475569),
+                  letterSpacing: 0.6,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
