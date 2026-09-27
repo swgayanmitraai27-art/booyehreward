@@ -1263,6 +1263,8 @@ class AppState extends ChangeNotifier {
   }
 
   // --- LIVE FIRESTORE DATABASE SYNCHRONIZATION (SW-GYANMITRA-FINALL2) ---
+  Future<void> refreshFromFirestore() => _syncWithFirestore();
+
   Future<void> _syncWithFirestore() async {
     isLiveSyncing = true;
     notifyListeners();

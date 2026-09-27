@@ -1,11 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:js_interop' as js_interop;
 import 'dart:js_interop_unsafe' as js_util;
 import '../services/app_state.dart';
-import '../services/payment_service.dart';
 import '../theme/app_theme.dart';
-import '../services/razorpay_checkout_service.dart';
 
 class DepositDialog extends StatefulWidget {
   final AppState appState;
@@ -18,13 +17,22 @@ class DepositDialog extends StatefulWidget {
 
 class _DepositDialogState extends State<DepositDialog> {
   final TextEditingController _amountController = TextEditingController(text: '100');
-  bool isProcessing = false;
-  String processingStep = '';
+  bool isWaitingForPayment = false;
+  String currentCheckoutUrl = '';
+  double initialDepositCash = 0;
+  Timer? _pollingTimer;
   Map<String, dynamic>? successData;
   String? errorMsg;
 
   @override
+  void initState() {
+    super.initState();
+    initialDepositCash = widget.appState.user.wallet.depositCash;
+  }
+
+  @override
   void dispose() {
+    _pollingTimer?.cancel();
     _amountController.dispose();
     super.dispose();
   }
@@ -32,101 +40,88 @@ class _DepositDialogState extends State<DepositDialog> {
   double get currentAmount => double.tryParse(_amountController.text.trim()) ?? 0;
   double get bonusCoins => currentAmount * 0.50; // 50% instant bonus
 
-  Future<void> _processDeposit() async {
+  void _openCheckoutUrl(String url) {
+    if (kIsWeb) {
+      try {
+        final global = js_interop.globalContext;
+        if (global.has('openWindowUrl')) {
+          global.callMethod('openWindowUrl'.toJS, url.toJS);
+          return;
+        }
+      } catch (e) {
+        debugPrint('[DepositDialog] openWindowUrl error: $e');
+      }
+    }
+  }
+
+  void _startPaymentProcess() {
     final amount = currentAmount;
     if (amount < 1) {
       setState(() => errorMsg = 'Minimum deposit amount is ₹1.');
       return;
     }
 
-    setState(() {
-      isProcessing = true;
-      errorMsg = null;
-      processingStep = 'Creating Razorpay Live Order...';
-    });
-
     final user = widget.appState.user;
-    String orderId = '';
-    String keyId = 'rzp_live_TakGRfnTFl20dG';
-    double bonusCoinsAmt = amount * 0.5;
+    initialDepositCash = user.wallet.depositCash;
+    currentCheckoutUrl = 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${Uri.encodeComponent(user.uid)}&amount=${amount.toInt()}';
 
-    // STEP 1: Attempt Order Creation (optional)
-    try {
-      final jsData = await RazorpayCheckoutService.createOrderViaJs(
-        userId: user.uid,
-        amount: amount,
-        name: user.displayName,
-        phone: user.phoneNumber,
-        email: user.email,
-      );
+    // 1. Open official registered website checkout tab
+    _openCheckoutUrl(currentCheckoutUrl);
 
-      if (jsData != null && (jsData['orderId'] != null || jsData['order_id'] != null || jsData['id'] != null)) {
-        orderId = (jsData['orderId'] ?? jsData['order_id'] ?? jsData['id']).toString();
-        keyId = (jsData['keyId'] ?? jsData['key'] ?? keyId).toString();
-        bonusCoinsAmt = ((jsData['bonusCoins'] ?? bonusCoinsAmt) as num).toDouble();
+    // 2. Set waiting state and start Firestore poller
+    setState(() {
+      isWaitingForPayment = true;
+      errorMsg = null;
+    });
+
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      await widget.appState.refreshFromFirestore();
+      if (!mounted) {
+        timer.cancel();
+        return;
       }
-    } catch (_) {}
 
-    if (!mounted) return;
-
-    setState(() {
-      processingStep = 'Opening Razorpay Payment Modal...';
+      final newBalance = widget.appState.user.wallet.depositCash;
+      if (newBalance > initialDepositCash) {
+        timer.cancel();
+        setState(() {
+          isWaitingForPayment = false;
+          successData = {
+            'addedReal': amount,
+            'addedBonus': bonusCoins,
+            'totalAdded': amount + bonusCoins,
+            'paymentId': 'VERIFIED_ON_GATEWAY',
+          };
+        });
+      }
     });
+  }
 
-    // STEP 2: Open Real Razorpay Web SDK Gateway Modal
-    final paymentResult = await RazorpayCheckoutService.openCheckout(
-      keyId: keyId,
-      orderId: orderId,
-      amount: amount,
-      name: 'Booyah Rewards (SkillWinner)',
-      description: 'Add ₹${amount.toInt()} (+₹${bonusCoinsAmt.toInt()} Bonus)',
-      userEmail: user.email,
-      userPhone: user.phoneNumber,
-      userName: user.displayName,
-    );
-
+  Future<void> _manualCheckBalance() async {
+    setState(() {
+      errorMsg = null;
+    });
+    await widget.appState.refreshFromFirestore();
     if (!mounted) return;
 
-    if (!paymentResult.success) {
+    final newBalance = widget.appState.user.wallet.depositCash;
+    if (newBalance > initialDepositCash) {
+      _pollingTimer?.cancel();
       setState(() {
-        isProcessing = false;
-        errorMsg = paymentResult.error ?? 'Payment was cancelled or failed.';
+        isWaitingForPayment = false;
+        successData = {
+          'addedReal': currentAmount,
+          'addedBonus': bonusCoins,
+          'totalAdded': currentAmount + bonusCoins,
+          'paymentId': 'VERIFIED_ON_GATEWAY',
+        };
       });
-      return;
+    } else {
+      setState(() {
+        errorMsg = 'Payment not completed yet. Please finish payment in the open browser tab.';
+      });
     }
-
-    final realPaymentId = paymentResult.paymentId ?? 'pay_${DateTime.now().millisecondsSinceEpoch}';
-    final realSignature = paymentResult.signature ?? 'sig_${DateTime.now().millisecondsSinceEpoch}';
-
-    setState(() {
-      processingStep = 'Crediting Wallet & Syncing Firestore...';
-    });
-
-    // STEP 3: Auto-Credit Real Cash + 50% Bonus in Firebase Firestore & AppState
-    widget.appState.depositCash(amount, realPaymentId, bonusCoins: bonusCoinsAmt);
-
-    // Optional background verification ping
-    try {
-      PaymentService.verifyPayment(
-        orderId: orderId,
-        paymentId: realPaymentId,
-        signature: realSignature,
-        userId: user.uid,
-        amount: amount,
-        bonusCoins: bonusCoinsAmt,
-      );
-    } catch (_) {}
-
-    setState(() {
-      isProcessing = false;
-      successData = {
-        'orderId': orderId.isNotEmpty ? orderId : 'DIRECT_GATEWAY',
-        'paymentId': realPaymentId,
-        'addedReal': amount,
-        'addedBonus': bonusCoinsAmt,
-        'totalAdded': amount + bonusCoinsAmt,
-      };
-    });
   }
 
   @override
@@ -160,7 +155,7 @@ class _DepositDialogState extends State<DepositDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'SKILLWINNER • RAZORPAY LIVE',
+                          'SW TECH • OFFICIAL RAZORPAY GATEWAY',
                           style: TextStyle(
                             fontFamily: 'Inter',
                             fontSize: 9,
@@ -179,7 +174,10 @@ class _DepositDialogState extends State<DepositDialog> {
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () {
+                    _pollingTimer?.cancel();
+                    Navigator.of(context).pop();
+                  },
                 ),
               ],
             ),
@@ -209,19 +207,6 @@ class _DepositDialogState extends State<DepositDialog> {
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 12, color: Color(0xFF047857), fontWeight: FontWeight.w600),
                     ),
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFA7F3D0)),
-                      ),
-                      child: Text(
-                        'Ref ID: ${successData!['paymentId']}',
-                        style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Color(0xFF065F46), fontWeight: FontWeight.bold),
-                      ),
-                    ),
                     const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
@@ -235,6 +220,74 @@ class _DepositDialogState extends State<DepositDialog> {
                         onPressed: () => Navigator.of(context).pop(),
                         child: const Text('DONE & PLAY TOURNAMENTS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else if (isWaitingForPayment) ...[
+              // WAITING / IN-PROGRESS VIEW
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Column(
+                  children: [
+                    const SizedBox(
+                      width: 40,
+                      height: 40,
+                      child: CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF1D4ED8)),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Official Payment Gateway Opened!',
+                      style: TextStyle(fontFamily: 'Inter', fontSize: 14, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Complete your payment in the opened tab (swgayanbhumi.in). Your balance will update automatically here.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Color(0xFF1D4ED8)),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () => _openCheckoutUrl(currentCheckoutUrl),
+                            child: const Text('Re-open Page', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF1D4ED8),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: _manualCheckBalance,
+                            child: const Text('Check Status', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton(
+                      onPressed: () {
+                        _pollingTimer?.cancel();
+                        setState(() => isWaitingForPayment = false);
+                      },
+                      child: const Text('Cancel & Change Amount', style: TextStyle(fontSize: 11, color: Colors.grey)),
                     ),
                   ],
                 ),
@@ -357,20 +410,11 @@ class _DepositDialogState extends State<DepositDialog> {
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     elevation: 0,
                   ),
-                  onPressed: isProcessing ? null : _processDeposit,
-                  child: isProcessing
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
-                            const SizedBox(width: 10),
-                            Text(processingStep, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          ],
-                        )
-                      : Text(
-                          'PAY ₹${currentAmount.toInt()} WITH RAZORPAY',
-                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
-                        ),
+                  onPressed: _startPaymentProcess,
+                  child: Text(
+                    'PAY ₹${currentAmount.toInt()} VIA OFFICIAL GATEWAY',
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
+                  ),
                 ),
               ),
             ],
