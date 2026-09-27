@@ -38,7 +38,7 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   double get currentAmount => double.tryParse(_amountController.text.trim()) ?? 0;
-  double get bonusCoins => currentAmount * 0.50; // 50% instant bonus
+  double get bonusCash => currentAmount * 0.10; // 10% Extra Deposit Cash
 
   void _openCheckoutUrl(String url) {
     if (kIsWeb) {
@@ -56,8 +56,8 @@ class _DepositDialogState extends State<DepositDialog> {
 
   void _startPaymentProcess() {
     final amount = currentAmount;
-    if (amount < 1) {
-      setState(() => errorMsg = 'Minimum deposit amount is ₹1.');
+    if (amount < 10) {
+      setState(() => errorMsg = 'Minimum deposit amount is ₹10.');
       return;
     }
 
@@ -89,8 +89,8 @@ class _DepositDialogState extends State<DepositDialog> {
           isWaitingForPayment = false;
           successData = {
             'addedReal': amount,
-            'addedBonus': bonusCoins,
-            'totalAdded': amount + bonusCoins,
+            'addedBonus': bonusCash,
+            'totalAdded': amount + bonusCash,
             'paymentId': 'VERIFIED_ON_GATEWAY',
           };
         });
@@ -112,8 +112,8 @@ class _DepositDialogState extends State<DepositDialog> {
         isWaitingForPayment = false;
         successData = {
           'addedReal': currentAmount,
-          'addedBonus': bonusCoins,
-          'totalAdded': currentAmount + bonusCoins,
+          'addedBonus': bonusCash,
+          'totalAdded': currentAmount + bonusCash,
           'paymentId': 'VERIFIED_ON_GATEWAY',
         };
       });
@@ -203,7 +203,7 @@ class _DepositDialogState extends State<DepositDialog> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      '₹${(successData!['addedReal'] as num).toInt()} Real Cash + ${(successData!['addedBonus'] as num).toInt()} 🟡 Bonus Ad Coins credited successfully.',
+                      '₹${(successData!['addedReal'] as num).toInt()} Paid + 10% Extra = ₹${((successData!['addedReal'] as num) * 1.10).toStringAsFixed(1)} Deposit Cash credited successfully.',
                       textAlign: TextAlign.center,
                       style: const TextStyle(fontSize: 12, color: Color(0xFF047857), fontWeight: FontWeight.w600),
                     ),
@@ -293,7 +293,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 ),
               ),
             ] else ...[
-              // 50% BONUS PROMO BANNER
+              // 10% EXTRA DEPOSIT CASH PROMO BANNER
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
@@ -310,11 +310,11 @@ class _DepositDialogState extends State<DepositDialog> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'SPECIAL 50% BONUS OFFER ACTIVE!',
+                            'SPECIAL 10% EXTRA DEPOSIT CASH!',
                             style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
                           ),
                           Text(
-                            'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${currentAmount.toInt()} Cash + ${bonusCoins.toInt()} 🟡 Bonus Coins Free!',
+                            'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${(currentAmount * 1.10).toStringAsFixed(1)} Deposit Cash in Wallet!',
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
                           ),
                         ],
@@ -350,10 +350,10 @@ class _DepositDialogState extends State<DepositDialog> {
               ),
               const SizedBox(height: 12),
 
-              // PRESET CHIPS
+              // PRESET CHIPS (Min ₹10)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [1, 20, 50, 100, 200, 500].map((amt) {
+                children: [10, 20, 50, 100, 200, 500].map((amt) {
                   final isSelected = currentAmount.toInt() == amt;
                   return InkWell(
                     onTap: () {
