@@ -6,13 +6,15 @@ import '../theme/app_theme.dart';
 class FreeFireLogoInline extends StatelessWidget {
   final GameType gameType;
   final double height;
+  final double? width;
   final Color? color;
   final BoxFit fit;
 
   const FreeFireLogoInline({
     super.key,
     this.gameType = GameType.freeFire,
-    this.height = 20,
+    this.height = 22,
+    this.width = 120,
     this.color,
     this.fit = BoxFit.contain,
   });
@@ -26,16 +28,24 @@ class FreeFireLogoInline extends StatelessWidget {
     return Image.asset(
       assetPath,
       height: height,
+      width: width,
       fit: fit,
       color: color,
       errorBuilder: (context, error, stackTrace) {
-        return Text(
-          gameType == GameType.freeFireMax ? 'FREE FIRE MAX' : 'FREE FIRE',
-          style: const TextStyle(
-            fontWeight: FontWeight.w900,
-            fontSize: 11,
-            color: AppTheme.primaryAmber,
-            letterSpacing: 0.5,
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            gameType == GameType.freeFireMax ? 'FREE FIRE MAX' : 'FREE FIRE',
+            style: const TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 11,
+              color: AppTheme.primaryAmber,
+              letterSpacing: 0.8,
+            ),
           ),
         );
       },

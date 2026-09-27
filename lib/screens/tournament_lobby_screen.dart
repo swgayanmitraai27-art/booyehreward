@@ -6,6 +6,7 @@ import '../widgets/slot_picker_dialog.dart';
 import '../widgets/squad_team_dialog.dart';
 import '../widgets/match_banner_image.dart';
 import '../widgets/ff_brand_elements.dart';
+import '../widgets/dynamic_banner_carousel.dart';
 import 'package:intl/intl.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
@@ -32,6 +33,12 @@ class TournamentLobbyScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Dynamic Auto-Sliding Promo & Announcement Carousel
+          if (appState.banners.isNotEmpty) ...[
+            DynamicBannerCarousel(banners: appState.banners),
+            const SizedBox(height: 14),
+          ],
+
           // 1. Hero Promo Card (Clean Light Aesthetic with Amber Accent)
           Container(
             width: double.infinity,

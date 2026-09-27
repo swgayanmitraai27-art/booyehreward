@@ -504,57 +504,219 @@ class _WalletScreenState extends State<WalletScreen> {
                   },
                 ),
               ] else ...[
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: widget.appState.withdrawals.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
-                  itemBuilder: (context, index) {
-                    final w = widget.appState.withdrawals[index];
+                if (widget.appState.withdrawals.isEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.account_balance_wallet_outlined, size: 40, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'No UPI withdrawal requests yet',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Win paid tournaments and withdraw directly to your UPI (Min ₹50).',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: widget.appState.withdrawals.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final w = widget.appState.withdrawals[index];
 
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      title: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('₹${w.amount.toInt()} Payout', style: const TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w900, fontSize: 13)),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: w.status == WithdrawalStatus.completed
-                                  ? const Color(0xFFECFDF5)
-                                  : w.status == WithdrawalStatus.rejected
-                                      ? Colors.red.shade100
-                                      : Colors.amber.shade100,
-                              borderRadius: BorderRadius.circular(6),
+                      final isCompleted = w.status == WithdrawalStatus.completed;
+                      final isRejected = w.status == WithdrawalStatus.rejected;
+                      final isPending = w.status == WithdrawalStatus.pending;
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isCompleted
+                                ? const Color(0xFFA7F3D0)
+                                : isRejected
+                                    ? const Color(0xFFFECACA)
+                                    : const Color(0xFFFDE68A),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(8),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
                             ),
-                            child: Text(
-                              w.status.name.toUpperCase(),
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: w.status == WithdrawalStatus.completed
-                                    ? const Color(0xFF065F46)
-                                    : w.status == WithdrawalStatus.rejected
-                                        ? Colors.red.shade900
-                                        : Colors.amber.shade900,
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: isCompleted
+                                            ? const Color(0xFFECFDF5)
+                                            : isRejected
+                                                ? const Color(0xFFFEF2F2)
+                                                : const Color(0xFFFFFBEB),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isCompleted
+                                            ? Icons.check_circle
+                                            : isRejected
+                                                ? Icons.cancel
+                                                : Icons.access_time,
+                                        size: 16,
+                                        color: isCompleted
+                                            ? AppTheme.winningGreen
+                                            : isRejected
+                                                ? Colors.red
+                                                : Colors.amber.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '₹${w.amount.toInt()} UPI Payout',
+                                      style: const TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w900,
+                                        fontSize: 14,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isCompleted
+                                        ? const Color(0xFFECFDF5)
+                                        : isRejected
+                                            ? const Color(0xFFFEF2F2)
+                                            : const Color(0xFFFFFBEB),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isCompleted
+                                          ? const Color(0xFFA7F3D0)
+                                          : isRejected
+                                              ? const Color(0xFFFECACA)
+                                              : const Color(0xFFFDE68A),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isCompleted
+                                        ? 'APPROVED / PAID'
+                                        : isRejected
+                                            ? 'REJECTED'
+                                            : 'IN REVIEW (24H)',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: isCompleted
+                                          ? const Color(0xFF065F46)
+                                          : isRejected
+                                              ? Colors.red.shade900
+                                              : const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.account_balance, size: 13, color: Color(0xFF64748B)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        w.upiId,
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    DateFormat('dd MMM, hh:mm a').format(w.requestedAt),
+                                    style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('UPI ID: ${w.upiId}', style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600)),
-                          if (w.adminNotes != null)
-                            Text('Note: ${w.adminNotes}', style: const TextStyle(fontFamily: 'Inter', fontSize: 10, color: Colors.grey)),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                            const SizedBox(height: 6),
+                            if (isPending) ...[
+                              const Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 12, color: Color(0xFFD97706)),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    '24 Hours ke andar aapke UPI account par transfer ho jayega.',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                                  ),
+                                ],
+                              ),
+                            ] else if (isCompleted) ...[
+                              Row(
+                                children: [
+                                  const Icon(Icons.verified, size: 12, color: AppTheme.winningGreen),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Payment Transferred! Ref: ${w.payoutTxnRef ?? "UTR Success"}',
+                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                  ),
+                                ],
+                              ),
+                            ] else if (isRejected) ...[
+                              Row(
+                                children: [
+                                  const Icon(Icons.error_outline, size: 12, color: Colors.red),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Refunded to Wallet. Note: ${w.adminNotes ?? "Invalid UPI"}',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade900),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ],
             ],
           ),

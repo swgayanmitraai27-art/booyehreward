@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/url_launcher_util.dart';
 import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
 
@@ -191,36 +192,43 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 8),
 
-          // Role Switcher (User / Admin)
+          // 💬 Dynamic Customer Support (Telegram)
           InkWell(
             onTap: () {
-              appState.toggleRole();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  duration: const Duration(seconds: 1),
-                  content: Text('Switched to ${user.role.toUpperCase()} MODE'),
-                ),
-              );
+              UrlLauncherUtil.openUrl(appState.telegramSupportUrl);
             },
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 5),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
               decoration: BoxDecoration(
-                color: user.role == 'admin' ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: user.role == 'admin' ? Colors.black : const Color(0xFFCBD5E1),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0088CC), Color(0xFF0077B5)],
                 ),
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0088CC).withAlpha(60),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Text(
-                user.role == 'admin' ? 'ADMIN' : 'USER',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 9.5,
-                  fontWeight: FontWeight.w900,
-                  color: user.role == 'admin' ? AppTheme.primaryAmber : const Color(0xFF475569),
-                  letterSpacing: 0.6,
-                ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.send, size: 12, color: Colors.white),
+                  SizedBox(width: 4),
+                  Text(
+                    'SUPPORT',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.6,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

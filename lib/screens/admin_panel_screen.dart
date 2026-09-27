@@ -3,9 +3,11 @@ import 'package:flutter/services.dart';
 import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
+import '../models/banner_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
+import '../utils/url_launcher_util.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   final AppState appState;
@@ -17,7 +19,7 @@ class AdminPanelScreen extends StatefulWidget {
 }
 
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
-  int activeSection = 0; // 0: Finance & Analytics, 1: Results, 2: Room Publisher, 3: Withdrawals, 4: Store Claims, 5: Create Match
+  int activeSection = 0; // 0: Finance & Analytics, 1: Results, 2: Room Publisher, 3: Withdrawals, 4: Store Claims, 5: Create Match, 6: Banners, 7: Settings
   int financeViewTab = 0; // 0: All Summary, 1: Paid (Real Cash), 2: Free (Ad Coins)
   String selectedLedgerDateFilter = 'All Time'; // 'All Time', 'Today', 'Last 7 Days', 'This Month'
 
@@ -36,6 +38,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _storeImgUrlController = TextEditingController(text: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80');
   final TextEditingController _storeCoinPriceController = TextEditingController(text: '250');
   final TextEditingController _storeRewardValController = TextEditingController(text: '₹50 Code');
+
+  // Dynamic Banners state
+  final TextEditingController _bannerTitleController = TextEditingController(text: '🔥 Free Fire Esports Championship - Win ₹500');
+  final TextEditingController _bannerImgUrlController = TextEditingController(text: 'imgasest/brhomescreen .png');
+  final TextEditingController _bannerClickUrlController = TextEditingController(text: 'https://t.me/swgayanmitra');
+
+  // Telegram Support & Settings state
+  final TextEditingController _telegramUrlController = TextEditingController();
 
   // Create Match state (100% Dynamic with 70/30 Financial Engine)
   final TextEditingController _matchTitleController = TextEditingController(text: '⚡ Free Fire Clash Squad Championship');
@@ -58,6 +68,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   MapType newMapType = MapType.bermuda;
 
   @override
+  void initState() {
+    super.initState();
+    _telegramUrlController.text = widget.appState.telegramSupportUrl;
+  }
+
+  @override
   void dispose() {
     for (var c in killControllers.values) {
       c.dispose();
@@ -71,6 +87,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _storeImgUrlController.dispose();
     _storeCoinPriceController.dispose();
     _storeRewardValController.dispose();
+    _bannerTitleController.dispose();
+    _bannerImgUrlController.dispose();
+    _bannerClickUrlController.dispose();
+    _telegramUrlController.dispose();
     _matchTitleController.dispose();
     _matchBannerUrlController.dispose();
     _entryFeeController.dispose();
@@ -149,6 +169,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(4, '🎁 Store Claims (${metrics['pendingVoucherClaims']})'),
                 const SizedBox(width: 8),
                 _buildTabBtn(5, '➕ Create Match (70/30 Engine)'),
+                const SizedBox(width: 8),
+                _buildTabBtn(6, '📢 Banners & Slider (${widget.appState.banners.length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(7, '⚙️ Telegram & App Settings'),
               ],
             ),
           ),
@@ -160,6 +184,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 3) _buildWithdrawalsSection(),
           if (activeSection == 4) _buildStoreManagementSection(),
           if (activeSection == 5) _buildCreateMatchSection(),
+          if (activeSection == 6) _buildBannersSection(),
+          if (activeSection == 7) _buildSettingsSection(),
         ],
       ),
     );
@@ -2734,6 +2760,449 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  // ==========================================
+  // --- 6. PROMO BANNERS & SLIDER MANAGEMENT ---
+  // ==========================================
+  Widget _buildBannersSection() {
+    final banners = widget.appState.banners;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'PROMO BANNERS & SLIDER',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED), letterSpacing: 1.2),
+                  ),
+                  Text(
+                    'Dynamic Home Lobby Carousel',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEDE9FE),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${banners.length} ACTIVE',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Banners added here appear dynamically in the auto-sliding carousel at the top of the Home Lobby. When players click the banner, it opens the configured URL in a new tab.',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+
+          // Active Banners List
+          const Text('ACTIVE CAROUSEL BANNERS:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+
+          if (banners.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Center(
+                child: Text('No promo banners active. Add one below to display in lobby!', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: banners.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final banner = banners[index];
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      // Mini Thumbnail
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          width: 80,
+                          height: 48,
+                          color: const Color(0xFF0F172A),
+                          child: banner.imageUrl.startsWith('http')
+                              ? Image.network(
+                                  banner.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.broken_image, color: Colors.white54, size: 20)),
+                                )
+                              : Image.asset(
+                                  banner.imageUrl,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const Center(child: Icon(Icons.image, color: Colors.white54, size: 20)),
+                                ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              banner.title,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF0F172A)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              banner.clickUrl,
+                              style: const TextStyle(fontSize: 11, color: Color(0xFF7C3AED)),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+
+                      // Test Link Button
+                      IconButton(
+                        tooltip: 'Test Open URL',
+                        icon: const Icon(Icons.open_in_new, size: 18, color: Color(0xFF64748B)),
+                        onPressed: () => UrlLauncherUtil.openUrl(banner.clickUrl),
+                      ),
+
+                      // Delete Button
+                      IconButton(
+                        tooltip: 'Delete Banner',
+                        icon: const Icon(Icons.delete_outline, size: 18, color: Colors.redAccent),
+                        onPressed: () {
+                          widget.appState.adminDeleteBanner(banner.id);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Banner deleted from lobby & Firestore!')),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          const SizedBox(height: 20),
+
+          const Divider(),
+          const SizedBox(height: 10),
+
+          // Add Banner Form
+          const Text('➕ ADD NEW LOBBY BANNER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _bannerTitleController,
+            decoration: InputDecoration(
+              labelText: 'Banner Title / Headline',
+              hintText: 'e.g. 🔥 Free Fire Esports Championship - Win ₹500',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _bannerImgUrlController,
+            decoration: InputDecoration(
+              labelText: 'Image Path or Online Image URL',
+              hintText: 'e.g. imgasest/brhomescreen .png or https://images.unsplash.com/...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Quick Presets for Image
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const Text('Presets: ', style: TextStyle(fontSize: 10.5, color: Colors.grey, fontWeight: FontWeight.bold)),
+                ActionChip(
+                  label: const Text('BR Cover', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _bannerImgUrlController.text = 'imgasest/brhomescreen .png';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('CS Cover', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _bannerImgUrlController.text = 'imgasest/cshomescreen.png';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('Diamonds HD', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _bannerImgUrlController.text = 'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&auto=format&fit=crop&q=80';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _bannerClickUrlController,
+            decoration: InputDecoration(
+              labelText: 'Click URL / Action Link',
+              hintText: 'e.g. https://t.me/swgayanmitra or https://...',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () {
+                final title = _bannerTitleController.text.trim();
+                final img = _bannerImgUrlController.text.trim();
+                final url = _bannerClickUrlController.text.trim();
+
+                if (title.isEmpty || img.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill title and image URL')),
+                  );
+                  return;
+                }
+
+                final newBanner = BannerModel(
+                  id: 'banner_${DateTime.now().millisecondsSinceEpoch}',
+                  title: title,
+                  imageUrl: img,
+                  clickUrl: url.isEmpty ? widget.appState.telegramSupportUrl : url,
+                  createdAt: DateTime.now(),
+                );
+
+                widget.appState.adminAddBanner(newBanner);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: AppTheme.winningGreen,
+                    content: Text('Promo banner added to Lobby & synced to Firestore!'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_photo_alternate, size: 18),
+              label: Text('PUBLISH BANNER TO LOBBY', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white, isItalic: false)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // --- 7. TELEGRAM SUPPORT & APP SETTINGS ---
+  // ==========================================
+  Widget _buildSettingsSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'APP CONFIGURATION & SUPPORT',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF0284C7), letterSpacing: 1.2),
+                  ),
+                  Text(
+                    'Official Telegram Support Settings',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE0F2FE),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  '24/7 LIVE',
+                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF0284C7)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'The Telegram customer support handle configured here is 100% dynamic and synced with Firestore (`skillwinner_settings/app_config`). Any time a player taps "💬 SUPPORT" in the top bar or wallet, they are taken directly to this Telegram ID/Channel.',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+
+          // Current Link display
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF0FDF4),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFBBF7D0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Color(0xFF16A34A), size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('CURRENT ACTIVE SUPPORT LINK:', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
+                      Text(
+                        widget.appState.telegramSupportUrl,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5, color: Color(0xFF14532D)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Input field
+          TextField(
+            controller: _telegramUrlController,
+            decoration: InputDecoration(
+              labelText: 'Telegram Support URL or Handle',
+              hintText: 'e.g. https://t.me/swgayanmitra or @swgayanmitra',
+              prefixIcon: const Icon(Icons.send_rounded, color: Color(0xFF0284C7)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Quick helper suggestions
+          Row(
+            children: [
+              const Text('Suggestions: ', style: TextStyle(fontSize: 10.5, color: Colors.grey, fontWeight: FontWeight.bold)),
+              ActionChip(
+                label: const Text('@swgayanmitra', style: TextStyle(fontSize: 10)),
+                onPressed: () {
+                  setState(() {
+                    _telegramUrlController.text = 'https://t.me/swgayanmitra';
+                  });
+                },
+              ),
+              const SizedBox(width: 6),
+              ActionChip(
+                label: const Text('Booyah Support Channel', style: TextStyle(fontSize: 10)),
+                onPressed: () {
+                  setState(() {
+                    _telegramUrlController.text = 'https://t.me/booyahrewards';
+                  });
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0284C7),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    final url = _telegramUrlController.text.trim();
+                    if (url.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Please enter a valid Telegram URL')),
+                      );
+                      return;
+                    }
+                    widget.appState.adminUpdateTelegramUrl(url);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: AppTheme.winningGreen,
+                        content: Text('Telegram Customer Support URL updated & synced to Firestore!'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.cloud_done, size: 18),
+                  label: const Text('SAVE TO FIRESTORE', style: TextStyle(fontFamily: 'Rajdhani', fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ),
+              const SizedBox(width: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF0284C7),
+                  side: const BorderSide(color: Color(0xFF0284C7)),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => UrlLauncherUtil.openUrl(_telegramUrlController.text.trim()),
+                icon: const Icon(Icons.open_in_new, size: 16),
+                label: const Text('TEST LINK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildJsonRow(String key, String value, {Color? color}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1.5),
@@ -2759,3 +3228,4 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return '$hour:$minute $period';
   }
 }
+

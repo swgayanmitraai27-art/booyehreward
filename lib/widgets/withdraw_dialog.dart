@@ -167,22 +167,36 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                     const Icon(Icons.check_circle, color: AppTheme.winningGreen, size: 48),
                     const SizedBox(height: 8),
                     Text(
-                      'Request Submitted!',
+                      'Withdrawal Request Submitted!',
                       style: AppTheme.gamingTitle(fontSize: 16, color: const Color(0xFF065F46)),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      successMsg!,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF047857)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFA7F3D0)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.schedule, size: 14, color: Color(0xFF059669)),
+                          SizedBox(width: 6),
+                          Text(
+                            '24 Hours Ke Andar Transfer to your UPI',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                      'Amount deducted immediately to prevent double spending. Admin will process via UPI shortly.',
+                      'Amount deducted immediately from wallet. Live payout status is updated below in your 4-Wallet history.',
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0F172A),
@@ -190,14 +204,14 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('VIEW WALLET'),
+                      child: const Text('OK & VIEW STATUS'),
                     ),
                   ],
                 ),
               ),
             ] else ...[
               const Text(
-                'WITHDRAWAL AMOUNT (₹)',
+                'WITHDRAWAL AMOUNT (MIN ₹50)',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
               ),
               const SizedBox(height: 6),

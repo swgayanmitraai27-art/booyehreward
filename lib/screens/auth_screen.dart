@@ -392,24 +392,6 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2.5))
                 : Text('ENTER ARENA & PLAY', style: AppTheme.gamingTitle(fontSize: 14, color: Colors.black)),
           ),
-          const SizedBox(height: 16),
-
-          // Admin Quick Fill helper
-          OutlinedButton.icon(
-            onPressed: () {
-              _loginEmailController.text = 'admin@booyah.com';
-              _loginPassController.text = 'admin123';
-            },
-            icon: const Icon(Icons.admin_panel_settings, size: 16, color: AppTheme.primaryAmber),
-            label: const Text(
-              'Quick Fill Admin Demo (admin@booyah.com)',
-              style: TextStyle(fontSize: 11, color: AppTheme.primaryAmber, fontWeight: FontWeight.bold),
-            ),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: AppTheme.primaryAmber.withAlpha(100)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-          ),
         ],
       ),
     );

@@ -7,6 +7,7 @@ import '../models/team_model.dart';
 import '../models/transaction_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
+import '../models/banner_model.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
@@ -17,6 +18,8 @@ class AppState extends ChangeNotifier {
   List<TransactionModel> transactions = [];
   List<WithdrawalModel> withdrawals = [];
   List<VoucherClaim> voucherClaims = [];
+  List<BannerModel> banners = [];
+  String telegramSupportUrl = 'https://t.me/swgayanmitra';
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
   bool isLoadingAuth = true;
@@ -152,6 +155,22 @@ class AppState extends ChangeNotifier {
     transactions = [];
     withdrawals = [];
     voucherClaims = [];
+    banners = [
+      BannerModel(
+        id: 'banner_ff_01',
+        title: '🔥 Free Fire Esports Tournament - Win Real Cash & Diamonds',
+        imageUrl: 'imgasest/brhomescreen .png',
+        clickUrl: telegramSupportUrl,
+        createdAt: DateTime.now(),
+      ),
+      BannerModel(
+        id: 'banner_ff_02',
+        title: '💬 Join Official Telegram Community & 24/7 Support',
+        imageUrl: 'imgasest/cshomescreen.png',
+        clickUrl: telegramSupportUrl,
+        createdAt: DateTime.now(),
+      ),
+    ];
   }
 
   // --- GETTERS ---
@@ -1326,6 +1345,18 @@ class AppState extends ChangeNotifier {
       } else {
         voucherClaims = [];
       }
+
+      // 6. Sync Dynamic Banners from Firestore
+      final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
+      if (bannerDocs.isNotEmpty) {
+        banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
+      }
+
+      // 7. Sync Telegram Support & App Config
+      final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
+      if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
+        telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+      }
     } catch (e) {
       debugPrint('[AppState] Firestore live sync error: $e');
     } finally {
@@ -1333,6 +1364,29 @@ class AppState extends ChangeNotifier {
       isLiveSyncing = false;
       notifyListeners();
     }
+  }
+
+  // --- ADMIN: TELEGRAM CUSTOMER SUPPORT URL CONFIGURATION ---
+  void adminUpdateTelegramUrl(String url) {
+    telegramSupportUrl = url.trim();
+    FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
+      'telegramSupportUrl': telegramSupportUrl,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+    notifyListeners();
+  }
+
+  // --- ADMIN: DYNAMIC PROMO BANNERS ---
+  void adminAddBanner(BannerModel newBanner) {
+    banners.insert(0, newBanner);
+    FirestoreRestService.setDocument('skillwinner_banners', newBanner.id, newBanner.toJson());
+    notifyListeners();
+  }
+
+  void adminDeleteBanner(String bannerId) {
+    banners.removeWhere((b) => b.id == bannerId);
+    FirestoreRestService.deleteDocument('skillwinner_banners', bannerId);
+    notifyListeners();
   }
 
   void _syncUser() {
