@@ -48864,7 +48864,7 @@ aiD(){var s=0,r=A.P(t.H),q,p=2,o=[],n=this,m,l,k,j,i,h,g,f,e,d,c,b,a,a0,a1,a2,a3
 var $async$uy=A.Q(function(b4,b5){if(b4===1){o.push(b5)
 s=p}for(;;)switch(s){case 0:b0={}
 b1=n.gr4()
-if(b1<10){n.M(new A.ar3(n))
+if(b1<1){n.M(new A.ar3(n))
 s=1
 break}n.M(new A.ar4(n))
 h=n.a.c.a
@@ -48961,7 +48961,7 @@ r=A.ax(B.lu,B.o,1)
 s=A.T(l,A.a3(A.b([B.a5W,B.Q,A.az(A.ae(A.b([B.a70,A.D("Recharge \u20b9"+B.d.af(m.gr4())+" \u2794 Get \u20b9"+B.d.af(m.gr4())+" Cash + "+B.d.af(m.gr4()*0.5)+" \ud83d\udfe1 Bonus Coins Free!",l,l,l,l,B.a4C,l,l)],i),B.v,B.i,B.e),1)],i),B.k,B.i,B.e,0),B.j,l,l,new A.U(l,l,r,s,l,B.rZ,B.m),l,l,l,B.ee,l,l,l)
 r=A.ce(m.d,A.bR(l,new A.bq(4,A.t(14),new A.aO(B.ea,1,B.o,-1)),l,l,l,l,l,l,!0,new A.bq(4,A.t(14),new A.aO(B.ea,1,B.o,-1)),l,l,l,l,l,B.lx,!0,l,l,l,l,new A.bq(4,A.t(14),B.Fh),l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,l,!0,!0,!1,l,B.UJ,l,l,l,l,l,l,l,l,l,l,l,l),B.aJ,!1,new A.are(m),B.DS,B.a3)
 q=t.Ys
-q=A.a4(new A.aa(A.b([20,50,100,200,500],t.t),new A.arf(m),q),q.i("aq.E"))
+q=A.a4(new A.aa(A.b([1,20,50,100,200,500],t.t),new A.arf(m),q),q.i("aq.E"))
 s=A.b([s,B.aj,B.a7L,B.bi,r,B.an,A.a3(q,B.k,B.F,B.e,0),B.ap],i)
 r=m.w
 if(r!=null){q=A.t(10)
@@ -48972,7 +48972,7 @@ p=q?l:m.gaiC()
 s.push(A.c2(A.e7(q?A.a3(A.b([B.De,B.b4,A.D(m.f,l,l,l,l,B.fC,l,l)],i),B.k,B.bB,B.e,0):A.D("PAY \u20b9"+B.d.af(m.gr4())+" WITH RAZORPAY",l,l,l,l,B.a23,l,l),p,r),l,1/0))
 B.b.N(j,s)}return A.pZ(B.h,A.T(l,A.ae(j,B.v,B.i,B.b0),B.j,l,B.FE,l,l,l,l,B.ef,l,l,l),l,new A.b3(k,B.t))}}
 A.ar3.prototype={
-$0(){return this.a.w="Minimum deposit amount is \u20b910."},
+$0(){return this.a.w="Minimum deposit amount is \u20b91."},
 $S:0}
 A.ar4.prototype={
 $0(){var s=this.a

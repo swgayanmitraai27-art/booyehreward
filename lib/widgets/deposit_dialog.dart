@@ -34,8 +34,8 @@ class _DepositDialogState extends State<DepositDialog> {
 
   Future<void> _processDeposit() async {
     final amount = currentAmount;
-    if (amount < 10) {
-      setState(() => errorMsg = 'Minimum deposit amount is ₹10.');
+    if (amount < 1) {
+      setState(() => errorMsg = 'Minimum deposit amount is ₹1.');
       return;
     }
 
@@ -300,7 +300,7 @@ class _DepositDialogState extends State<DepositDialog> {
               // PRESET CHIPS
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [20, 50, 100, 200, 500].map((amt) {
+                children: [1, 20, 50, 100, 200, 500].map((amt) {
                   final isSelected = currentAmount.toInt() == amt;
                   return InkWell(
                     onTap: () {
