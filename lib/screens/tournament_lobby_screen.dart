@@ -600,10 +600,10 @@ class TournamentLobbyScreen extends StatelessWidget {
             children: [
               MatchBannerImage(
                 bannerImage: match.bannerImage,
-                height: 125,
+                height: 135,
               ),
               Container(
-                height: 125,
+                height: 135,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,

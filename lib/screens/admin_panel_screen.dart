@@ -1451,7 +1451,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         _maxSlotsController.text = '2';
                         newTeamType = TeamType.solo;
                       } else {
-                        _matchBannerUrlController.text = 'imgasest/solobrfullmap.png';
+                        _matchBannerUrlController.text = 'imgasest/brhomescreen .png';
                         _maxSlotsController.text = '48';
                         newTeamType = TeamType.solo;
                       }
@@ -1831,29 +1831,101 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const SizedBox(height: 14),
 
           // Banner Image & Preview
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('MATCH BANNER IMAGE:', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+              Text('Size: 16:9 (1280x720 or 800x450 px)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+            ],
+          ),
+          const SizedBox(height: 6),
           TextField(
             controller: _matchBannerUrlController,
             onChanged: (v) => setState(() {}),
             decoration: InputDecoration(
-              labelText: 'Banner Image URL (or preset)',
+              labelText: 'Banner Image Path or Online URL',
+              hintText: 'e.g. imgasest/brhomescreen .png or https://images.unsplash.com/...',
               isDense: true,
+              prefixIcon: const Icon(Icons.image, size: 18, color: Color(0xFF7C3AED)),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 6),
 
-          // Live Banner Preview
+          // Quick Presets
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const Text('Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                ActionChip(
+                  label: const Text('⚔️ Clash Squad', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _matchBannerUrlController.text = 'imgasest/cshomescreen.png';
+                    });
+                  },
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🔥 BR Full Map', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _matchBannerUrlController.text = 'imgasest/brhomescreen .png';
+                    });
+                  },
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🐺 Lone Wolf', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _matchBannerUrlController.text = 'imgasest/lonewolfhomescreen.png';
+                    });
+                  },
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('💎 Diamonds Glow', style: TextStyle(fontSize: 10)),
+                  onPressed: () {
+                    setState(() {
+                      _matchBannerUrlController.text = 'https://images.unsplash.com/photo-1563089145-599997674d42?w=800&auto=format&fit=crop&q=80';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Live Banner Preview Box
           Container(
-            height: 80,
+            height: 100,
             width: double.infinity,
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(color: const Color(0xFFCBD5E1)),
             ),
             clipBehavior: Clip.antiAlias,
-            child: MatchBannerImage(
-              bannerImage: _matchBannerUrlController.text.trim(),
-              height: 80,
+            child: Stack(
+              children: [
+                MatchBannerImage(
+                  bannerImage: _matchBannerUrlController.text.trim(),
+                  height: 100,
+                ),
+                Positioned(
+                  bottom: 6,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withAlpha(180),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text('LIVE PREVIEW', style: TextStyle(color: Colors.white, fontSize: 8.5, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),
