@@ -8,6 +8,7 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
 import '../utils/url_launcher_util.dart';
+import '../utils/image_url_resolver.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   final AppState appState;
@@ -1940,8 +1941,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 final bannerUrl = _matchBannerUrlController.text.trim();
+                final resolvedBanner = await ImageUrlResolver.resolveDirectImageUrl(bannerUrl);
+
                 final format = newMatchMode == MatchMode.cs
                     ? MatchFormat.cs4v4
                     : (newMatchMode == MatchMode.loneWolf
@@ -1961,7 +1964,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 final match = MatchModel(
                   id: 'match_${DateTime.now().millisecondsSinceEpoch}',
                   title: _matchTitleController.text.trim(),
-                  bannerImage: bannerUrl.isNotEmpty ? bannerUrl : 'imgasest/cshomescreen.png',
+                  bannerImage: resolvedBanner.isNotEmpty ? resolvedBanner : 'imgasest/cshomescreen.png',
                   gameType: newGameType,
                   mode: newMatchMode,
                   teamType: newTeamType,
@@ -1980,6 +1983,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 );
 
                 widget.appState.adminCreateMatch(match);
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.winningGreen,
@@ -3072,7 +3076,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 final title = _bannerTitleController.text.trim();
                 final img = _bannerImgUrlController.text.trim();
                 final url = _bannerClickUrlController.text.trim();
@@ -3084,16 +3088,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   return;
                 }
 
+                final resolvedImg = await ImageUrlResolver.resolveDirectImageUrl(img);
+
                 final newBanner = BannerModel(
                   id: 'banner_${DateTime.now().millisecondsSinceEpoch}',
                   title: title,
-                  imageUrl: img,
+                  imageUrl: resolvedImg,
                   clickUrl: url.isEmpty ? widget.appState.telegramSupportUrl : url,
                   createdAt: DateTime.now(),
                 );
 
                 widget.appState.adminAddBanner(newBanner);
-
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     backgroundColor: AppTheme.winningGreen,

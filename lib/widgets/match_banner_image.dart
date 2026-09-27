@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/image_url_resolver.dart';
 
 class MatchBannerImage extends StatelessWidget {
   final String? bannerImage;
@@ -16,18 +17,31 @@ class MatchBannerImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String raw = bannerImage?.trim().replaceAll('"', '').replaceAll("'", '') ?? '';
+    String raw = ImageUrlResolver.sanitizeUrl(bannerImage ?? '');
 
     // If empty, use default BR banner
     if (raw.isEmpty) {
       return _buildAssetImage('imgasest/brhomescreen .png');
     }
 
-    // Auto-detect web image URLs (http://, https://, or domain-like strings)
-    if (raw.startsWith('http://') || raw.startsWith('https://')) {
-      return _buildNetworkImage(raw);
-    } else if (raw.contains('.') && !raw.startsWith('imgasest/') && !raw.startsWith('assets/')) {
-      return _buildNetworkImage('https://$raw');
+    // Auto-detect web image URLs (http://, https://, ibb.co, etc.)
+    if (raw.startsWith('http://') || raw.startsWith('https://') || (raw.contains('.') && !raw.startsWith('imgasest/'))) {
+      String initialUrl = raw.startsWith('http') ? raw : 'https://$raw';
+
+      // If it's a page link like ibb.co/xyz or postimg.cc/xyz, resolve to direct stream
+      if (initialUrl.contains('ibb.co/') && !initialUrl.contains('i.ibb.co')) {
+        return FutureBuilder<String>(
+          future: ImageUrlResolver.resolveDirectImageUrl(initialUrl),
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data != null && snapshot.data!.isNotEmpty) {
+              return _buildNetworkImage(snapshot.data!);
+            }
+            return _buildNetworkImage(initialUrl);
+          },
+        );
+      }
+
+      return _buildNetworkImage(initialUrl);
     }
 
     // Local asset path
