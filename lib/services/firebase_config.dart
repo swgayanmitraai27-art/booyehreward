@@ -14,9 +14,9 @@ class FirebaseConfig {
   static const String matchesCollection = "skillwinner_matches";
   static const String financialLedgerCollection = "financial_ledger";
 
-  // Backend API Base URL
-  static const String apiBaseUrl = "https://swgayanbhumi.in/api/payments";
-  static const String orderEndpoint = "$apiBaseUrl/create-order";
-  static const String verifyEndpoint = "$apiBaseUrl/verify";
+  // Backend API Base URL - Using www.swgayanbhumi.in to prevent 308 CORS browser redirect
+  static const String apiBaseUrl = "https://www.swgayanbhumi.in/api/payments";
+  static const String orderEndpoint = "https://www.swgayanbhumi.in/api/payments/create-order";
+  static const String verifyEndpoint = "https://www.swgayanbhumi.in/api/payments/verify";
   static const String defaultRazorpayKeyId = "rzp_live_TakGRfnTFl20dG";
 }

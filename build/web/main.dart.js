@@ -8911,7 +8911,7 @@ aeK(a,b,c,d,e){return A.aVb(a,b,c,d,e)},
 aVb(a,b,a0,a1,a2){var s=0,r=A.Q(t.EM),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e,d,c
 var $async$aeK=A.R(function(a3,a4){if(a3===1){o.push(a4)
 s=p}for(;;)switch(s){case 0:p=4
-k=A.fg("https://swgayanbhumi.in/api/payments/create-order",0,null)
+k=A.fg("https://www.swgayanbhumi.in/api/payments/create-order",0,null)
 j=t.N
 i=A.X(["Content-Type","application/json","Accept","application/json"],j,j)
 h=a2.length!==0
@@ -8978,7 +8978,7 @@ aeL(a,b,c,d,e,f){return A.aVc(a,b,c,d,e,f)},
 aVc(a,b,c,d,a0,a1){var s=0,r=A.Q(t.dI),q,p=2,o=[],n,m,l,k,j,i,h,g,f,e
 var $async$aeL=A.R(function(a2,a3){if(a2===1){o.push(a3)
 s=p}for(;;)switch(s){case 0:p=4
-k=A.fg("https://swgayanbhumi.in/api/payments/verify",0,null)
+k=A.fg("https://www.swgayanbhumi.in/api/payments/verify",0,null)
 j=t.N
 i=A.X(["Content-Type","application/json","Accept","application/json"],j,j)
 h=a1.length!==0
