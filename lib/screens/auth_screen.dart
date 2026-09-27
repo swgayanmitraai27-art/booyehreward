@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/app_state.dart';
+import '../services/auth_service.dart';
 import '../services/firestore_rest_service.dart';
 import '../services/firebase_config.dart';
 import '../theme/app_theme.dart';
@@ -75,59 +76,13 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     });
 
     try {
-      // 1. Fetch users from Firestore
-      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      
-      Map<String, dynamic>? matchingDoc;
-      for (var doc in userDocs) {
-        if (doc['email']?.toString().toLowerCase() == email.toLowerCase() &&
-            (doc['password']?.toString() == pass || pass == 'admin123' || pass == 'booyah123')) {
-          matchingDoc = doc;
-          break;
-        }
-      }
+      final authResult = await AuthService.login(
+        email: email,
+        password: pass,
+      );
 
-      // Admin quick fallback if database is brand new
-      if (matchingDoc == null && (email == 'admin@booyah.com' || email == 'swgayanmitra@gmail.com') && pass.isNotEmpty) {
-        matchingDoc = {
-          'uid': 'admin_master_01',
-          'displayName': 'Booyah Esports Admin',
-          'email': email,
-          'phoneNumber': '+919935259374',
-          'inGameName': '⚡BOOYAH_ADMIN⚡',
-          'inGameUid': '10000001',
-          'inGameLevel': 75,
-          'password': pass,
-          'role': 'admin',
-          'wallet': {
-            'adCoins': 100,
-            'rewardCoins': 1000,
-            'depositCash': 5000.0,
-            'winningCash': 5000.0,
-          },
-          'adTracker': {
-            'adsWatchedToday': 0,
-            'adsWatchedSinceLastCoin': 0,
-            'dailyLimitRemaining': 30,
-          },
-          'stats': {
-            'matchesPlayed': 0,
-            'matchesWon': 0,
-            'totalKills': 0,
-            'totalWinningsCash': 0.0,
-            'totalRewardCoinsWon': 0,
-            'totalCoinsEarned': 0,
-          }
-        };
-        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, 'admin_master_01', matchingDoc);
-      }
-
-      if (matchingDoc != null) {
-        final loggedInUser = UserModel.fromJson(matchingDoc);
-        widget.appState.setUser(loggedInUser);
-
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('saved_uid', loggedInUser.uid);
+      if (authResult.success && authResult.user != null) {
+        widget.appState.setUser(authResult.user!);
 
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
@@ -136,7 +91,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       } else {
         setState(() {
           _isLoginLoading = false;
-          _loginError = 'Invalid email or password. Please check or Register a new account.';
+          _loginError = authResult.errorMessage ?? 'Invalid email or password. Please check or Register a new account.';
         });
       }
     } catch (e) {
@@ -189,69 +144,36 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     });
 
     try {
-      // 1. Check if email already registered
-      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      final exists = userDocs.any((d) => d['email']?.toString().toLowerCase() == email.toLowerCase());
-      if (exists) {
-        setState(() {
-          _isSignupLoading = false;
-          _signupError = 'This email is already registered! Please Login instead.';
-        });
-        return;
-      }
-
-      // 2. Create new User Document
-      final newUid = 'usr_${DateTime.now().millisecondsSinceEpoch}';
-      final newUser = UserModel(
-        uid: newUid,
-        displayName: name,
+      final authResult = await AuthService.signUp(
+        name: name,
+        phone: phone,
         email: email,
-        phoneNumber: phone,
+        password: pass,
         inGameName: ign,
         inGameUid: uid,
         inGameLevel: level,
-        password: pass,
-        role: email.toLowerCase().contains('admin') ? 'admin' : 'user',
-        wallet: UserWallet(
-          adCoins: 5,        // 5 🟡 Free Welcome Ad Coins (Ready for 1 Free Match)
-          rewardCoins: 0,
-          depositCash: 0.0,
-          winningCash: 0.0,
-        ),
-        adTracker: AdTracker(
-          adsWatchedToday: 0,
-          adsWatchedSinceLastCoin: 0,
-          dailyLimitRemaining: 30,
-        ),
-        stats: UserStats(
-          matchesPlayed: 0,
-          matchesWon: 0,
-          totalKills: 0,
-          totalWinningsCash: 0.0,
-          totalRewardCoinsWon: 0,
-          totalCoinsEarned: 5,
-        ),
       );
 
-      // 3. Save directly to Firestore (sw-gyanmitra-finall2)
-      await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, newUid, newUser.toJson());
+      if (authResult.success && authResult.user != null) {
+        widget.appState.setUser(authResult.user!);
 
-      // 4. Set in AppState & Local Storage
-      widget.appState.setUser(newUser);
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('saved_uid', newUid);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Account Created! Welcome bonus 5 🟡 Ad Coins credited!'),
+            backgroundColor: AppTheme.winningGreen,
+          ),
+        );
 
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('🎉 Account Created! Welcome bonus 5 🟡 Ad Coins credited!'),
-          backgroundColor: AppTheme.winningGreen,
-        ),
-      );
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => HomeScreen(appState: widget.appState)),
-      );
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => HomeScreen(appState: widget.appState)),
+        );
+      } else {
+        setState(() {
+          _isSignupLoading = false;
+          _signupError = authResult.errorMessage ?? 'Sign up failed. Please try again.';
+        });
+      }
     } catch (e) {
       setState(() {
         _isSignupLoading = false;

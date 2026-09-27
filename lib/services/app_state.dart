@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -9,6 +8,7 @@ import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
+import 'auth_service.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
@@ -104,11 +104,11 @@ class AppState extends ChangeNotifier {
     isAuthenticated = true;
     notifyListeners();
     _syncUser();
+    AuthService.saveUser(u);
   }
 
   Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('saved_uid');
+    await AuthService.logout();
     isAuthenticated = false;
     _initData();
     notifyListeners();
