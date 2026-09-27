@@ -1,0 +1,3 @@
+build/web/*.js binary
+build/web/*.wasm binary
+build/web/assets/** binary

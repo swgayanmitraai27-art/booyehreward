@@ -42,6 +42,53 @@
       overflow: hidden;
     }
   </style>
+  <!-- Razorpay Official Web Checkout SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script>
+    window.openRazorpayModal = function(optionsJson, callback) {
+      try {
+        var options = JSON.parse(optionsJson);
+        options.handler = function(response) {
+          if (callback) {
+            callback(JSON.stringify({
+              status: 'success',
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature
+            }));
+          }
+        };
+        options.modal = {
+          ondismiss: function() {
+            if (callback) {
+              callback(JSON.stringify({
+                status: 'dismissed',
+                message: 'Payment cancelled by user'
+              }));
+            }
+          }
+        };
+        var rzp = new Razorpay(options);
+        rzp.on('payment.failed', function(response) {
+          if (callback) {
+            callback(JSON.stringify({
+              status: 'failed',
+              error: (response.error && response.error.description) ? response.error.description : 'Payment Failed'
+            }));
+          }
+        });
+        rzp.open();
+      } catch (err) {
+        console.error('Razorpay open error:', err);
+        if (callback) {
+          callback(JSON.stringify({
+            status: 'error',
+            message: err.toString()
+          }));
+        }
+      }
+    };
+  </script>
 </head>
 <body>
   <script src="flutter_bootstrap.js" async></script>
