@@ -9,6 +9,24 @@ class ImageUrlResolver {
     String url = rawUrl.trim().replaceAll('"', '').replaceAll("'", '');
     if (url.isEmpty) return url;
 
+    // HTML embed snippet (e.g. <img src="https://i.ibb.co/..." />)
+    if (url.contains('<img') || url.contains('src=')) {
+      final reg = RegExp(r'src=["\x27]?([^"\x27\s>]+)["\x27]?');
+      final match = reg.firstMatch(url);
+      if (match != null) {
+        url = match.group(1)!;
+      }
+    }
+
+    // BBCode embed snippet (e.g. [img]https://i.ibb.co/...[/img])
+    if (url.contains('[img]') || url.contains('[/img]')) {
+      final reg = RegExp(r'\[img\](.*?)\[/img\]');
+      final match = reg.firstMatch(url);
+      if (match != null) {
+        url = match.group(1)!;
+      }
+    }
+
     // Google Drive direct link conversion
     if (url.contains('drive.google.com/file/d/')) {
       final reg = RegExp(r'/d/([a-zA-Z0-9_-]+)');
