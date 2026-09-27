@@ -76,13 +76,15 @@ class TransactionModel {
       (e) => e.name == json['walletAffected'],
       orElse: () => WalletType.depositCash,
     ),
-    amount: ((json['amount'] ?? 0) as num).toDouble(),
+    amount: ((json['amount'] ?? json['real_amount'] ?? json['bonus_amount'] ?? 0) as num).toDouble(),
     currency: json['currency'] ?? 'INR',
-    balanceBefore: ((json['balanceBefore'] ?? 0) as num).toDouble(),
-    balanceAfter: ((json['balanceAfter'] ?? 0) as num).toDouble(),
+    balanceBefore: ((json['balanceBefore'] ?? json['balance_before'] ?? 0) as num).toDouble(),
+    balanceAfter: ((json['balanceAfter'] ?? json['balance_after'] ?? json['real_amount'] ?? json['amount'] ?? 0) as num).toDouble(),
     status: json['status'] ?? 'SUCCESS',
     description: json['description'] ?? '',
-    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now(),
+    createdAt: json['createdAt'] != null
+        ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
+        : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) ?? DateTime.now() : DateTime.now()),
     metadata: json['metadata'],
   );
 }

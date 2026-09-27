@@ -22,10 +22,10 @@ class UserWallet {
   };
 
   factory UserWallet.fromJson(Map<String, dynamic> json) => UserWallet(
-    adCoins: (json['adCoins'] ?? 0) as int,
-    rewardCoins: (json['rewardCoins'] ?? 0) as int,
-    depositCash: ((json['depositCash'] ?? 0) as num).toDouble(),
-    winningCash: ((json['winningCash'] ?? 0) as num).toDouble(),
+    adCoins: ((json['adCoins'] ?? json['bonus_balance'] ?? json['ad_coins'] ?? json['bonus'] ?? 0) as num).toInt(),
+    rewardCoins: ((json['rewardCoins'] ?? json['reward_coins'] ?? 0) as num).toInt(),
+    depositCash: ((json['depositCash'] ?? json['real_balance'] ?? json['realCash'] ?? json['real'] ?? 0) as num).toDouble(),
+    winningCash: ((json['winningCash'] ?? json['total_winnings'] ?? json['winnings'] ?? 0) as num).toDouble(),
   );
 }
 
@@ -137,18 +137,36 @@ class UserModel {
     'role': role,
   };
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-    uid: json['uid'] ?? 'user_01',
-    displayName: json['displayName'] ?? 'Gamer',
-    email: json['email'] ?? 'gamer@booyah.com',
-    phoneNumber: json['phoneNumber'] ?? '',
-    inGameName: json['inGameName'] ?? 'FF_WARRIOR',
-    inGameUid: json['inGameUid'] ?? '10000000',
-    inGameLevel: (json['inGameLevel'] ?? 45) as int,
-    password: json['password'] ?? '',
-    wallet: UserWallet.fromJson(json['wallet'] ?? {}),
-    adTracker: AdTracker.fromJson(json['adTracker'] ?? {}),
-    stats: UserStats.fromJson(json['stats'] ?? {}),
-    role: json['role'] ?? 'user',
-  );
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    var walletMap = json['wallet'] as Map<String, dynamic>? ?? {};
+    if (walletMap.isEmpty && (json['real_balance'] != null || json['depositCash'] != null)) {
+      walletMap = {
+        'depositCash': json['depositCash'] ?? json['real_balance'] ?? 0,
+        'winningCash': json['winningCash'] ?? json['total_winnings'] ?? 0,
+        'adCoins': json['adCoins'] ?? json['bonus_balance'] ?? 0,
+        'rewardCoins': json['rewardCoins'] ?? 0,
+      };
+    } else {
+      // If wallet map exists, also merge top-level real_balance if depositCash is 0
+      final dep = walletMap['depositCash'] ?? json['depositCash'] ?? json['real_balance'] ?? 0;
+      final ad = walletMap['adCoins'] ?? json['adCoins'] ?? json['bonus_balance'] ?? 0;
+      walletMap['depositCash'] = dep;
+      walletMap['adCoins'] = ad;
+    }
+
+    return UserModel(
+      uid: json['uid'] ?? json['userId'] ?? 'user_01',
+      displayName: json['displayName'] ?? json['name'] ?? 'Gamer',
+      email: json['email'] ?? 'gamer@booyah.com',
+      phoneNumber: json['phoneNumber'] ?? json['phone'] ?? '',
+      inGameName: json['inGameName'] ?? json['in_game_name'] ?? 'FF_WARRIOR',
+      inGameUid: json['inGameUid'] ?? json['in_game_uid'] ?? '10000000',
+      inGameLevel: (json['inGameLevel'] ?? 45) as int,
+      password: json['password'] ?? '',
+      wallet: UserWallet.fromJson(walletMap),
+      adTracker: AdTracker.fromJson(json['adTracker'] ?? {}),
+      stats: UserStats.fromJson(json['stats'] ?? {}),
+      role: json['role'] ?? 'user',
+    );
+  }
 }

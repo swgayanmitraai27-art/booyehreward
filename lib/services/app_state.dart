@@ -1278,11 +1278,12 @@ class AppState extends ChangeNotifier {
       }
 
       final prefs = await SharedPreferences.getInstance();
-      final savedUid = prefs.getString('saved_uid') ?? (activeUser?.uid);
+      final savedUid = prefs.getString('saved_uid');
+      final uidToSync = savedUid ?? activeUser?.uid ?? (user.uid.isNotEmpty ? user.uid : null);
 
-      if (savedUid != null && savedUid.isNotEmpty) {
+      if (uidToSync != null && uidToSync.isNotEmpty) {
         try {
-          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, savedUid);
+          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uidToSync);
           if (userDoc != null && userDoc.isNotEmpty) {
             user = UserModel.fromJson(userDoc);
             isAuthenticated = true;
