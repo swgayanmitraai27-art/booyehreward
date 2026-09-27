@@ -41,7 +41,14 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 2200), () async {
+    // Immediately restore session from synchronous WebStorage cache
+    AuthService.getActiveUser().then((savedUser) {
+      if (savedUser != null && mounted) {
+        widget.appState.setUser(savedUser);
+      }
+    });
+
+    Timer(const Duration(milliseconds: 1800), () async {
       if (mounted) {
         if (!widget.appState.isAuthenticated) {
           final savedUser = await AuthService.getActiveUser();
@@ -62,7 +69,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             transitionsBuilder: (context, anim, secAnim, child) {
               return FadeTransition(opacity: anim, child: child);
             },
-            transitionDuration: const Duration(milliseconds: 600),
+            transitionDuration: const Duration(milliseconds: 500),
           ),
         );
       }
