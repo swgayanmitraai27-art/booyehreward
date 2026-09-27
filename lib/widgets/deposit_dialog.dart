@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:js_interop' as js_interop;
+import 'dart:js_interop_unsafe' as js_util;
 import '../services/app_state.dart';
 import '../services/payment_service.dart';
 import '../theme/app_theme.dart';
-
 import '../services/razorpay_checkout_service.dart';
 
 class DepositDialog extends StatefulWidget {
@@ -30,6 +32,19 @@ class _DepositDialogState extends State<DepositDialog> {
   double get currentAmount => double.tryParse(_amountController.text.trim()) ?? 0;
   double get bonusCoins => currentAmount * 0.50; // 50% instant bonus
 
+  void _openDirectCheckoutUrl() {
+    final amount = currentAmount.toInt();
+    final user = widget.appState.user;
+    final checkoutUrl = 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${Uri.encodeComponent(user.uid)}&amount=$amount';
+
+    if (kIsWeb) {
+      final global = js_interop.globalContext;
+      if (global.has('window')) {
+        js_util.callMethod(global, 'open', [checkoutUrl.toJS, '_blank'.toJS]);
+      }
+    }
+  }
+
   Future<void> _processDeposit() async {
     final amount = currentAmount;
     if (amount < 10) {
@@ -44,9 +59,12 @@ class _DepositDialogState extends State<DepositDialog> {
     });
 
     final user = widget.appState.user;
+    String orderId = '';
+    String keyId = 'rzp_live_TakGRfnTFl20dG';
+    double bonusCoinsAmt = amount * 0.5;
 
-    // STEP 1: Call API 1 -> Create Order (swgayanbhumi.in)
-    final orderRes = await PaymentService.createOrder(
+    // STEP 1: Try Native JS Bridge first on Web
+    final jsData = await RazorpayCheckoutService.createOrderViaJs(
       userId: user.uid,
       amount: amount,
       name: user.displayName,
@@ -54,12 +72,35 @@ class _DepositDialogState extends State<DepositDialog> {
       email: user.email,
     );
 
+    if (jsData != null && (jsData['orderId'] != null || jsData['order_id'] != null || jsData['id'] != null)) {
+      orderId = (jsData['orderId'] ?? jsData['order_id'] ?? jsData['id']).toString();
+      keyId = (jsData['keyId'] ?? jsData['key'] ?? keyId).toString();
+      bonusCoinsAmt = ((jsData['bonusCoins'] ?? bonusCoinsAmt) as num).toDouble();
+    } else {
+      // Fallback to PaymentService.createOrder
+      final orderRes = await PaymentService.createOrder(
+        userId: user.uid,
+        amount: amount,
+        name: user.displayName,
+        phone: user.phoneNumber,
+        email: user.email,
+      );
+
+      if (orderRes.success && orderRes.orderId.isNotEmpty) {
+        orderId = orderRes.orderId;
+        keyId = orderRes.keyId;
+        bonusCoinsAmt = orderRes.bonusCoins;
+      }
+    }
+
     if (!mounted) return;
 
-    if (!orderRes.success) {
+    if (orderId.isEmpty) {
+      // Direct Web Checkout Fallback
+      _openDirectCheckoutUrl();
       setState(() {
         isProcessing = false;
-        errorMsg = orderRes.errorMessage ?? 'Failed to create payment order.';
+        processingStep = '';
       });
       return;
     }
@@ -70,11 +111,11 @@ class _DepositDialogState extends State<DepositDialog> {
 
     // STEP 2: Open Real Razorpay Web SDK Gateway Modal
     final paymentResult = await RazorpayCheckoutService.openCheckout(
-      keyId: orderRes.keyId,
-      orderId: orderRes.orderId,
+      keyId: keyId,
+      orderId: orderId,
       amount: amount,
       name: 'Booyah Rewards (SkillWinner)',
-      description: 'Add ₹${amount.toInt()} (+₹${orderRes.bonusCoins.toInt()} Bonus)',
+      description: 'Add ₹${amount.toInt()} (+₹${bonusCoinsAmt.toInt()} Bonus)',
       userEmail: user.email,
       userPhone: user.phoneNumber,
       userName: user.displayName,
@@ -99,24 +140,24 @@ class _DepositDialogState extends State<DepositDialog> {
 
     // STEP 3: Call API 2 -> Verify Payment & Auto-Credit
     final verifyRes = await PaymentService.verifyPayment(
-      orderId: orderRes.orderId,
+      orderId: orderId,
       paymentId: realPaymentId,
       signature: realSignature,
       userId: user.uid,
       amount: amount,
-      bonusCoins: orderRes.bonusCoins > 0 ? orderRes.bonusCoins : bonusCoins,
+      bonusCoins: bonusCoinsAmt,
     );
 
     if (!mounted) return;
 
     // Credit in local AppState & sync to Firestore
-    final finalBonus = verifyRes.addedBonus > 0 ? verifyRes.addedBonus : bonusCoins;
+    final finalBonus = verifyRes.addedBonus > 0 ? verifyRes.addedBonus : bonusCoinsAmt;
     widget.appState.depositCash(amount, realPaymentId, bonusCoins: finalBonus);
 
     setState(() {
       isProcessing = false;
       successData = {
-        'orderId': orderRes.orderId,
+        'orderId': orderId,
         'paymentId': realPaymentId,
         'addedReal': amount,
         'addedBonus': finalBonus,
@@ -254,11 +295,11 @@ class _DepositDialogState extends State<DepositDialog> {
                         children: [
                           const Text(
                             'SPECIAL 50% BONUS OFFER ACTIVE!',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
                           ),
                           Text(
                             'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${currentAmount.toInt()} Cash + ${bonusCoins.toInt()} 🟡 Bonus Coins Free!',
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
                           ),
                         ],
                       ),
@@ -266,48 +307,50 @@ class _DepositDialogState extends State<DepositDialog> {
                   ],
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
 
+              // AMOUNT INPUT
               const Text(
                 'ENTER RECHARGE AMOUNT (₹)',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.subtleGrey, letterSpacing: 0.5),
               ),
               const SizedBox(height: 6),
               TextField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                onChanged: (v) => setState(() {}),
-                style: AppTheme.gamingNumber(fontSize: 22),
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                 decoration: InputDecoration(
                   prefixIcon: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    child: Text('₹', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    child: Text('₹', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                   ),
-                  prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey.shade300)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.blue, width: 2)),
                 ),
+                onChanged: (_) => setState(() {}),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
 
-              // Quick Amount Selectors
+              // PRESET CHIPS
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [20, 50, 100, 200, 500].map((amt) {
-                  final isSel = currentAmount == amt;
+                  final isSelected = currentAmount.toInt() == amt;
                   return InkWell(
                     onTap: () {
-                      setState(() {
-                        _amountController.text = amt.toString();
-                      });
+                      _amountController.text = amt.toString();
+                      setState(() {});
                     },
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isSel ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: isSel ? Colors.transparent : const Color(0xFFE2E8F0)),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: isSelected ? const Color(0xFF0F172A) : Colors.transparent),
                       ),
                       child: Text(
                         '₹$amt',
@@ -315,57 +358,55 @@ class _DepositDialogState extends State<DepositDialog> {
                           fontFamily: 'Inter',
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: isSel ? Colors.white : const Color(0xFF334155),
+                          color: isSelected ? Colors.white : const Color(0xFF334155),
                         ),
                       ),
                     ),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
 
               if (errorMsg != null) ...[
                 Container(
-                  padding: const EdgeInsets.all(8),
-                  margin: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.all(10),
+                  margin: const EdgeInsets.only(bottom: 12),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.red.shade200),
                   ),
-                  child: Text(errorMsg!, style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold)),
+                  child: Text(
+                    errorMsg!,
+                    style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.w600),
+                  ),
                 ),
               ],
 
-              // Pay Button
+              // PAY BUTTON
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue.shade700,
+                    backgroundColor: const Color(0xFF1D4ED8),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
                   ),
                   onPressed: isProcessing ? null : _processDeposit,
                   child: isProcessing
                       ? Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              processingStep.isNotEmpty ? processingStep : 'PROCESSING VIA RAZORPAY...',
-                              style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.bold),
-                            ),
+                            const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                            const SizedBox(width: 10),
+                            Text(processingStep, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                           ],
                         )
                       : Text(
                           'PAY ₹${currentAmount.toInt()} WITH RAZORPAY',
-                          style: AppTheme.gamingTitle(fontSize: 14, color: Colors.white, isItalic: false),
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
                         ),
                 ),
               ),

@@ -1,19 +1,6 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <!--
-    If you are serving your web app in a path other than the root, change the
-    href value below to reflect the base path you are serving from.
-
-    The path provided below has to start and end with a slash "/" in order for
-    it to work correctly.
-
-    For more details:
-    * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/base
-
-    This is a placeholder for base href that will be replaced by the value of
-    the `--base-href` argument provided to `flutter build`.
-  -->
   <base href="/">
 
   <meta charset="UTF-8">
@@ -45,12 +32,29 @@
   <!-- Razorpay Official Web Checkout SDK -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
-    // Exact SW Tech Solution Checkout Bridge
+    // 1. Direct JS Order Creator
+    window.createOrderViaJs = async function(payloadJson, callback) {
+      try {
+        var payload = JSON.parse(payloadJson);
+        var res = await fetch('https://www.swgayanbhumi.in/api/payments/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (callback) callback(JSON.stringify(data));
+      } catch (e) {
+        console.error('JS Order Creation Error:', e);
+        if (callback) callback(JSON.stringify({ success: false, error: e.toString() }));
+      }
+    };
+
+    // 2. Exact SW Tech Solution Checkout Bridge
     window.openRazorpayModal = function(optionsJson, callback) {
       try {
         var options = JSON.parse(optionsJson);
         options.name = options.name || 'SW Tech Solution';
-        options.image = options.image || 'https://swgayanbhumi.in/logo.png';
+        options.image = options.image || 'https://www.swgayanbhumi.in/logo.png';
         options.theme = options.theme || { color: '#E50914' };
         
         options.handler = function(response) {

@@ -21,6 +21,55 @@ class RazorpayPaymentResult {
 }
 
 class RazorpayCheckoutService {
+  /// Create Order via Web JS Bridge to bypass Flutter Web fetch restrictions
+  static Future<Map<String, dynamic>?> createOrderViaJs({
+    required String userId,
+    required double amount,
+    required String name,
+    required String phone,
+    required String email,
+  }) async {
+    if (!kIsWeb) return null;
+    final completer = Completer<Map<String, dynamic>?>();
+
+    try {
+      final global = js_interop.globalContext;
+      if (global.has('createOrderViaJs')) {
+        final payload = jsonEncode({
+          'uid': userId,
+          'userId': userId,
+          'amount': amount.toInt(),
+          'name': name,
+          'phone': phone,
+          'email': email,
+        });
+
+        final jsCallback = ((js_interop.JSString responseStr) {
+          try {
+            final data = jsonDecode(responseStr.toDart);
+            completer.complete(data as Map<String, dynamic>);
+          } catch (e) {
+            completer.complete(null);
+          }
+        }).toJS;
+
+        global.callMethod(
+          'createOrderViaJs'.toJS,
+          payload.toJS,
+          jsCallback,
+        );
+
+        return await completer.future.timeout(
+          const Duration(seconds: 12),
+          onTimeout: () => null,
+        );
+      }
+    } catch (e) {
+      debugPrint('[RazorpayCheckoutService] JS create order error: $e');
+    }
+    return null;
+  }
+
   static Future<RazorpayPaymentResult> openCheckout({
     required String keyId,
     required String orderId,
@@ -42,7 +91,7 @@ class RazorpayCheckoutService {
           'name': 'SW Tech Solution',
           'description': 'Add ₹${amount.toInt()} (+50% Bonus)',
           'order_id': orderId,
-          'image': 'https://swgayanbhumi.in/logo.png',
+          'image': 'https://www.swgayanbhumi.in/logo.png',
           'prefill': {
             'name': userName.isNotEmpty ? userName : 'Gamer',
             'email': userEmail.isNotEmpty ? userEmail : 'user@gmail.com',
