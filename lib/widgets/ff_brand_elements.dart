@@ -9,14 +9,16 @@ class FreeFireLogoInline extends StatelessWidget {
   final double? width;
   final Color? color;
   final BoxFit fit;
+  final bool showBadge;
 
   const FreeFireLogoInline({
     super.key,
     this.gameType = GameType.freeFire,
-    this.height = 22,
-    this.width = 120,
+    this.height = 18,
+    this.width = 110,
     this.color,
     this.fit = BoxFit.contain,
+    this.showBadge = true,
   });
 
   @override
@@ -25,7 +27,7 @@ class FreeFireLogoInline extends StatelessWidget {
         ? 'imgasest/FREE_FIRE_MAX_LOGO.PNG.png'
         : 'imgasest/FREE_FIRE_LOGO.PNG.png';
 
-    return Image.asset(
+    Widget imgWidget = Image.asset(
       assetPath,
       height: height,
       width: width,
@@ -39,7 +41,7 @@ class FreeFireLogoInline extends StatelessWidget {
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
-            gameType == GameType.freeFireMax ? 'FREE FIRE MAX' : 'FREE FIRE',
+            gameType == GameType.freeFireMax ? '🔥 FREE FIRE MAX' : '🔥 FREE FIRE',
             style: const TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 11,
@@ -50,6 +52,27 @@ class FreeFireLogoInline extends StatelessWidget {
         );
       },
     );
+
+    if (showBadge) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: const Color(0xFF334155), width: 0.8),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(40),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: imgWidget,
+      );
+    }
+
+    return imgWidget;
   }
 }
 

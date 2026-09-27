@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/app_state.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/ff_brand_elements.dart';
 import 'home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -266,12 +267,20 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
                           Text('REWARDS', style: AppTheme.gamingTitle(fontSize: 22, color: AppTheme.primaryAmber)),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        'Official Free Fire Esports Tournament Platform',
-                        style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                      const SizedBox(height: 6),
+                      const Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: 6,
+                        children: [
+                          Text(
+                            'Official Esports Platform for',
+                            style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                          ),
+                          FreeFireLogoInline(height: 14, width: 90),
+                        ],
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 18),
 
                       // Tabs: Login vs Register
                       Container(

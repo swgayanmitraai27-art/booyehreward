@@ -60,20 +60,21 @@ class BooyahFooter extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: const Color(0xFF0F172A),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                    border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withAlpha(12), blurRadius: 4),
+                      BoxShadow(color: Colors.black.withAlpha(50), blurRadius: 4),
                     ],
                   ),
                   child: Image.asset(
                     'imgasest/FREE_FIRE_LOGO.PNG.png',
                     height: 20,
+                    width: 110,
                     fit: BoxFit.contain,
                     errorBuilder: (c, e, s) => const Text(
-                      'FREE FIRE',
-                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.black),
+                      '🔥 FREE FIRE',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Color(0xFFF59E0B)),
                     ),
                   ),
                 ),

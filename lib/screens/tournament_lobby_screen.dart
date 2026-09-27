@@ -654,7 +654,8 @@ class TournamentLobbyScreen extends StatelessWidget {
                   ),
                   child: FreeFireLogoInline(
                     gameType: match.gameType,
-                    height: 13,
+                    height: 14,
+                    showBadge: false,
                   ),
                 ),
               ),
