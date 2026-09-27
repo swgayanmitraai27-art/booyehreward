@@ -77,6 +77,12 @@ class AppState extends ChangeNotifier {
   String selectedFormat = 'ALL';
   String selectedMode = 'ALL'; // 'ALL', 'BR', 'CS', 'LONE_WOLF'
   String selectedTeamType = 'ALL'; // 'ALL', 'SOLO', 'DUO', 'SQUAD'
+  String selectedStatus = 'ALL'; // 'ALL', 'UPCOMING', 'ONGOING', 'COMPLETED'
+
+  void setStatusFilter(String status) {
+    selectedStatus = status;
+    notifyListeners();
+  }
 
   void setMode(String mode) {
     selectedMode = mode;
@@ -179,7 +185,7 @@ class AppState extends ChangeNotifier {
   }
 
   List<MatchModel> get filteredMatches {
-    return matches.where((m) {
+    final list = matches.where((m) {
       // 1. Free / Paid Filter
       if (selectedFilter == 'FREE' && m.matchType != MatchType.free) return false;
       if (selectedFilter == 'PAID' && m.matchType != MatchType.paid) return false;
@@ -194,8 +200,22 @@ class AppState extends ChangeNotifier {
       if (selectedTeamType == 'DUO' && m.teamType != TeamType.duo) return false;
       if (selectedTeamType == 'SQUAD' && m.teamType != TeamType.squad) return false;
 
+      // 4. Status Filter (Upcoming, Ongoing, Completed/Resulted)
+      if (selectedStatus == 'UPCOMING' && m.status != MatchStatus.upcoming) return false;
+      if (selectedStatus == 'ONGOING' && m.status != MatchStatus.ongoing) return false;
+      if (selectedStatus == 'COMPLETED' && m.status != MatchStatus.completed) return false;
+
       return true;
     }).toList();
+
+    // Sort: Upcoming & Ongoing first, Completed at end
+    list.sort((a, b) {
+      int scoreA = a.status == MatchStatus.upcoming ? 0 : (a.status == MatchStatus.ongoing ? 1 : 2);
+      int scoreB = b.status == MatchStatus.upcoming ? 0 : (b.status == MatchStatus.ongoing ? 1 : 2);
+      return scoreA.compareTo(scoreB);
+    });
+
+    return list;
   }
 
   // --- JOIN MATCH WITH SPECIFIC SLOT SELECTION ---
@@ -1155,6 +1175,12 @@ class AppState extends ChangeNotifier {
   void adminCreateMatch(MatchModel newMatch) {
     matches.insert(0, newMatch);
     _syncMatch(newMatch);
+    notifyListeners();
+  }
+
+  void adminDeleteMatch(String matchId) {
+    matches.removeWhere((m) => m.id == matchId);
+    FirestoreRestService.deleteDocument(FirebaseConfig.matchesCollection, matchId);
     notifyListeners();
   }
 

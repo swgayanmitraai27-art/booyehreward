@@ -260,6 +260,23 @@ class TournamentLobbyScreen extends StatelessWidget {
                   _buildEconomyChip('PAID', 'Paid Matches', '💵', selectedFilter == 'PAID'),
                 ],
               ),
+              const SizedBox(height: 10),
+
+              // Match Status Row (ALL / UPCOMING / ONGOING / RESULTS)
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildStatusFilterChip('ALL', 'All Status', Icons.all_inclusive, appState.selectedStatus == 'ALL', () => appState.setStatusFilter('ALL')),
+                    const SizedBox(width: 6),
+                    _buildStatusFilterChip('UPCOMING', 'Upcoming 🕒', Icons.schedule, appState.selectedStatus == 'UPCOMING', () => appState.setStatusFilter('UPCOMING')),
+                    const SizedBox(width: 6),
+                    _buildStatusFilterChip('ONGOING', 'Live 🔴', Icons.sensors, appState.selectedStatus == 'ONGOING', () => appState.setStatusFilter('ONGOING')),
+                    const SizedBox(width: 6),
+                    _buildStatusFilterChip('COMPLETED', 'Resulted 🏆', Icons.emoji_events, appState.selectedStatus == 'COMPLETED', () => appState.setStatusFilter('COMPLETED')),
+                  ],
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -558,6 +575,38 @@ class TournamentLobbyScreen extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // --- STATUS FILTER CHIP (All / Upcoming / Ongoing / Resulted) ---
+  Widget _buildStatusFilterChip(String value, String label, IconData icon, bool isSelected, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isSelected ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 12, color: isSelected ? Colors.white : const Color(0xFF64748B)),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? Colors.white : const Color(0xFF475569),
+              ),
+            ),
+          ],
         ),
       ),
     );

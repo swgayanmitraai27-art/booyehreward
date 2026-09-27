@@ -550,28 +550,46 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 10),
 
-          DropdownButtonFormField<String>(
-            initialValue: selectedMatch.id,
-            isExpanded: true,
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'Select Match to Declare Results',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            items: matches.map((m) {
-              return DropdownMenuItem(
-                value: m.id,
-                child: Text(
-                  '${m.title} [${m.mode.name.toUpperCase()} • ${m.teamType.name.toUpperCase()}] (${m.participants.length} Players)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: selectedMatch.id,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    labelText: 'Select Match to Declare Results',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: matches.map((m) {
+                    return DropdownMenuItem(
+                      value: m.id,
+                      child: Text(
+                        '${m.title} [${m.mode.name.toUpperCase()} • ${m.teamType.name.toUpperCase()}] (${m.participants.length} Players)',
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      selectedMatchIdForResult = val;
+                    });
+                  },
                 ),
-              );
-            }).toList(),
-            onChanged: (val) {
-              setState(() {
-                selectedMatchIdForResult = val;
-              });
-            },
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFFEE2E2),
+                  foregroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                tooltip: 'Delete this match',
+                icon: const Icon(Icons.delete_forever, size: 20),
+                onPressed: () => _confirmDeleteMatch(context, selectedMatch),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
@@ -3297,6 +3315,40 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   String _monthName(int month) {
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return months[(month - 1).clamp(0, 11)];
+  }
+
+  void _confirmDeleteMatch(BuildContext context, MatchModel match) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Match?'),
+        content: Text('Are you sure you want to permanently delete "${match.title}" (ID: ${match.id}) from Firestore?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() {
+                if (selectedMatchIdForResult == match.id) selectedMatchIdForResult = null;
+                if (selectedMatchIdForRoom == match.id) selectedMatchIdForRoom = null;
+              });
+              widget.appState.adminDeleteMatch(match.id);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.red,
+                  content: Text('Match "${match.title}" deleted from database.'),
+                ),
+              );
+            },
+            child: const Text('DELETE PERMANENTLY'),
+          ),
+        ],
+      ),
+    );
   }
 
   String _formatTime(DateTime dt) {
