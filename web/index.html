@@ -45,9 +45,14 @@
   <!-- Razorpay Official Web Checkout SDK -->
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   <script>
+    // Exact SW Tech Solution Checkout Bridge
     window.openRazorpayModal = function(optionsJson, callback) {
       try {
         var options = JSON.parse(optionsJson);
+        options.name = options.name || 'SW Tech Solution';
+        options.image = options.image || 'https://swgayanbhumi.in/logo.png';
+        options.theme = options.theme || { color: '#E50914' };
+        
         options.handler = function(response) {
           if (callback) {
             callback(JSON.stringify({
@@ -68,7 +73,7 @@
             }
           }
         };
-        var rzp = new Razorpay(options);
+        var rzp = new window.Razorpay(options);
         rzp.on('payment.failed', function(response) {
           if (callback) {
             callback(JSON.stringify({

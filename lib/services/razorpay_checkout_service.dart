@@ -36,19 +36,20 @@ class RazorpayCheckoutService {
     if (kIsWeb) {
       try {
         final options = {
-          'key': keyId,
+          'key': keyId.isNotEmpty ? keyId : 'rzp_live_TakGRfnTFl20dG',
           'amount': (amount * 100).toInt(),
           'currency': 'INR',
-          'name': name.isNotEmpty ? name : 'Booyah Rewards',
-          'description': description.isNotEmpty ? description : 'Wallet Recharge',
+          'name': 'SW Tech Solution',
+          'description': 'Add ₹${amount.toInt()} (+50% Bonus)',
           'order_id': orderId,
+          'image': 'https://swgayanbhumi.in/logo.png',
           'prefill': {
-            'name': userName,
-            'email': userEmail,
-            'contact': userPhone,
+            'name': userName.isNotEmpty ? userName : 'Gamer',
+            'email': userEmail.isNotEmpty ? userEmail : 'user@gmail.com',
+            'contact': userPhone.isNotEmpty ? userPhone : '9935259374',
           },
           'theme': {
-            'color': '#F59E0B',
+            'color': '#E50914',
           }
         };
 

@@ -87,20 +87,17 @@ class PaymentService {
           'Accept': 'application/json',
         },
         body: jsonEncode({
-          'userId': userId,
+          'userId': userId.isNotEmpty ? userId : 'USER_123',
           'amount': amount.toInt(),
-          'name': name.isNotEmpty ? name : 'SkillWinner Player',
-          'phone': phone.isNotEmpty ? phone : '+919935259374',
-          'email': email.isNotEmpty ? email : 'user@gmail.com',
+          'name': name.isNotEmpty ? name : 'Gamer',
         }),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return PaymentOrderResponse.fromJson(data);
       } else {
-        debugPrint('[PaymentService] Order HTTP error: ${response.statusCode}');
-        // Fallback for resilient offline/mock mode
+        debugPrint('[PaymentService] Order HTTP error: ${response.statusCode} - ${response.body}');
         return _mockOrderResponse(amount);
       }
     } catch (e) {
@@ -129,17 +126,17 @@ class PaymentService {
           'razorpay_order_id': orderId,
           'razorpay_payment_id': paymentId,
           'razorpay_signature': signature,
-          'userId': userId,
+          'userId': userId.isNotEmpty ? userId : 'USER_123',
           'amount': amount.toInt(),
           'bonusCoins': bonusCoins.toInt(),
         }),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 12));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return PaymentVerificationResponse.fromJson(data);
       } else {
-        debugPrint('[PaymentService] Verify HTTP error: ${response.statusCode}');
+        debugPrint('[PaymentService] Verify HTTP error: ${response.statusCode} - ${response.body}');
         return _mockVerificationResponse(amount, bonusCoins);
       }
     } catch (e) {
