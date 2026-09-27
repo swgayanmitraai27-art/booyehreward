@@ -29,17 +29,18 @@ class PaymentOrderResponse {
   });
 
   factory PaymentOrderResponse.fromJson(Map<String, dynamic> json) {
+    final orderId = json['orderId'] ?? json['order_id'] ?? json['id'] ?? '';
     return PaymentOrderResponse(
-      success: json['success'] == true,
-      orderId: json['orderId'] ?? '',
+      success: (json['success'] == true || orderId.toString().isNotEmpty),
+      orderId: orderId.toString(),
       amountInPaise: (json['amount'] ?? 0) as int,
       currency: json['currency'] ?? 'INR',
-      keyId: json['keyId'] ?? FirebaseConfig.defaultRazorpayKeyId,
-      name: json['name'] ?? 'SkillWinner Esports',
+      keyId: json['keyId'] ?? json['key'] ?? FirebaseConfig.defaultRazorpayKeyId,
+      name: json['name'] ?? 'SW Tech Solution',
       description: json['description'] ?? 'Wallet Recharge',
-      bonusCoins: ((json['bonusCoins'] ?? 0) as num).toDouble(),
+      bonusCoins: ((json['bonusCoins'] ?? json['bonus'] ?? 0) as num).toDouble(),
       realAmount: ((json['realAmount'] ?? 0) as num).toDouble(),
-      errorMessage: json['message'],
+      errorMessage: json['error'] ?? json['message'],
     );
   }
 }
@@ -63,15 +64,15 @@ class PaymentVerificationResponse {
     return PaymentVerificationResponse(
       success: json['success'] == true,
       message: json['message'] ?? 'Payment verified successfully',
-      addedReal: ((json['addedReal'] ?? 0) as num).toDouble(),
-      addedBonus: ((json['addedBonus'] ?? 0) as num).toDouble(),
+      addedReal: ((json['addedReal'] ?? json['realAmount'] ?? 0) as num).toDouble(),
+      addedBonus: ((json['addedBonus'] ?? json['bonusCoins'] ?? 0) as num).toDouble(),
       totalAdded: ((json['totalAdded'] ?? 0) as num).toDouble(),
     );
   }
 }
 
 class PaymentService {
-  /// 1. Create Payment Order API Call
+  /// 1. Create Live Razorpay Order via SW Tech Backend
   static Future<PaymentOrderResponse> createOrder({
     required String userId,
     required double amount,
@@ -87,26 +88,51 @@ class PaymentService {
           'Accept': 'application/json',
         },
         body: jsonEncode({
+          'uid': userId.isNotEmpty ? userId : 'USER_123',
           'userId': userId.isNotEmpty ? userId : 'USER_123',
           'amount': amount.toInt(),
           'name': name.isNotEmpty ? name : 'Gamer',
+          'phone': phone,
+          'email': email,
         }),
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(const Duration(seconds: 15));
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return PaymentOrderResponse.fromJson(data);
       } else {
         debugPrint('[PaymentService] Order HTTP error: ${response.statusCode} - ${response.body}');
-        return _mockOrderResponse(amount);
+        return PaymentOrderResponse(
+          success: false,
+          orderId: '',
+          amountInPaise: (amount * 100).toInt(),
+          currency: 'INR',
+          keyId: FirebaseConfig.defaultRazorpayKeyId,
+          name: 'SW Tech Solution',
+          description: 'Wallet Recharge',
+          bonusCoins: amount * 0.5,
+          realAmount: amount,
+          errorMessage: 'Server returned HTTP ${response.statusCode}: ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint('[PaymentService] Order network exception: $e');
-      return _mockOrderResponse(amount);
+      return PaymentOrderResponse(
+        success: false,
+        orderId: '',
+        amountInPaise: (amount * 100).toInt(),
+        currency: 'INR',
+        keyId: FirebaseConfig.defaultRazorpayKeyId,
+        name: 'SW Tech Solution',
+        description: 'Wallet Recharge',
+        bonusCoins: amount * 0.5,
+        realAmount: amount,
+        errorMessage: 'Network error connecting to payment gateway: $e',
+      );
     }
   }
 
-  /// 2. Verify Payment & Auto-Credit Wallet API Call
+  /// 2. Verify Payment & Auto-Credit Wallet in Firebase
   static Future<PaymentVerificationResponse> verifyPayment({
     required String orderId,
     required String paymentId,
@@ -123,50 +149,41 @@ class PaymentService {
           'Accept': 'application/json',
         },
         body: jsonEncode({
-          'razorpay_order_id': orderId,
-          'razorpay_payment_id': paymentId,
-          'razorpay_signature': signature,
+          'uid': userId.isNotEmpty ? userId : 'USER_123',
           'userId': userId.isNotEmpty ? userId : 'USER_123',
+          'orderId': orderId,
+          'razorpay_order_id': orderId,
+          'paymentId': paymentId,
+          'razorpay_payment_id': paymentId,
+          'signature': signature,
+          'razorpay_signature': signature,
           'amount': amount.toInt(),
           'bonusCoins': bonusCoins.toInt(),
         }),
-      ).timeout(const Duration(seconds: 12));
+      ).timeout(const Duration(seconds: 15));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return PaymentVerificationResponse.fromJson(data);
       } else {
         debugPrint('[PaymentService] Verify HTTP error: ${response.statusCode} - ${response.body}');
-        return _mockVerificationResponse(amount, bonusCoins);
+        return PaymentVerificationResponse(
+          success: false,
+          message: 'Payment verification failed on server: ${response.body}',
+          addedReal: 0,
+          addedBonus: 0,
+          totalAdded: 0,
+        );
       }
     } catch (e) {
       debugPrint('[PaymentService] Verify network exception: $e');
-      return _mockVerificationResponse(amount, bonusCoins);
+      return PaymentVerificationResponse(
+        success: false,
+        message: 'Network error verifying payment: $e',
+        addedReal: 0,
+        addedBonus: 0,
+        totalAdded: 0,
+      );
     }
-  }
-
-  static PaymentOrderResponse _mockOrderResponse(double amount) {
-    final bonus = (amount * 0.50); // 50% bonus
-    return PaymentOrderResponse(
-      success: true,
-      orderId: 'order_sw_${DateTime.now().millisecondsSinceEpoch}',
-      amountInPaise: (amount * 100).toInt(),
-      currency: 'INR',
-      keyId: FirebaseConfig.defaultRazorpayKeyId,
-      name: 'SkillWinner Esports',
-      description: 'Add ₹${amount.toInt()} Real Cash (+₹${bonus.toInt()} Bonus Free)',
-      bonusCoins: bonus,
-      realAmount: amount,
-    );
-  }
-
-  static PaymentVerificationResponse _mockVerificationResponse(double amount, double bonusCoins) {
-    return PaymentVerificationResponse(
-      success: true,
-      message: 'Payment verified & wallet credited successfully',
-      addedReal: amount,
-      addedBonus: bonusCoins,
-      totalAdded: amount + bonusCoins,
-    );
   }
 }

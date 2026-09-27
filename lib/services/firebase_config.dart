@@ -15,8 +15,8 @@ class FirebaseConfig {
   static const String financialLedgerCollection = "financial_ledger";
 
   // Backend API Base URL
-  static const String apiBaseUrl = "https://swgayanbhumi.in/api/skillwinner";
-  static const String orderEndpoint = "$apiBaseUrl/order";
+  static const String apiBaseUrl = "https://swgayanbhumi.in/api/payments";
+  static const String orderEndpoint = "$apiBaseUrl/create-order";
   static const String verifyEndpoint = "$apiBaseUrl/verify";
   static const String defaultRazorpayKeyId = "rzp_live_TakGRfnTFl20dG";
 }
