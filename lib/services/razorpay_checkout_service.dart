@@ -84,13 +84,12 @@ class RazorpayCheckoutService {
 
     if (kIsWeb) {
       try {
-        final options = {
+        final options = <String, dynamic>{
           'key': keyId.isNotEmpty ? keyId : 'rzp_live_TakGRfnTFl20dG',
           'amount': (amount * 100).toInt(),
           'currency': 'INR',
-          'name': 'SW Tech Solution',
-          'description': 'Add ₹${amount.toInt()} (+50% Bonus)',
-          'order_id': orderId,
+          'name': name.isNotEmpty ? name : 'Booyah Rewards (SkillWinner)',
+          'description': description.isNotEmpty ? description : 'Add ₹${amount.toInt()} (+50% Bonus)',
           'image': 'https://www.swgayanbhumi.in/logo.png',
           'prefill': {
             'name': userName.isNotEmpty ? userName : 'Gamer',
@@ -101,6 +100,10 @@ class RazorpayCheckoutService {
             'color': '#E50914',
           }
         };
+
+        if (orderId.isNotEmpty && !orderId.startsWith('order_sw_')) {
+          options['order_id'] = orderId;
+        }
 
         final optionsJson = jsonEncode(options);
 

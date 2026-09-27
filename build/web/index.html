@@ -54,21 +54,26 @@
       window.open(url, '_blank');
     };
 
-    // 3. Exact SW Tech Solution Checkout Bridge
+    // 3. Exact SW Tech Solution / Booyah Rewards Checkout Bridge
     window.openRazorpayModal = function(optionsJson, callback) {
       try {
         var options = JSON.parse(optionsJson);
-        options.name = options.name || 'SW Tech Solution';
+        options.name = options.name || 'Booyah Rewards';
         options.image = options.image || 'https://www.swgayanbhumi.in/logo.png';
         options.theme = options.theme || { color: '#E50914' };
+        
+        // Clean order_id: remove if empty or dummy
+        if (!options.order_id || typeof options.order_id !== 'string' || options.order_id.trim() === '' || options.order_id.startsWith('order_sw_')) {
+          delete options.order_id;
+        }
         
         options.handler = function(response) {
           if (callback) {
             callback(JSON.stringify({
               status: 'success',
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_signature: response.razorpay_signature
+              razorpay_payment_id: response.razorpay_payment_id || ('pay_' + Date.now()),
+              razorpay_order_id: response.razorpay_order_id || '',
+              razorpay_signature: response.razorpay_signature || ''
             }));
           }
         };
