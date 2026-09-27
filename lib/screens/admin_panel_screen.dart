@@ -2142,6 +2142,103 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
         ),
         const SizedBox(height: 16),
 
+        // 💰 USER REAL MONEY INFLOW & TOTAL DEPOSITS STATS
+        Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1E1B4B), Color(0xFF312E81)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFF6366F1)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(25), blurRadius: 8, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.account_balance, color: Color(0xFFA5B4FC), size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'LIFETIME USER REAL MONEY INFLOW (DEPOSITS)',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFFA5B4FC), letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4F46E5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('RAZORPAY UPI / GATEWAY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('TOTAL CASH DEPOSITED', style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Colors.white70, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '₹${((widget.appState.adminFinancialMetrics['totalDeposits'] ?? 0) as num).toInt()}',
+                          style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFF38BDF8)),
+                        ),
+                        const Text('All users real cash loaded', style: TextStyle(fontSize: 8.5, color: Colors.white54)),
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, height: 40, color: Colors.white24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('ENTRY FEES COLLECTED', style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Colors.white70, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '₹${((widget.appState.adminFinancialMetrics['totalCashEntryFees'] ?? 0) as num).toInt()}',
+                          style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFFFBBF24)),
+                        ),
+                        const Text('Used in tournament entries', style: TextStyle(fontSize: 8.5, color: Colors.white54)),
+                      ],
+                    ),
+                  ),
+                  Container(width: 1, height: 40, color: Colors.white24),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('TOTAL PAID OUT (UPI)', style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, color: Colors.white70, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 2),
+                        Text(
+                          '₹${((widget.appState.adminFinancialMetrics['totalPaidOut'] ?? 0) as num).toInt()}',
+                          style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFF34D399)),
+                        ),
+                        const Text('Completed user withdrawals', style: TextStyle(fontSize: 8.5, color: Colors.white54)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
         // 4 TOP AGGREGATED METRIC CARDS
         LayoutBuilder(
           builder: (context, constraints) {
