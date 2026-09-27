@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
@@ -1267,20 +1268,27 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUid = prefs.getString('saved_uid');
+      // 1. Sync User Profile from AuthService local cache and Firestore
+      final activeUser = await AuthService.getActiveUser();
+      if (activeUser != null) {
+        user = activeUser;
+        isAuthenticated = true;
+      }
 
-      // 1. Sync User Profile from Firestore
+      final prefs = await SharedPreferences.getInstance();
+      final savedUid = prefs.getString('saved_uid') ?? (activeUser?.uid);
+
       if (savedUid != null && savedUid.isNotEmpty) {
-        final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, savedUid);
-        if (userDoc != null && userDoc.isNotEmpty) {
-          user = UserModel.fromJson(userDoc);
-          isAuthenticated = true;
-        } else {
-          isAuthenticated = false;
+        try {
+          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, savedUid);
+          if (userDoc != null && userDoc.isNotEmpty) {
+            user = UserModel.fromJson(userDoc);
+            isAuthenticated = true;
+            await AuthService.saveUser(user);
+          }
+        } catch (e) {
+          debugPrint('[AppState] Remote user doc sync error: $e');
         }
-      } else {
-        isAuthenticated = false;
       }
 
       // 2. Sync Live Matches from Firestore
@@ -1325,6 +1333,7 @@ class AppState extends ChangeNotifier {
   }
 
   void _syncUser() {
+    AuthService.saveUser(user);
     FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
   }
 

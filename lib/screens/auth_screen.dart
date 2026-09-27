@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import '../models/user_model.dart';
 import '../services/app_state.dart';
 import '../services/auth_service.dart';
-import '../services/firestore_rest_service.dart';
-import '../services/firebase_config.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 

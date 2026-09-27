@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
+import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import 'home_screen.dart';
@@ -40,8 +41,17 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     _controller.forward();
 
-    Timer(const Duration(milliseconds: 2200), () {
+    Timer(const Duration(milliseconds: 2200), () async {
       if (mounted) {
+        if (!widget.appState.isAuthenticated) {
+          final savedUser = await AuthService.getActiveUser();
+          if (savedUser != null) {
+            widget.appState.setUser(savedUser);
+          }
+        }
+
+        if (!mounted) return;
+
         final targetScreen = widget.appState.isAuthenticated
             ? HomeScreen(appState: widget.appState)
             : AuthScreen(appState: widget.appState);
