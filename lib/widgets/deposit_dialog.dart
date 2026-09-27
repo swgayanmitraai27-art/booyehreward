@@ -39,8 +39,8 @@ class _DepositDialogState extends State<DepositDialog> {
 
     if (kIsWeb) {
       final global = js_interop.globalContext;
-      if (global.has('window')) {
-        js_util.callMethod(global, 'open', [checkoutUrl.toJS, '_blank'.toJS]);
+      if (global.has('openWindowUrl')) {
+        global.callMethod('openWindowUrl'.toJS, checkoutUrl.toJS);
       }
     }
   }
@@ -312,7 +312,7 @@ class _DepositDialogState extends State<DepositDialog> {
               // AMOUNT INPUT
               const Text(
                 'ENTER RECHARGE AMOUNT (₹)',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.subtleGrey, letterSpacing: 0.5),
+                style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w800, color: Color(0xFF64748B), letterSpacing: 0.5),
               ),
               const SizedBox(height: 6),
               TextField(

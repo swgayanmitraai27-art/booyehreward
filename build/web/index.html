@@ -49,7 +49,12 @@
       }
     };
 
-    // 2. Exact SW Tech Solution Checkout Bridge
+    // 2. Window opener
+    window.openWindowUrl = function(url) {
+      window.open(url, '_blank');
+    };
+
+    // 3. Exact SW Tech Solution Checkout Bridge
     window.openRazorpayModal = function(optionsJson, callback) {
       try {
         var options = JSON.parse(optionsJson);
