@@ -149,10 +149,20 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   Future<void> _downloadQr() async {
-    if (activePaymentUrl != null) {
+    if (activeQrId != null) {
+      final downloadUrl = 'https://www.swgayanbhumi.in/api/skillwinner/qr/image?id=$activeQrId&download=1';
+      await UrlLauncherUtil.openUrl(downloadUrl);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Downloading Razorpay QR Image...'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Color(0xFF047857),
+          ),
+        );
+      }
+    } else if (activePaymentUrl != null) {
       await UrlLauncherUtil.openUrl(activePaymentUrl!);
-    } else if (activeQrId != null) {
-      await UrlLauncherUtil.openUrl('https://api.razorpay.com/v1/l/qrcode/$activeQrId');
     }
   }
 
@@ -215,8 +225,8 @@ class _DepositDialogState extends State<DepositDialog> {
       backgroundColor: Colors.white,
       insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 440),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        constraints: const BoxConstraints(maxWidth: 400),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: successData != null ? _buildSuccessView() : _buildQrPaymentBody(),
       ),
     );
@@ -420,12 +430,11 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 14),
 
-          // OFFICIAL RAZORPAY GENERATED QR IMAGE CARD (RENDERED VIA DIRECT MEMORY BYTES)
+          // FULL-SIZED OFFICIAL RAZORPAY QR CODE CARD (FITTING PROPORTIONATELY)
           Center(
             child: Container(
-              width: double.infinity,
-              constraints: const BoxConstraints(maxWidth: 320, maxHeight: 360),
-              padding: const EdgeInsets.all(10),
+              width: 250,
+              height: 380,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -439,31 +448,27 @@ class _DepositDialogState extends State<DepositDialog> {
                 ],
               ),
               child: isQrLoading || qrImageBytes == null
-                  ? Container(
-                      height: 260,
-                      alignment: Alignment.center,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const CircularProgressIndicator(color: Colors.blue),
-                          const SizedBox(height: 14),
-                          Text(
-                            'Loading Razorpay QR (₹${currentAmount.toInt()})...',
-                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(color: Colors.blue),
+                        const SizedBox(height: 14),
+                        Text(
+                          'Loading Razorpay QR (₹${currentAmount.toInt()})...',
+                          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     )
                   : ClipRRect(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(18),
                       child: Image.memory(
                         qrImageBytes!,
-                        fit: BoxFit.contain,
+                        fit: BoxFit.fill,
                       ),
                     ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
           // DUAL ACTION BUTTONS: DOWNLOAD QR + PAY ON RAZORPAY WEB
           Row(
