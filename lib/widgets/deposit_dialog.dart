@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:qr_flutter/qr_flutter.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/url_launcher_util.dart';
@@ -20,10 +20,9 @@ class _DepositDialogState extends State<DepositDialog> {
   final TextEditingController _amountController = TextEditingController(text: '20');
 
   bool isQrLoading = false;
+  Uint8List? qrImageBytes;
   String? activeQrId;
-  String? activeUpiString;
   String? activePaymentUrl;
-  String? qrImageUrl;
   double initialDepositCash = 0;
   Timer? _pollingTimer;
   Map<String, dynamic>? successData;
@@ -33,7 +32,7 @@ class _DepositDialogState extends State<DepositDialog> {
   void initState() {
     super.initState();
     initialDepositCash = widget.appState.user.wallet.depositCash;
-    _fetchRazorpayQr(20);
+    _fetchRazorpayQrFromApi(20);
   }
 
   @override
@@ -47,19 +46,13 @@ class _DepositDialogState extends State<DepositDialog> {
   double get bonusCash => currentAmount * 0.10; // 10% Extra Deposit Cash
   double get totalDepositCash => currentAmount + bonusCash;
 
-  String _getFallbackUpiString(double amt) {
-    return 'upi://pay?pa=swgayanbhumi490795.rzp@rxairtel&pn=Swgayanbhumi&am=${amt.toStringAsFixed(2)}&cu=INR&tn=Swgayanbhumi_Deposit';
-  }
-
-  Future<void> _fetchRazorpayQr(double amt) async {
+  Future<void> _fetchRazorpayQrFromApi(double amt) async {
     if (amt < 10) return;
     setState(() {
       isQrLoading = true;
       errorMsg = null;
+      qrImageBytes = null;
     });
-
-    final defaultUpi = _getFallbackUpiString(amt);
-    final fallbackWebUrl = 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${amt.toInt()}&auto=1';
 
     try {
       final res = await http.post(
@@ -69,22 +62,25 @@ class _DepositDialogState extends State<DepositDialog> {
           'userId': widget.appState.user.uid,
           'amount': amt,
         }),
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 12));
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (data['success'] == true) {
           final qId = data['qrId'] as String;
-          final upi = (data['upi_string'] ?? data['upiString'] ?? defaultUpi) as String;
-          final payUrl = (data['paymentUrl'] ?? fallbackWebUrl) as String;
-          final imgUrl = (data['qrImageUrl'] ?? data['imageUrl']) as String?;
+          final b64 = data['imageBase64'] as String?;
+          final payUrl = data['paymentUrl'] as String?;
+
+          Uint8List? bytes;
+          if (b64 != null && b64.isNotEmpty) {
+            bytes = base64Decode(b64);
+          }
 
           if (mounted) {
             setState(() {
               activeQrId = qId;
-              activeUpiString = upi;
+              qrImageBytes = bytes;
               activePaymentUrl = payUrl;
-              qrImageUrl = imgUrl;
               isQrLoading = false;
             });
             _startAutoPoller(qId);
@@ -92,17 +88,15 @@ class _DepositDialogState extends State<DepositDialog> {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[DepositDialog] Razorpay QR API Fetch Error: $e');
+    }
 
     if (mounted) {
       setState(() {
-        activeQrId = 'qr_${DateTime.now().millisecondsSinceEpoch}';
-        activeUpiString = defaultUpi;
-        activePaymentUrl = fallbackWebUrl;
-        qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${Uri.encodeComponent(defaultUpi)}';
         isQrLoading = false;
+        errorMsg = 'Could not fetch Razorpay QR. Tap retry or check your internet connection.';
       });
-      _startAutoPoller(activeQrId!);
     }
   }
 
@@ -154,18 +148,12 @@ class _DepositDialogState extends State<DepositDialog> {
     });
   }
 
-  Future<void> _openUpiApp() async {
-    final upi = activeUpiString ?? _getFallbackUpiString(currentAmount);
-    final launched = await UrlLauncherUtil.openUrl(upi);
-    if (!launched && activePaymentUrl != null) {
-      await UrlLauncherUtil.openUrl(activePaymentUrl!);
-    }
-  }
-
   Future<void> _downloadQr() async {
-    final upi = activeUpiString ?? _getFallbackUpiString(currentAmount);
-    final downloadUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${Uri.encodeComponent(upi)}';
-    await UrlLauncherUtil.openUrl(downloadUrl);
+    if (activePaymentUrl != null) {
+      await UrlLauncherUtil.openUrl(activePaymentUrl!);
+    } else if (activeQrId != null) {
+      await UrlLauncherUtil.openUrl('https://api.razorpay.com/v1/l/qrcode/$activeQrId');
+    }
   }
 
   Future<void> _openRazorpayWeb() async {
@@ -323,8 +311,6 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   Widget _buildQrPaymentBody() {
-    final upiToDisplay = activeUpiString ?? _getFallbackUpiString(currentAmount);
-
     return SingleChildScrollView(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -409,7 +395,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 onTap: () {
                   _amountController.text = amt.toString();
                   setState(() {});
-                  _fetchRazorpayQr(amt.toDouble());
+                  _fetchRazorpayQrFromApi(amt.toDouble());
                 },
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
@@ -434,10 +420,12 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 14),
 
-          // NATIVE CANVAS QR CODE RENDERER (PASSING RAZORPAY UPI_STRING TO QR_FLUTTER)
+          // OFFICIAL RAZORPAY GENERATED QR IMAGE CARD (RENDERED VIA DIRECT MEMORY BYTES)
           Center(
             child: Container(
-              padding: const EdgeInsets.all(14),
+              width: double.infinity,
+              constraints: const BoxConstraints(maxWidth: 320, maxHeight: 360),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -450,53 +438,34 @@ class _DepositDialogState extends State<DepositDialog> {
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  Container(
-                    width: 210,
-                    height: 210,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
+              child: isQrLoading || qrImageBytes == null
+                  ? Container(
+                      height: 260,
+                      alignment: Alignment.center,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.blue),
+                          const SizedBox(height: 14),
+                          Text(
+                            'Loading Razorpay QR (₹${currentAmount.toInt()})...',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ClipRRect(
                       borderRadius: BorderRadius.circular(14),
+                      child: Image.memory(
+                        qrImageBytes!,
+                        fit: BoxFit.contain,
+                      ),
                     ),
-                    child: Center(
-                      child: isQrLoading
-                          ? const CircularProgressIndicator(color: Colors.blue)
-                          : QrImageView(
-                              data: upiToDisplay,
-                              version: QrVersions.auto,
-                              size: 200.0,
-                              backgroundColor: Colors.white,
-                              eyeStyle: const QrEyeStyle(
-                                eyeShape: QrEyeShape.square,
-                                color: Color(0xFF0F172A),
-                              ),
-                              dataModuleStyle: const QrDataModuleStyle(
-                                dataModuleShape: QrDataModuleShape.square,
-                                color: Color(0xFF0F172A),
-                              ),
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '⚡ Scan with GPay / PhonePe / Paytm / BHIM',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'Verified Razorpay Merchant: Swgayanbhumi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ),
             ),
           ),
           const SizedBox(height: 12),
 
-          // DUAL ACTION BUTTONS: OPEN UPI APP + DOWNLOAD QR
+          // DUAL ACTION BUTTONS: DOWNLOAD QR + PAY ON RAZORPAY WEB
           Row(
             children: [
               Expanded(
@@ -516,33 +485,20 @@ class _DepositDialogState extends State<DepositDialog> {
               Expanded(
                 flex: 1,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.flash_on_rounded, size: 16),
+                  icon: const Icon(Icons.open_in_browser_rounded, size: 16),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1D4ED8),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _openUpiApp,
-                  label: Text('Open UPI (₹${currentAmount.toInt()})', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900)),
+                  onPressed: _openRazorpayWeb,
+                  label: Text('Pay on Web (₹${currentAmount.toInt()})', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900)),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 8),
-
-          // RAZORPAY WEB CHECKOUT OPTION
-          Center(
-            child: TextButton.icon(
-              icon: const Icon(Icons.payment_rounded, size: 14, color: Color(0xFF64748B)),
-              onPressed: _openRazorpayWeb,
-              label: const Text(
-                'Or Pay via Cards / NetBanking / Razorpay Web',
-                style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B), decoration: TextDecoration.underline),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
 
           // LIVE POLLING / REFRESH BUTTON
           InkWell(
