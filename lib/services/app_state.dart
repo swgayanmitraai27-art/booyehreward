@@ -757,10 +757,12 @@ class AppState extends ChangeNotifier {
     };
   }
 
-  // --- DEPOSIT CASH VIA RAZORPAY & AUTO-CREDIT WALLET (SWGAYANBHUMI API) ---
-  void depositCash(double amount, String paymentId, {double bonusCoins = 0}) {
+  // --- DEPOSIT CASH & AUTO-CREDIT WALLET (WITH 10% EXTRA DEPOSIT CASH) ---
+  void depositCash(double amount, String paymentId, {String description = ''}) {
+    final extraBonus = (amount * 0.10);
+    final totalAdded = amount + extraBonus;
     final balBefore = user.wallet.depositCash;
-    user.wallet.depositCash += amount;
+    user.wallet.depositCash += totalAdded;
 
     final depositTxn = TransactionModel(
       id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
@@ -768,39 +770,18 @@ class AppState extends ChangeNotifier {
       userName: user.displayName,
       type: TransactionType.deposit,
       walletAffected: WalletType.depositCash,
-      amount: amount,
+      amount: totalAdded,
       currency: 'INR',
       balanceBefore: balBefore,
       balanceAfter: user.wallet.depositCash,
       status: 'SUCCESS',
-      description: 'Added ₹${amount.toInt()} Real Cash via Razorpay ($paymentId)',
+      description: description.isNotEmpty
+          ? description
+          : 'Added ₹${amount.toInt()} (+10% Bonus = ₹${totalAdded.toStringAsFixed(1)}) to Deposit Cash ($paymentId)',
       createdAt: DateTime.now(),
     );
     transactions.insert(0, depositTxn);
     _syncTransaction(depositTxn);
-
-    if (bonusCoins > 0) {
-      final adBalBefore = user.wallet.adCoins.toDouble();
-      user.wallet.adCoins += bonusCoins.toInt();
-      user.stats.totalCoinsEarned += bonusCoins.toInt();
-
-      final bonusTxn = TransactionModel(
-        id: 'txn_bonus_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.adReward,
-        walletAffected: WalletType.adCoins,
-        amount: bonusCoins,
-        currency: 'AD_COINS',
-        balanceBefore: adBalBefore,
-        balanceAfter: user.wallet.adCoins.toDouble(),
-        status: 'SUCCESS',
-        description: '🎁 50% Instant Bonus: +${bonusCoins.toInt()} 🟡 Ad Coins on ₹${amount.toInt()} Recharge',
-        createdAt: DateTime.now(),
-      );
-      transactions.insert(0, bonusTxn);
-      _syncTransaction(bonusTxn);
-    }
 
     _syncUser();
     notifyListeners();
