@@ -426,7 +426,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 border: Border.all(color: Colors.blue.shade100, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.08),
+                    color: Colors.blue.withValues(alpha: 0.08),
                     blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
@@ -506,24 +506,28 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 10),
 
-          // LIVE PULSING STATUS PILL
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F5F9),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.sync_rounded, size: 14, color: Color(0xFF047857)),
-                SizedBox(width: 6),
-                Text(
-                  'Waiting for payment... Auto-updates instantly upon payment',
-                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-                ),
-              ],
+          // LIVE PULSING STATUS PILL WITH REFRESH BUTTON
+          InkWell(
+            onTap: _manualCheckBalance,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: const [
+                  Icon(Icons.sync_rounded, size: 14, color: Color(0xFF047857)),
+                  SizedBox(width: 6),
+                  Text(
+                    'Paid? Tap here to Verify & Refresh Balance',
+                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                  ),
+                ],
+              ),
             ),
           ),
 

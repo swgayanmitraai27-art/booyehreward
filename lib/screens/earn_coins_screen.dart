@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/voucher_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/video_ad_modal.dart';
 import '../widgets/ff_brand_elements.dart';
+import '../services/ad_service.dart';
 
 class EarnCoinsScreen extends StatefulWidget {
   final AppState appState;
@@ -367,22 +367,19 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: () {
-                        showDialog(
+                        AdService.showRewardedAd(
                           context: context,
-                          barrierDismissible: false,
-                          builder: (context) => VideoAdModal(
-                            title: 'Rewarded Ad Player',
-                            rewardDescription: '+1 Ad Progress Recorded!',
-                            onAdCompleted: () {
-                              final res = widget.appState.watchRewardedAd();
+                          onUserEarnedReward: () {
+                            final res = widget.appState.watchRewardedAd();
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   backgroundColor: Colors.amber.shade900,
                                   content: Text(res['message']),
                                 ),
                               );
-                            },
-                          ),
+                            }
+                          },
                         );
                       },
                       icon: const Icon(Icons.play_circle_fill, color: Colors.amber, size: 20),

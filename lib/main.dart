@@ -3,8 +3,11 @@ import 'services/app_state.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 
-void main() {
+import 'services/ad_service.dart';
+
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AdService.initialize();
   runApp(const BooyahRewardsApp());
 }
 
