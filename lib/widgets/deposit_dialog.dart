@@ -47,7 +47,10 @@ class _DepositDialogState extends State<DepositDialog> {
   double get totalDepositCash => currentAmount + bonusCash;
 
   Future<void> _fetchRazorpayQrFromApi(double amt) async {
-    if (amt < 10) return;
+    if (amt < 10) {
+      setState(() => errorMsg = 'Minimum recharge amount is ₹10.');
+      return;
+    }
     setState(() {
       isQrLoading = true;
       errorMsg = null;
@@ -220,13 +223,16 @@ class _DepositDialogState extends State<DepositDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogMaxHeight = screenHeight * 0.88;
+
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 400),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        constraints: BoxConstraints(maxWidth: 420, maxHeight: dialogMaxHeight),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: successData != null ? _buildSuccessView() : _buildQrPaymentBody(),
       ),
     );
@@ -321,7 +327,13 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   Widget _buildQrPaymentBody() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    // Dynamic responsive height for card so it never overflows or cuts off
+    final cardHeight = (screenHeight * 0.40).clamp(240.0, 350.0);
+    final cardWidth = cardHeight * (9.0 / 19.5);
+
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -371,7 +383,7 @@ class _DepositDialogState extends State<DepositDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
 
           // 10% Extra Bonus Banner
           Container(
@@ -394,7 +406,64 @@ class _DepositDialogState extends State<DepositDialog> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+
+          // CUSTOM AMOUNT INPUT BOX
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200, width: 1.5),
+            ),
+            child: Row(
+              children: [
+                const Text('₹', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    decoration: const InputDecoration(
+                      hintText: 'Enter custom amount (Min ₹10)',
+                      hintStyle: TextStyle(fontSize: 11.5, color: Colors.grey, fontWeight: FontWeight.normal),
+                      border: InputBorder.none,
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(vertical: 8),
+                    ),
+                    onSubmitted: (val) {
+                      final parsed = double.tryParse(val.trim());
+                      if (parsed != null && parsed >= 10) {
+                        _fetchRazorpayQrFromApi(parsed);
+                      }
+                    },
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4ED8),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    elevation: 0,
+                  ),
+                  onPressed: isQrLoading
+                      ? null
+                      : () {
+                          final parsed = double.tryParse(_amountController.text.trim());
+                          if (parsed != null && parsed >= 10) {
+                            _fetchRazorpayQrFromApi(parsed);
+                          } else {
+                            setState(() => errorMsg = 'Please enter amount of at least ₹10.');
+                          }
+                        },
+                  child: const Text('UPDATE QR', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
 
           // Presets Chips
           Row(
@@ -409,7 +478,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 },
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   decoration: BoxDecoration(
                     color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(10),
@@ -428,21 +497,21 @@ class _DepositDialogState extends State<DepositDialog> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
-          // FULL-SIZED OFFICIAL RAZORPAY QR CODE CARD (FITTING PROPORTIONATELY)
+          // FULLY RESPONSIVE RAZORPAY QR CARD (ASPECT RATIO 9:19.5 - ZERO OVERFLOW / ZERO CUT-OFF)
           Center(
             child: Container(
-              width: 250,
-              height: 380,
+              width: cardWidth,
+              height: cardHeight,
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.blue.shade100, width: 2),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: Colors.blue.shade200, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withValues(alpha: 0.08),
-                    blurRadius: 16,
+                    color: Colors.blue.withValues(alpha: 0.10),
+                    blurRadius: 14,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -452,23 +521,25 @@ class _DepositDialogState extends State<DepositDialog> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const CircularProgressIndicator(color: Colors.blue),
-                        const SizedBox(height: 14),
+                        const SizedBox(height: 12),
                         Text(
-                          'Loading Razorpay QR (₹${currentAmount.toInt()})...',
+                          'Generating QR for ₹${currentAmount.toInt()}...',
                           style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
                         ),
                       ],
                     )
                   : ClipRRect(
-                      borderRadius: BorderRadius.circular(18),
+                      borderRadius: BorderRadius.circular(16),
                       child: Image.memory(
                         qrImageBytes!,
-                        fit: BoxFit.fill,
+                        fit: BoxFit.contain,
+                        width: cardWidth,
+                        height: cardHeight,
                       ),
                     ),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 10),
 
           // DUAL ACTION BUTTONS: DOWNLOAD QR + PAY ON RAZORPAY WEB
           Row(
@@ -479,7 +550,7 @@ class _DepositDialogState extends State<DepositDialog> {
                   icon: const Icon(Icons.download_rounded, size: 16),
                   style: OutlinedButton.styleFrom(
                     side: BorderSide(color: Colors.blue.shade300),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _downloadQr,
@@ -494,7 +565,7 @@ class _DepositDialogState extends State<DepositDialog> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1D4ED8),
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(vertical: 11),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: _openRazorpayWeb,
@@ -503,14 +574,14 @@ class _DepositDialogState extends State<DepositDialog> {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // LIVE POLLING / REFRESH BUTTON
           InkWell(
             onTap: _manualCheckBalance,
             borderRadius: BorderRadius.circular(10),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
                 color: const Color(0xFFF1F5F9),
                 borderRadius: BorderRadius.circular(10),
@@ -531,7 +602,7 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
 
           if (errorMsg != null) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             Text(
               errorMsg!,
               style: TextStyle(fontSize: 11, color: Colors.red.shade700, fontWeight: FontWeight.w600),
