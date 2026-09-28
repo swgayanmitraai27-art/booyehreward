@@ -22,6 +22,7 @@ class _DepositDialogState extends State<DepositDialog> {
   String? qrImageUrl;
   String? activeQrId;
   String? activePaymentUrl;
+  double initialDepositCash = 0;
   Timer? _pollingTimer;
   Map<String, dynamic>? successData;
   String? errorMsg;
@@ -29,6 +30,7 @@ class _DepositDialogState extends State<DepositDialog> {
   @override
   void initState() {
     super.initState();
+    initialDepositCash = widget.appState.user.wallet.depositCash;
     _fetchRazorpayQr(100);
   }
 
@@ -125,6 +127,20 @@ class _DepositDialogState extends State<DepositDialog> {
 
         // 2. Also check Firestore directly
         await widget.appState.refreshFromFirestore();
+        final newBal = widget.appState.user.wallet.depositCash;
+        if (newBal > initialDepositCash) {
+          timer.cancel();
+          if (mounted) {
+            setState(() {
+              successData = {
+                'amount': currentAmount,
+                'bonus': bonusCash,
+                'total': totalDepositCash,
+                'txId': 'VERIFIED_ON_WALLET',
+              };
+            });
+          }
+        }
       } catch (_) {}
     });
   }
@@ -134,10 +150,29 @@ class _DepositDialogState extends State<DepositDialog> {
     await UrlLauncherUtil.openUrl(url);
   }
 
+  Future<void> _downloadQrImage() async {
+    if (qrImageUrl != null) {
+      await UrlLauncherUtil.openUrl(qrImageUrl!);
+    }
+  }
+
   Future<void> _manualCheckBalance() async {
     setState(() => errorMsg = null);
     await widget.appState.refreshFromFirestore();
     if (!mounted) return;
+
+    if (widget.appState.user.wallet.depositCash > initialDepositCash) {
+      _pollingTimer?.cancel();
+      setState(() {
+        successData = {
+          'amount': currentAmount,
+          'bonus': bonusCash,
+          'total': totalDepositCash,
+          'txId': 'VERIFIED_ON_WALLET',
+        };
+      });
+      return;
+    }
 
     if (activeQrId != null) {
       try {
@@ -164,7 +199,7 @@ class _DepositDialogState extends State<DepositDialog> {
     }
 
     setState(() {
-      errorMsg = 'Payment not confirmed yet. Please scan the QR code or tap Pay via UPI.';
+      errorMsg = 'Payment in progress. Complete on GPay/PhonePe and balance will reflect automatically.';
     });
   }
 
@@ -173,10 +208,10 @@ class _DepositDialogState extends State<DepositDialog> {
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      insetPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       child: Container(
         constraints: const BoxConstraints(maxWidth: 440),
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         child: successData != null ? _buildSuccessView() : _buildQrPaymentBody(),
       ),
     );
@@ -189,23 +224,24 @@ class _DepositDialogState extends State<DepositDialog> {
         children: [
           const SizedBox(height: 10),
           Container(
-            width: 64,
-            height: 64,
+            width: 68,
+            height: 68,
             decoration: BoxDecoration(
               color: const Color(0xFFECFDF5),
               shape: BoxShape.circle,
-              border: Border.all(color: const Color(0xFFA7F3D0), width: 2),
+              border: Border.all(color: const Color(0xFFA7F3D0), width: 2.5),
             ),
-            child: const Icon(Icons.check_circle_rounded, color: AppTheme.winningGreen, size: 40),
+            child: const Icon(Icons.check_circle_rounded, color: AppTheme.winningGreen, size: 44),
           ),
           const SizedBox(height: 14),
           Text(
-            'Deposit Cash Credited!',
-            style: AppTheme.gamingTitle(fontSize: 20, color: const Color(0xFF065F46)),
+            'Payment Received & Credited! 🎉',
+            textAlign: TextAlign.center,
+            style: AppTheme.gamingTitle(fontSize: 19, color: const Color(0xFF065F46)),
           ),
           const SizedBox(height: 6),
           const Text(
-            '10% Extra Deposit Cash has been added to your wallet.',
+            '10% Extra Deposit Cash has been added to your wallet automatically.',
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 12, color: Color(0xFF64748B)),
           ),
@@ -261,7 +297,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 _pollingTimer?.cancel();
                 Navigator.of(context).pop();
               },
-              child: const Text('DONE & PLAY MATCHES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              child: const Text('DONE & PLAY TOURNAMENTS', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
             ),
           ),
         ],
@@ -287,14 +323,14 @@ class _DepositDialogState extends State<DepositDialog> {
                       color: Colors.blue.shade50,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.qr_code_scanner_rounded, color: Colors.blue.shade700, size: 22),
+                    child: Icon(Icons.qr_code_2_rounded, color: Colors.blue.shade700, size: 22),
                   ),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'SW TECH • RAZORPAY OFFICIAL GATEWAY',
+                        'OFFICIAL RAZORPAY UPI QR',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 9,
@@ -336,7 +372,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${totalDepositCash.toStringAsFixed(1)} Deposit Cash (10% Extra Cash)!',
+                    'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${totalDepositCash.toStringAsFixed(1)} Deposit Cash (+10% Extra)!',
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
                   ),
                 ),
@@ -377,20 +413,20 @@ class _DepositDialogState extends State<DepositDialog> {
               );
             }).toList(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
 
-          // RAZORPAY QR CODE DISPLAY CARD
+          // RAZORPAY QR CODE DISPLAY CARD (SPACIOUS & HIGH RESOLUTION)
           Center(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.blue.shade100, width: 2),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.06),
-                    blurRadius: 15,
+                    color: Colors.blue.withOpacity(0.08),
+                    blurRadius: 16,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -398,11 +434,11 @@ class _DepositDialogState extends State<DepositDialog> {
               child: Column(
                 children: [
                   Container(
-                    width: 190,
-                    height: 190,
+                    width: 210,
+                    height: 210,
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(14),
                     ),
                     child: isQrLoading
                         ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
@@ -421,10 +457,11 @@ class _DepositDialogState extends State<DepositDialog> {
                             },
                           ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
                   const Text(
                     '📸 Screenshot QR & Pay with GPay / PhonePe / Paytm',
-                    style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                   ),
                 ],
               ),
@@ -432,38 +469,59 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 12),
 
-          // BUTTON 1: DIRECT PAY VIA UPI APP / IN-APP GATEWAY
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              icon: const Icon(Icons.flash_on_rounded, size: 16),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF1D4ED8),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                padding: const EdgeInsets.symmetric(vertical: 13),
+          // DUAL ACTION BUTTONS: DOWNLOAD QR + OPEN UPI APP
+          Row(
+            children: [
+              Expanded(
+                flex: 1,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.download_rounded, size: 16),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: Colors.blue.shade300),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _downloadQrImage,
+                  label: const Text('Download QR', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                ),
               ),
-              onPressed: _openGatewayUrl,
-              label: Text(
-                '⚡ OPEN GPAY / PHONEPE / GATEWAY (₹${currentAmount.toInt()})',
-                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.5),
+              const SizedBox(width: 8),
+              Expanded(
+                flex: 1,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.flash_on_rounded, size: 16),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4ED8),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: _openGatewayUrl,
+                  label: Text('Open UPI (₹${currentAmount.toInt()})', style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900)),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
 
-          // BUTTON 2: MANUAL STATUS CHECK
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Color(0xFF1D4ED8)),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              onPressed: _manualCheckBalance,
-              label: const Text('Check Balance Status', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+          // LIVE PULSING STATUS PILL
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.sync_rounded, size: 14, color: Color(0xFF047857)),
+                SizedBox(width: 6),
+                Text(
+                  'Waiting for payment... Auto-updates instantly upon payment',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
+                ),
+              ],
             ),
           ),
 
