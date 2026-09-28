@@ -2,8 +2,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:js_interop' as js;
-import 'dart:js_interop_unsafe' as js_util;
+import 'web_storage/web_storage.dart';
 import '../models/user_model.dart';
 import 'firebase_config.dart';
 import 'firestore_rest_service.dart';
@@ -14,46 +13,6 @@ class AuthResult {
   final String? errorMessage;
 
   AuthResult({required this.success, this.user, this.errorMessage});
-}
-
-/// Web-Safe Instant Synchronous LocalStorage Cache Handler
-class WebStorageHelper {
-  static void setItem(String key, String value) {
-    if (kIsWeb) {
-      try {
-        final storage = js.globalContext['localStorage'] as js.JSObject?;
-        storage?.callMethod('setItem'.toJS, key.toJS, value.toJS);
-      } catch (e) {
-        debugPrint('[WebStorage] setItem error: $e');
-      }
-    }
-  }
-
-  static String? getItem(String key) {
-    if (kIsWeb) {
-      try {
-        final storage = js.globalContext['localStorage'] as js.JSObject?;
-        if (storage != null && storage.has(key)) {
-          final val = storage.callMethod<js.JSString?>('getItem'.toJS, key.toJS);
-          return val?.toDart;
-        }
-      } catch (e) {
-        debugPrint('[WebStorage] getItem error: $e');
-      }
-    }
-    return null;
-  }
-
-  static void removeItem(String key) {
-    if (kIsWeb) {
-      try {
-        final storage = js.globalContext['localStorage'] as js.JSObject?;
-        storage?.callMethod('removeItem'.toJS, key.toJS);
-      } catch (e) {
-        debugPrint('[WebStorage] removeItem error: $e');
-      }
-    }
-  }
 }
 
 class AuthService {

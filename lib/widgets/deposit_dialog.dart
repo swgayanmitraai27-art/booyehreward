@@ -1,10 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'dart:js_interop' as js_interop;
-import 'dart:js_interop_unsafe' as js_util;
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
+import '../utils/url_launcher_util.dart';
 
 class DepositDialog extends StatefulWidget {
   final AppState appState;
@@ -41,17 +39,7 @@ class _DepositDialogState extends State<DepositDialog> {
   double get bonusCash => currentAmount * 0.10; // 10% Extra Deposit Cash
 
   void _openCheckoutUrl(String url) {
-    if (kIsWeb) {
-      try {
-        final global = js_interop.globalContext;
-        if (global.has('openWindowUrl')) {
-          global.callMethod('openWindowUrl'.toJS, url.toJS);
-          return;
-        }
-      } catch (e) {
-        debugPrint('[DepositDialog] openWindowUrl error: $e');
-      }
-    }
+    UrlLauncherUtil.openUrl(url);
   }
 
   void _startPaymentProcess() {
