@@ -64,10 +64,10 @@ class _DepositDialogState extends State<DepositDialog> {
         final data = jsonDecode(res.body);
         if (data['success'] == true) {
           final qId = data['qrId'] as String;
-          final payUrl = data['imageUrl'] as String? ?? 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${amt.toInt()}&auto=1';
-          
-          // Generate direct QR image url from the payment url
-          final directQrImage = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(payUrl)}';
+          final payUrl = (data['paymentUrl'] ?? data['imageUrl']) as String? ??
+              'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${amt.toInt()}&auto=1';
+          final directQrImage = data['qrImageUrl'] as String? ??
+              'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(payUrl)}';
 
           if (mounted) {
             setState(() {
@@ -407,8 +407,18 @@ class _DepositDialogState extends State<DepositDialog> {
                     child: isQrLoading
                         ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
                         : Image.network(
-                            qrImageUrl ?? 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://swgayanbhumi.in',
+                            qrImageUrl ?? 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fswgayanbhumi.in',
                             fit: BoxFit.contain,
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
+                            },
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.network(
+                                'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fswgayanbhumi.in',
+                                fit: BoxFit.contain,
+                              );
+                            },
                           ),
                   ),
                   const SizedBox(height: 8),
