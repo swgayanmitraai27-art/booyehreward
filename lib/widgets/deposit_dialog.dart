@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:js_interop' as js_interop;
+import 'dart:js_interop_unsafe' as js_util;
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/url_launcher_util.dart';
@@ -40,6 +43,17 @@ class _DepositDialogState extends State<DepositDialog> {
   double get totalDepositCash => currentAmount + bonusCash;
 
   void _openCheckoutUrl(String url) {
+    if (kIsWeb) {
+      try {
+        final global = js_interop.globalContext;
+        if (global.has('openWindowUrl')) {
+          global.callMethod('openWindowUrl'.toJS, url.toJS);
+          return;
+        }
+      } catch (e) {
+        debugPrint('[DepositDialog] openWindowUrl error: $e');
+      }
+    }
     UrlLauncherUtil.openUrl(url);
   }
 
@@ -243,33 +257,33 @@ class _DepositDialogState extends State<DepositDialog> {
                       style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
                     ),
                     const SizedBox(height: 16),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: Color(0xFF1D4ED8)),
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            onPressed: () => _openCheckoutUrl(currentCheckoutUrl),
-                            child: const Text('Re-open Gateway', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
-                          ),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new_rounded, size: 16),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1D4ED8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1D4ED8),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                            ),
-                            onPressed: _manualCheckBalance,
-                            child: const Text('Check Status', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                          ),
+                        onPressed: () => _openCheckoutUrl(currentCheckoutUrl),
+                        label: const Text('👉 OPEN GATEWAY (CLICK HERE)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.refresh_rounded, size: 16),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Color(0xFF1D4ED8)),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                      ],
+                        onPressed: _manualCheckBalance,
+                        label: const Text('Check Balance Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                      ),
                     ),
                     const SizedBox(height: 8),
                     TextButton(
