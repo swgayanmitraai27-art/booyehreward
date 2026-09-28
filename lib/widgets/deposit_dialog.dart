@@ -17,15 +17,13 @@ class DepositDialog extends StatefulWidget {
 }
 
 class _DepositDialogState extends State<DepositDialog> {
-  final TextEditingController _amountController = TextEditingController(text: '100');
-  final TextEditingController _utrController = TextEditingController();
+  final TextEditingController _amountController = TextEditingController(text: '20');
 
   bool isQrLoading = false;
-  bool isUtrSubmitting = false;
-  String? qrImageUrl;
   String? activeQrId;
   String? activeUpiString;
   String? activePaymentUrl;
+  String? qrImageUrl;
   double initialDepositCash = 0;
   Timer? _pollingTimer;
   Map<String, dynamic>? successData;
@@ -35,14 +33,13 @@ class _DepositDialogState extends State<DepositDialog> {
   void initState() {
     super.initState();
     initialDepositCash = widget.appState.user.wallet.depositCash;
-    _generateQrCode(100);
+    _fetchRazorpayQr(20);
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
     _amountController.dispose();
-    _utrController.dispose();
     super.dispose();
   }
 
@@ -50,19 +47,18 @@ class _DepositDialogState extends State<DepositDialog> {
   double get bonusCash => currentAmount * 0.10; // 10% Extra Deposit Cash
   double get totalDepositCash => currentAmount + bonusCash;
 
-  String _getDirectUpiIntent(double amt) {
-    final userShort = widget.appState.user.uid.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '').padRight(6, '0').substring(0, 6);
-    return 'upi://pay?pa=samashermaurya9935@okaxis&pn=SkillWinner&am=${amt.toInt()}&cu=INR&tn=SW_DEP_$userShort';
+  String _getFallbackUpiString(double amt) {
+    return 'upi://pay?pa=swgayanbhumi490795.rzp@rxairtel&pn=Swgayanbhumi&am=${amt.toStringAsFixed(2)}&cu=INR&tn=Swgayanbhumi_Deposit';
   }
 
-  Future<void> _generateQrCode(double amt) async {
+  Future<void> _fetchRazorpayQr(double amt) async {
     if (amt < 10) return;
     setState(() {
       isQrLoading = true;
       errorMsg = null;
     });
 
-    final defaultUpi = _getDirectUpiIntent(amt);
+    final defaultUpi = _getFallbackUpiString(amt);
     final fallbackWebUrl = 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${amt.toInt()}&auto=1';
 
     try {
@@ -79,17 +75,16 @@ class _DepositDialogState extends State<DepositDialog> {
         final data = jsonDecode(res.body);
         if (data['success'] == true) {
           final qId = data['qrId'] as String;
-          final upi = (data['upiString'] ?? data['upiIntent'] ?? defaultUpi) as String;
+          final upi = (data['upi_string'] ?? data['upiString'] ?? defaultUpi) as String;
           final payUrl = (data['paymentUrl'] ?? fallbackWebUrl) as String;
-          final directQrImage = (data['qrImageUrl'] ?? data['imageUrl']) as String? ??
-              'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(upi)}';
+          final imgUrl = (data['qrImageUrl'] ?? data['imageUrl']) as String?;
 
           if (mounted) {
             setState(() {
               activeQrId = qId;
               activeUpiString = upi;
               activePaymentUrl = payUrl;
-              qrImageUrl = directQrImage;
+              qrImageUrl = imgUrl;
               isQrLoading = false;
             });
             _startAutoPoller(qId);
@@ -99,13 +94,12 @@ class _DepositDialogState extends State<DepositDialog> {
       }
     } catch (_) {}
 
-    // Offline / Direct UPI Fallback
     if (mounted) {
       setState(() {
-        activeQrId = 'upi_${DateTime.now().millisecondsSinceEpoch}';
+        activeQrId = 'qr_${DateTime.now().millisecondsSinceEpoch}';
         activeUpiString = defaultUpi;
         activePaymentUrl = fallbackWebUrl;
-        qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${Uri.encodeComponent(defaultUpi)}';
+        qrImageUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${Uri.encodeComponent(defaultUpi)}';
         isQrLoading = false;
       });
       _startAutoPoller(activeQrId!);
@@ -116,7 +110,7 @@ class _DepositDialogState extends State<DepositDialog> {
     _pollingTimer?.cancel();
     _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
       try {
-        // 1. Check QR check API
+        // 1. Check Razorpay QR API Status
         final res = await http.get(
           Uri.parse('https://www.swgayanbhumi.in/api/skillwinner/qr/check?qrId=$qrId&userId=${widget.appState.user.uid}'),
         ).timeout(const Duration(seconds: 4));
@@ -140,7 +134,7 @@ class _DepositDialogState extends State<DepositDialog> {
           }
         }
 
-        // 2. Also check Firestore directly
+        // 2. Check Firestore wallet directly
         await widget.appState.refreshFromFirestore();
         final newBal = widget.appState.user.wallet.depositCash;
         if (newBal > initialDepositCash) {
@@ -161,79 +155,22 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   Future<void> _openUpiApp() async {
-    final upiUri = activeUpiString ?? _getDirectUpiIntent(currentAmount);
-    final launched = await UrlLauncherUtil.openUrl(upiUri);
+    final upi = activeUpiString ?? _getFallbackUpiString(currentAmount);
+    final launched = await UrlLauncherUtil.openUrl(upi);
     if (!launched && activePaymentUrl != null) {
       await UrlLauncherUtil.openUrl(activePaymentUrl!);
     }
   }
 
-  Future<void> _openRazorpayWeb() async {
-    final url = activePaymentUrl ?? 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${currentAmount.toInt()}&auto=1';
-    await UrlLauncherUtil.openUrl(url);
-  }
-
-  Future<void> _downloadQrImage() async {
-    final upi = activeUpiString ?? _getDirectUpiIntent(currentAmount);
+  Future<void> _downloadQr() async {
+    final upi = activeUpiString ?? _getFallbackUpiString(currentAmount);
     final downloadUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${Uri.encodeComponent(upi)}';
     await UrlLauncherUtil.openUrl(downloadUrl);
   }
 
-  Future<void> _submitUtrNumber() async {
-    final utr = _utrController.text.trim();
-    if (utr.length < 6) {
-      setState(() => errorMsg = 'Please enter a valid 12-digit UTR / Reference number.');
-      return;
-    }
-
-    setState(() {
-      isUtrSubmitting = true;
-      errorMsg = null;
-    });
-
-    try {
-      final res = await http.post(
-        Uri.parse('https://www.swgayanbhumi.in/api/skillwinner/qr/submit_utr'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'userId': widget.appState.user.uid,
-          'amount': currentAmount,
-          'utr': utr,
-        }),
-      ).timeout(const Duration(seconds: 8));
-
-      final data = jsonDecode(res.body);
-      if (res.statusCode == 200 && data['success'] == true) {
-        _pollingTimer?.cancel();
-        await widget.appState.refreshFromFirestore();
-        if (mounted) {
-          setState(() {
-            isUtrSubmitting = false;
-            successData = {
-              'amount': data['amount'] ?? currentAmount,
-              'bonus': data['extraBonus'] ?? bonusCash,
-              'total': data['totalDepositCash'] ?? totalDepositCash,
-              'txId': 'UTR_$utr',
-            };
-          });
-        }
-        return;
-      } else {
-        if (mounted) {
-          setState(() {
-            isUtrSubmitting = false;
-            errorMsg = data['error'] ?? 'UTR verification failed. Please try again.';
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          isUtrSubmitting = false;
-          errorMsg = 'Network error. Please try again or tap refresh.';
-        });
-      }
-    }
+  Future<void> _openRazorpayWeb() async {
+    final url = activePaymentUrl ?? 'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${currentAmount.toInt()}&auto=1';
+    await UrlLauncherUtil.openUrl(url);
   }
 
   Future<void> _manualCheckBalance() async {
@@ -279,7 +216,7 @@ class _DepositDialogState extends State<DepositDialog> {
     }
 
     setState(() {
-      errorMsg = 'Payment in progress. Complete on GPay/PhonePe and balance will reflect automatically.';
+      errorMsg = 'Payment in progress... Complete in GPay/PhonePe and balance will reflect automatically.';
     });
   }
 
@@ -386,7 +323,7 @@ class _DepositDialogState extends State<DepositDialog> {
   }
 
   Widget _buildQrPaymentBody() {
-    final qrDataToDisplay = activeUpiString ?? _getDirectUpiIntent(currentAmount);
+    final upiToDisplay = activeUpiString ?? _getFallbackUpiString(currentAmount);
 
     return SingleChildScrollView(
       child: Column(
@@ -412,7 +349,7 @@ class _DepositDialogState extends State<DepositDialog> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'INSTANT 0% FEE UPI PAYMENT',
+                        'OFFICIAL RAZORPAY UPI QR',
                         style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 9,
@@ -454,7 +391,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${totalDepositCash.toStringAsFixed(1)} Deposit Cash (+10% Extra)!',
+                    'Recharge ₹${currentAmount.toInt()} ➔ Get ₹${totalDepositCash.toStringAsFixed(1)} (+10% Extra Deposit Cash)!',
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
                   ),
                 ),
@@ -472,7 +409,7 @@ class _DepositDialogState extends State<DepositDialog> {
                 onTap: () {
                   _amountController.text = amt.toString();
                   setState(() {});
-                  _generateQrCode(amt.toDouble());
+                  _fetchRazorpayQr(amt.toDouble());
                 },
                 borderRadius: BorderRadius.circular(10),
                 child: Container(
@@ -497,7 +434,7 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 14),
 
-          // DIRECT UPI SCAN QR CODE CARD (DIRECTLY SCANNABLE BY GPAY/PHONEPE/PAYTM)
+          // NATIVE CANVAS QR CODE RENDERER (PASSING RAZORPAY UPI_STRING TO QR_FLUTTER)
           Center(
             child: Container(
               padding: const EdgeInsets.all(14),
@@ -524,9 +461,9 @@ class _DepositDialogState extends State<DepositDialog> {
                     ),
                     child: Center(
                       child: isQrLoading
-                          ? const CircularProgressIndicator()
+                          ? const CircularProgressIndicator(color: Colors.blue)
                           : QrImageView(
-                              data: qrDataToDisplay,
+                              data: upiToDisplay,
                               version: QrVersions.auto,
                               size: 200.0,
                               backgroundColor: Colors.white,
@@ -549,9 +486,9 @@ class _DepositDialogState extends State<DepositDialog> {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    'Direct UPI PIN screen will open (No website redirect)',
+                    'Verified Razorpay Merchant: Swgayanbhumi',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
@@ -571,7 +508,7 @@ class _DepositDialogState extends State<DepositDialog> {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  onPressed: _downloadQrImage,
+                  onPressed: _downloadQr,
                   label: const Text('Download QR', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
                 ),
               ),
@@ -594,7 +531,7 @@ class _DepositDialogState extends State<DepositDialog> {
           ),
           const SizedBox(height: 8),
 
-          // WEB CHECKOUT OPTION (RAZORPAY)
+          // RAZORPAY WEB CHECKOUT OPTION
           Center(
             child: TextButton.icon(
               icon: const Icon(Icons.payment_rounded, size: 14, color: Color(0xFF64748B)),
@@ -605,60 +542,9 @@ class _DepositDialogState extends State<DepositDialog> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
-          // UTR SUBMISSION ACCORDION
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFC),
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'PAID VIA UPI SCANNER? ENTER UTR FOR INSTANT CREDIT:',
-                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _utrController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          hintText: '12-digit UTR / Ref No. (e.g. 4238...)',
-                          hintStyle: const TextStyle(fontSize: 11, color: Colors.grey),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                          isDense: true,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF047857),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: isUtrSubmitting ? null : _submitUtrNumber,
-                      child: isUtrSubmitting
-                          ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('SUBMIT', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 10),
-
-          // LIVE PULSING STATUS PILL WITH REFRESH BUTTON
+          // LIVE POLLING / REFRESH BUTTON
           InkWell(
             onTap: _manualCheckBalance,
             borderRadius: BorderRadius.circular(10),
@@ -675,7 +561,7 @@ class _DepositDialogState extends State<DepositDialog> {
                   Icon(Icons.sync_rounded, size: 14, color: Color(0xFF047857)),
                   SizedBox(width: 6),
                   Text(
-                    'Tap here to Refresh Wallet Balance',
+                    'Paid? Tap here to Verify & Refresh Balance',
                     style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
                   ),
                 ],
