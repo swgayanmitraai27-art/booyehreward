@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:qr_flutter/qr_flutter.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../utils/url_launcher_util.dart';
@@ -440,22 +441,23 @@ class _DepositDialogState extends State<DepositDialog> {
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: isQrLoading
-                        ? const Center(child: CircularProgressIndicator(strokeWidth: 2.5))
-                        : Image.network(
-                            qrImageUrl ?? 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fswgayanbhumi.in',
-                            fit: BoxFit.contain,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                            },
-                            errorBuilder: (context, error, stackTrace) {
-                              return Image.network(
-                                'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https%3A%2F%2Fswgayanbhumi.in',
-                                fit: BoxFit.contain,
-                              );
-                            },
-                          ),
+                    child: Center(
+                      child: QrImageView(
+                        data: activePaymentUrl ??
+                            'https://www.swgayanbhumi.in/pay?app=skillwinner&userId=${widget.appState.user.uid}&amount=${currentAmount.toInt()}&auto=1',
+                        version: QrVersions.auto,
+                        size: 200.0,
+                        backgroundColor: Colors.white,
+                        eyeStyle: const QrEyeStyle(
+                          eyeShape: QrEyeShape.square,
+                          color: Color(0xFF0F172A),
+                        ),
+                        dataModuleStyle: const QrDataModuleStyle(
+                          dataModuleShape: QrDataModuleShape.square,
+                          color: Color(0xFF0F172A),
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 10),
                   const Text(
