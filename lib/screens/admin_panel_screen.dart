@@ -4,6 +4,7 @@ import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
 import '../models/banner_model.dart';
+import '../models/notification_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
@@ -73,6 +74,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   TeamType newTeamType = TeamType.squad;
   MapType newMapType = MapType.bermuda;
 
+  // Push Notification state
+  final TextEditingController _notifTitleController = TextEditingController(text: '🔥 Mega Tournament Alert!');
+  final TextEditingController _notifBodyController = TextEditingController(text: 'New High Prize Pool Match is LIVE! Join now and win real cash.');
+  final TextEditingController _notifImageUrlController = TextEditingController();
+  final TextEditingController _notifUserIdController = TextEditingController();
+  String _notifTarget = 'all'; // 'all' | 'match' | 'user'
+  String? _notifSelectedMatchId;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +117,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _fourthPrizeController.dispose();
     _fifthPrizeController.dispose();
     _perKillController.dispose();
+    _notifTitleController.dispose();
+    _notifBodyController.dispose();
+    _notifImageUrlController.dispose();
+    _notifUserIdController.dispose();
     super.dispose();
   }
 
@@ -192,6 +205,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           _buildFinancialAnalyticsContainer(metrics),
           const SizedBox(height: 18),
 
+          // 🚨 DYNAMIC AUTO-START EMERGENCY ALERTS (15-MIN COUNTDOWN)
+          _buildAutoStartEmergencyAlerts(),
+
           // Action Navigation Tabs
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -214,6 +230,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(7, '📢 Banners & Slider (${widget.appState.banners.length})'),
                 const SizedBox(width: 8),
                 _buildTabBtn(8, '⚙️ Telegram & App Settings'),
+                const SizedBox(width: 8),
+                _buildTabBtn(9, '🔔 Push Notifications & FCM Broadcast'),
               ],
             ),
           ),
@@ -228,6 +246,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 6) _buildCreateMatchSection(),
           if (activeSection == 7) _buildBannersSection(),
           if (activeSection == 8) _buildSettingsSection(),
+          if (activeSection == 9) _buildPushNotificationBroadcastSection(),
         ],
       ),
     );
@@ -3971,6 +3990,479 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             },
             child: const Text('DELETE PERMANENTLY'),
           ),
+        ],
+      ),
+    );
+  }
+
+  // --- AUTO-START EMERGENCY ALERTS (15-MIN COUNTDOWN) ---
+  Widget _buildAutoStartEmergencyAlerts() {
+    final fullMatches = widget.appState.matches.where((m) => m.isFillingRoom).toList();
+    if (fullMatches.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: fullMatches.map((m) {
+        final remaining = m.roomCountdownRemaining;
+        final minutes = remaining.inMinutes;
+        final seconds = remaining.inSeconds % 60;
+        final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 14),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF991B1B), Color(0xFFDC2626)],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.red.withAlpha(100),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.amberAccent, size: 22),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      '🚨 DYNAMIC AUTO-START TRIGGERED (100% FULL)',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 0.8),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.timer, color: Colors.amberAccent, size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          timeStr,
+                          style: const TextStyle(color: Colors.amberAccent, fontWeight: FontWeight.w900, fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Match "${m.title}" (${m.participants.length}/${m.maxSlots} Players) is FULL & Guaranteed Profitable! Please create the custom room and publish Room ID & Password within 15 minutes.',
+                style: const TextStyle(color: Colors.white, fontSize: 11.5, height: 1.3),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: const Color(0xFF991B1B),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      selectedMatchIdForRoom = m.id;
+                      activeSection = 3; // Switch to Room Publisher tab
+                      _roomIdController.text = m.credentials.roomId;
+                      _roomPassController.text = m.credentials.roomPassword;
+                    });
+                  },
+                  icon: const Icon(Icons.key, size: 16),
+                  label: const Text(
+                    'PUBLISH ROOM ID & PASSWORD NOW',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // --- 9. PUSH NOTIFICATIONS & FCM BROADCAST CENTER ---
+  Widget _buildPushNotificationBroadcastSection() {
+    final matches = widget.appState.matches;
+    final notifications = widget.appState.allGlobalNotifications;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'REALTIME PUSH NOTIFICATIONS (FCM BROADCAST)',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: const Text(
+                  '⚡ CLOUD MESSAGING ACTIVE',
+                  style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Target Audience Selector
+          const Text('1. SELECT TARGET AUDIENCE:', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('🌍 All Users', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  selected: _notifTarget == 'all',
+                  onSelected: (val) => setState(() => _notifTarget = 'all'),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('🎮 Match Players', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  selected: _notifTarget == 'match',
+                  onSelected: (val) => setState(() => _notifTarget = 'match'),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: ChoiceChip(
+                  label: const Text('👤 Single User', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  selected: _notifTarget == 'user',
+                  onSelected: (val) => setState(() => _notifTarget = 'user'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (_notifTarget == 'match') ...[
+            DropdownButtonFormField<String>(
+              initialValue: _notifSelectedMatchId ?? (matches.isNotEmpty ? matches.first.id : null),
+              isExpanded: true,
+              decoration: InputDecoration(
+                isDense: true,
+                labelText: 'Select Target Match',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              items: matches.map((m) {
+                return DropdownMenuItem(
+                  value: m.id,
+                  child: Text('${m.title} (${m.participants.length} Players)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                );
+              }).toList(),
+              onChanged: (val) => setState(() => _notifSelectedMatchId = val),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          if (_notifTarget == 'user') ...[
+            TextField(
+              controller: _notifUserIdController,
+              decoration: InputDecoration(
+                labelText: 'Target User UID (e.g. user_123456)',
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+
+          // Presets
+          const Text('2. QUICK TEMPLATES:', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                ActionChip(
+                  label: const Text('🔥 Mega Tournament', style: TextStyle(fontSize: 10.5)),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '🔥 Sunday Mega Esports Cup!';
+                      _notifBodyController.text = 'Entry is open! 75% Prize pool ₹1,500 waiting. Join your squad now!';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('🔑 Room ID Released', style: TextStyle(fontSize: 10.5)),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '🔑 Room ID & Pass Released!';
+                      _notifBodyController.text = 'Your match Room ID is live. Open app & join Free Fire room immediately!';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('🎁 10% Deposit Bonus', style: TextStyle(fontSize: 10.5)),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '🎁 10% Extra Deposit Cashback!';
+                      _notifBodyController.text = 'Add cash via Razorpay UPI today and get 10% instant Bonus Cash!';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Message Content
+          TextField(
+            controller: _notifTitleController,
+            onChanged: (v) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Notification Title',
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _notifBodyController,
+            onChanged: (v) => setState(() {}),
+            maxLines: 2,
+            decoration: InputDecoration(
+              labelText: 'Notification Message / Body',
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _notifImageUrlController,
+            onChanged: (v) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Optional Image URL (Big Picture)',
+              hintText: 'https://images.unsplash.com/...',
+              isDense: true,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Live Android Lockscreen Preview Mockup
+          const Text('3. LIVE NOTIFICATION PREVIEW (ANDROID LOCKSCREEN):', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.grey)),
+          const SizedBox(height: 6),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white12),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF7C3AED),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Booyah Rewards', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                          Text('now', style: TextStyle(color: Colors.white.withAlpha(100), fontSize: 9.5)),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _notifTitleController.text.isNotEmpty ? _notifTitleController.text : 'Notification Title',
+                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _notifBodyController.text.isNotEmpty ? _notifBodyController.text : 'Notification Message Body...',
+                        style: TextStyle(color: Colors.white.withAlpha(180), fontSize: 11),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Send Push Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1D4ED8),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final title = _notifTitleController.text.trim();
+                final body = _notifBodyController.text.trim();
+                final img = _notifImageUrlController.text.trim();
+
+                if (title.isEmpty || body.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please enter Title and Message!')),
+                  );
+                  return;
+                }
+
+                if (_notifTarget == 'all') {
+                  await widget.appState.adminSendBroadcastNotification(
+                    title: title,
+                    body: body,
+                    imageUrl: img.isNotEmpty ? img : null,
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFF047857),
+                      content: Text('📢 Global Push Notification dispatched to ALL users!'),
+                    ),
+                  );
+                } else if (_notifTarget == 'match') {
+                  final targetMatchId = _notifSelectedMatchId ?? (matches.isNotEmpty ? matches.first.id : '');
+                  if (targetMatchId.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a match!')));
+                    return;
+                  }
+                  await widget.appState.adminSendMatchNotification(
+                    matchId: targetMatchId,
+                    title: title,
+                    body: body,
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFF047857),
+                      content: Text('🎮 Match Push Notification dispatched to participants!'),
+                    ),
+                  );
+                } else {
+                  final targetUid = _notifUserIdController.text.trim();
+                  if (targetUid.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter target User UID!')));
+                    return;
+                  }
+                  await widget.appState.adminSendPersonalNotification(
+                    userId: targetUid,
+                    title: title,
+                    body: body,
+                  );
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      backgroundColor: Color(0xFF047857),
+                      content: Text('👤 Targeted Push Notification sent to user!'),
+                    ),
+                  );
+                }
+              },
+              icon: const Icon(Icons.send_rounded, size: 18),
+              label: Text(
+                _notifTarget == 'all'
+                    ? 'DISPATCH BROADCAST TO ALL USERS'
+                    : (_notifTarget == 'match' ? 'SEND ALERT TO MATCH PLAYERS' : 'SEND NOTIFICATION TO USER'),
+                style: AppTheme.gamingTitle(fontSize: 12, color: Colors.white, isItalic: false),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          const Divider(),
+          const SizedBox(height: 10),
+          const Text('RECENT DISPATCHED NOTIFICATIONS HISTORY:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 10),
+
+          if (notifications.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(child: Text('No notifications recorded yet.', style: TextStyle(color: Colors.grey, fontSize: 11))),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: notifications.length.clamp(0, 10),
+              separatorBuilder: (context, index) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final notif = notifications[index];
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          notif.type == NotificationType.matchFull
+                              ? Icons.alarm
+                              : (notif.type == NotificationType.roomCredentials ? Icons.key : Icons.campaign),
+                          size: 16,
+                          color: const Color(0xFF1E293B),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(notif.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                            Text(notif.body, style: const TextStyle(color: Colors.grey, fontSize: 11), maxLines: 2, overflow: TextOverflow.ellipsis),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${notif.createdAt.hour.toString().padLeft(2, '0')}:${notif.createdAt.minute.toString().padLeft(2, '0')}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 10),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );

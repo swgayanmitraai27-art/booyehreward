@@ -7,7 +7,7 @@ enum MatchMode { br, cs, loneWolf }
 enum TeamType { solo, duo, squad }
 enum MatchFormat { solo, duo, squad, cs4v4, loneWolf1v1, loneWolf2v2 }
 enum MapType { bermuda, purgatory, kalahari, alpine, nexterra }
-enum MatchStatus { upcoming, ongoing, completed, cancelled }
+enum MatchStatus { upcoming, roomFilling, ongoing, completed, cancelled }
 
 class MatchCredentials {
   String roomId;
@@ -246,6 +246,7 @@ class MatchModel {
   List<RegisteredTeam> registeredTeams;
   bool hasUserWatchedAdToUnlockRoom;
   DateTime? completedAt;
+  DateTime? roomFillingStartedAt; // Timestamp when match reached 100% capacity (15-min countdown)
   String? hostName;
   FinancialBreakdown? financialBreakdown;
 
@@ -271,6 +272,7 @@ class MatchModel {
     List<RegisteredTeam>? registeredTeams,
     this.hasUserWatchedAdToUnlockRoom = false,
     this.completedAt,
+    this.roomFillingStartedAt,
     this.hostName,
     this.financialBreakdown,
   })  : mode = mode ?? _inferMode(matchFormat),
@@ -404,6 +406,18 @@ class MatchModel {
     }
   }
 
+  bool get isFull => filledSlots >= maxSlots && maxSlots > 0;
+  bool get isFillingRoom => status == MatchStatus.roomFilling || (isFull && status == MatchStatus.upcoming);
+
+  Duration get roomCountdownRemaining {
+    if (roomFillingStartedAt == null) {
+      return const Duration(minutes: 15);
+    }
+    final elapsed = DateTime.now().difference(roomFillingStartedAt!);
+    final remaining = const Duration(minutes: 15) - elapsed;
+    return remaining.isNegative ? Duration.zero : remaining;
+  }
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
@@ -420,7 +434,10 @@ class MatchModel {
     'maxSlots': maxSlots,
     'filledSlots': filledSlots,
     'credentials': credentials.toJson(),
-    'status': status == MatchStatus.completed ? 'COMPLETED' : status.name,
+    'status': status == MatchStatus.completed
+        ? 'COMPLETED'
+        : (status == MatchStatus.roomFilling ? 'FILLING_ROOM' : status.name),
+    'room_filling_started_at': roomFillingStartedAt?.toIso8601String(),
     'completed_at': completedAt?.toIso8601String(),
     'host_name': hostName,
     'financial_breakdown': financialBreakdown?.toJson(),
@@ -443,6 +460,7 @@ class MatchModel {
       if (st == 'COMPLETED' || st == 'completed') return MatchStatus.completed;
       if (st == 'ONGOING' || st == 'ongoing') return MatchStatus.ongoing;
       if (st == 'CANCELLED' || st == 'cancelled') return MatchStatus.cancelled;
+      if (st == 'FILLING_ROOM' || st == 'roomFilling' || st == 'filling_room') return MatchStatus.roomFilling;
       return MatchStatus.upcoming;
     }
 
@@ -466,6 +484,9 @@ class MatchModel {
       completedAt: json['completed_at'] != null
           ? DateTime.parse(json['completed_at'])
           : (json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null),
+      roomFillingStartedAt: json['room_filling_started_at'] != null
+          ? DateTime.parse(json['room_filling_started_at'])
+          : (json['roomFillingStartedAt'] != null ? DateTime.parse(json['roomFillingStartedAt']) : null),
       hostName: json['host_name'] ?? json['hostName'],
       financialBreakdown: json['financial_breakdown'] != null
           ? FinancialBreakdown.fromJson(Map<String, dynamic>.from(json['financial_breakdown']))

@@ -8,12 +8,17 @@ import '../models/transaction_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
 import '../models/banner_model.dart';
+import '../models/notification_model.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
+import 'notification_service.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
+  final NotificationService _notificationService = NotificationService();
+  NotificationService get notificationService => _notificationService;
+
   List<MatchModel> matches = [];
   List<TransactionModel> transactions = [];
   List<TransactionModel> allGlobalTransactions = [];
@@ -21,6 +26,8 @@ class AppState extends ChangeNotifier {
   List<WithdrawalModel> allGlobalWithdrawals = [];
   List<VoucherClaim> voucherClaims = [];
   List<VoucherClaim> allGlobalVoucherClaims = [];
+  List<AppNotification> notifications = [];
+  List<AppNotification> allGlobalNotifications = [];
   int globalTotalAdsWatched = 0;
   List<BannerModel> banners = [];
   String telegramSupportUrl = 'https://t.me/swgayanmitra';
@@ -110,12 +117,43 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _initData();
+    _initNotifications();
     _syncWithFirestore();
+  }
+
+  void _initNotifications() {
+    _notificationService.initialize(userId: user.uid);
+    _notificationService.onNotificationReceived.listen((notif) {
+      if (!allGlobalNotifications.any((n) => n.id == notif.id)) {
+        allGlobalNotifications.insert(0, notif);
+      }
+      final bool isRelevant = notif.targetType == 'all' ||
+          (notif.targetType == 'match' && matches.any((m) => m.id == notif.targetId && m.participants.any((p) => p.uid == user.uid))) ||
+          (notif.targetType == 'user' && notif.targetId == user.uid) ||
+          (notif.targetType == 'admin' && user.role == 'admin');
+      if (isRelevant && !notifications.any((n) => n.id == notif.id)) {
+        notifications.insert(0, notif);
+      }
+      notifyListeners();
+    });
+  }
+
+  void _checkAndTriggerMatchAutoStart(MatchModel match) {
+    if (match.isFull && (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling)) {
+      if (match.status != MatchStatus.roomFilling || match.roomFillingStartedAt == null) {
+        match.status = MatchStatus.roomFilling;
+        match.roomFillingStartedAt = DateTime.now();
+        _syncMatch(match);
+        _notificationService.triggerMatchFullAutoAlert(match: match);
+        debugPrint('🚀 [Dynamic Auto-Start] Triggered for Match ${match.id} (${match.title}) - 15m Countdown Active');
+      }
+    }
   }
 
   void setUser(UserModel u) {
     user = u;
     isAuthenticated = true;
+    _notificationService.initialize(userId: u.uid);
     notifyListeners();
     _syncUser();
     AuthService.saveUser(u);
@@ -334,6 +372,7 @@ class AppState extends ChangeNotifier {
     );
 
     _syncUser();
+    _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
     _syncTransaction(transactions.first);
 
@@ -489,6 +528,7 @@ class AppState extends ChangeNotifier {
     );
 
     _syncUser();
+    _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
     _syncTransaction(transactions.first);
 
@@ -633,6 +673,7 @@ class AppState extends ChangeNotifier {
     );
 
     _syncUser();
+    _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
     _syncTransaction(transactions.first);
 
@@ -926,8 +967,53 @@ class AppState extends ChangeNotifier {
     match.credentials.roomId = roomId;
     match.credentials.roomPassword = roomPass;
     match.credentials.isRevealed = true;
+    if (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling) {
+      match.status = MatchStatus.ongoing;
+    }
     _syncMatch(match);
+    _notificationService.sendMatchAlert(
+      matchId: matchId,
+      title: '🔑 ROOM ID & PASSWORD LIVE! (${match.title})',
+      body: 'Room ID: $roomId | Password: $roomPass. Join custom room immediately!',
+    );
     notifyListeners();
+  }
+
+  // --- ADMIN: PUSH NOTIFICATION BROADCAST & TARGETED DISPATCH ---
+  Future<bool> adminSendBroadcastNotification({
+    required String title,
+    required String body,
+    String? imageUrl,
+  }) async {
+    return await _notificationService.sendBroadcastAnnouncement(
+      title: title,
+      body: body,
+      imageUrl: imageUrl,
+    );
+  }
+
+  Future<bool> adminSendMatchNotification({
+    required String matchId,
+    required String title,
+    required String body,
+  }) async {
+    return await _notificationService.sendMatchAlert(
+      matchId: matchId,
+      title: title,
+      body: body,
+    );
+  }
+
+  Future<bool> adminSendPersonalNotification({
+    required String userId,
+    required String title,
+    required String body,
+  }) async {
+    return await _notificationService.sendPersonalNotification(
+      userId: userId,
+      title: title,
+      body: body,
+    );
   }
 
   // Helper to credit prize to other players' Firestore user wallets and create transactions
@@ -1475,6 +1561,9 @@ class AppState extends ChangeNotifier {
       if (matchDocs.isNotEmpty) {
         final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
         matches = firestoreMatches;
+        for (var m in matches) {
+          _checkAndTriggerMatchAutoStart(m);
+        }
       } else {
         matches = []; // Real live: empty if admin hasn't created any
       }
@@ -1537,6 +1626,23 @@ class AppState extends ChangeNotifier {
       final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
       if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
         telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+      }
+
+      // 9. Sync Realtime Push Notifications
+      final notifDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_notifications');
+      if (notifDocs.isNotEmpty) {
+        allGlobalNotifications = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
+        allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        notifications = allGlobalNotifications.where((n) {
+          if (n.targetType == 'all') return true;
+          if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
+          if (n.targetType == 'user' && n.targetId == user.uid) return true;
+          if (n.targetType == 'admin' && user.role == 'admin') return true;
+          return false;
+        }).toList();
+      } else {
+        allGlobalNotifications = [];
+        notifications = [];
       }
     } catch (e) {
       debugPrint('[AppState] Firestore live sync error: $e');

@@ -452,26 +452,68 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                           style: TextStyle(fontSize: 10, color: Color(0xFF047857), fontWeight: FontWeight.w600),
                         ),
                       ] else ...[
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
-                          ),
-                          child: const Row(
-                            children: [
-                              Icon(Icons.info_outline, size: 18, color: Color(0xFFB45309)),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Room ID & Password will be published 10-15 minutes before kickoff by Admin. No ads needed to view!',
-                                  style: TextStyle(fontSize: 11, color: Color(0xFF78350F), fontWeight: FontWeight.w600),
-                                ),
+                        if (match.isFillingRoom) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFFFEF2F2), Color(0xFFFEE2E2)],
                               ),
-                            ],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFECACA), width: 1.5),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDC2626),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.alarm_on, color: Colors.white, size: 20),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        '🚨 MATCH 100% FULL! AUTO-STARTING',
+                                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF991B1B)),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Room ID & Password will be provided in exactly ${match.roomCountdownRemaining.inMinutes} minutes! Keep your game ready.',
+                                        style: const TextStyle(fontSize: 10.5, color: Color(0xFFB91C1C), fontWeight: FontWeight.w600),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
+                        ] else ...[
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: const Row(
+                              children: [
+                                Icon(Icons.info_outline, size: 18, color: Color(0xFFB45309)),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Room ID & Password will be published 10-15 minutes before kickoff by Admin. No ads needed to view!',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFF78350F), fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ],
                   ),
