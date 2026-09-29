@@ -39,8 +39,8 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
   @override
   void initState() {
     super.initState();
-    _ignController.text = widget.appState.user.inGameName;
-    _uidController.text = widget.appState.user.inGameUid;
+    _ignController.text = widget.appState.user.inGameName ?? '';
+    _uidController.text = widget.appState.user.inGameUid ?? '';
     _levelController.text = widget.appState.user.inGameLevel.toString();
 
     // Check if user already in a team for this match

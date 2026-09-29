@@ -1,6 +1,7 @@
 enum TransactionType {
   adReward,
   deposit,
+  bonusCashback,
   matchEntryFee,
   matchWinningCash,
   matchWinningRewardCoins,
@@ -13,8 +14,9 @@ enum TransactionType {
 enum WalletType {
   adCoins,       // 🟡 Free entry
   rewardCoins,   // 🎟️ Free match winnings (Redeem only)
-  depositCash,   // 💵 Real money deposit (Paid entry only)
-  winningCash,   // 🏆 Real money winnings (UPI withdrawable)
+  bonusCash,     // 🎁 10% Extra Cashback / Referral Bonus (Non-withdrawable, used first)
+  depositCash,   // 💵 Real money deposit (Non-withdrawable, match entry only)
+  winningCash,   // 🏆 Real money winnings (100% UPI withdrawable)
 }
 
 class TransactionModel {
@@ -65,9 +67,9 @@ class TransactionModel {
   };
 
   factory TransactionModel.fromJson(Map<String, dynamic> json) => TransactionModel(
-    id: json['id'] ?? '',
-    userId: json['userId'] ?? '',
-    userName: json['userName'] ?? '',
+    id: (json['id'] ?? 'txn_${DateTime.now().millisecondsSinceEpoch}') as String,
+    userId: (json['userId'] ?? 'anonymous') as String,
+    userName: (json['userName'] ?? 'Player') as String,
     type: TransactionType.values.firstWhere(
       (e) => e.name == json['type'],
       orElse: () => TransactionType.deposit,
@@ -76,15 +78,15 @@ class TransactionModel {
       (e) => e.name == json['walletAffected'],
       orElse: () => WalletType.depositCash,
     ),
-    amount: ((json['amount'] ?? json['real_amount'] ?? json['bonus_amount'] ?? 0) as num).toDouble(),
-    currency: json['currency'] ?? 'INR',
-    balanceBefore: ((json['balanceBefore'] ?? json['balance_before'] ?? 0) as num).toDouble(),
-    balanceAfter: ((json['balanceAfter'] ?? json['balance_after'] ?? json['real_amount'] ?? json['amount'] ?? 0) as num).toDouble(),
-    status: json['status'] ?? 'SUCCESS',
-    description: json['description'] ?? '',
+    amount: ((json['amount'] ?? json['credited_amount'] ?? 0) as num).toDouble(),
+    currency: (json['currency'] ?? 'INR') as String,
+    balanceBefore: ((json['balanceBefore'] ?? 0) as num).toDouble(),
+    balanceAfter: ((json['balanceAfter'] ?? 0) as num).toDouble(),
+    status: (json['status'] ?? 'SUCCESS') as String,
+    description: (json['description'] ?? '') as String,
     createdAt: json['createdAt'] != null
-        ? DateTime.tryParse(json['createdAt']) ?? DateTime.now()
-        : (json['created_at'] != null ? DateTime.tryParse(json['created_at']) ?? DateTime.now() : DateTime.now()),
-    metadata: json['metadata'],
+        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+        : DateTime.now(),
+    metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata'] as Map) : null,
   );
 }

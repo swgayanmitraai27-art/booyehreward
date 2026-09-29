@@ -285,11 +285,42 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                     const SizedBox(height: 12),
 
+                    // 3-Card Real & Promotional Economy (Bonus Cash, Deposit Cash, Winning Cash)
                     Row(
                       children: [
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7).withAlpha(100),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '🎁 BONUS CASH',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '₹${wallet.bonusCash.toStringAsFixed(1)}',
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                                ),
+                                const Text(
+                                  '10% Cashback (Used 1st)',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8, color: Color(0xFF92400E)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFF8FAFC),
                               borderRadius: BorderRadius.circular(12),
@@ -300,26 +331,26 @@ class _WalletScreenState extends State<WalletScreen> {
                               children: [
                                 const Text(
                                   '💵 DEPOSIT CASH',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF2563EB)),
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '₹${wallet.depositCash.toInt()}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                                 ),
                                 const Text(
-                                  'Entry for Paid Matches',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, color: Color(0xFF64748B)),
+                                  'Match Entry Only',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8, color: Color(0xFF64748B)),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
 
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFECFDF5),
                               borderRadius: BorderRadius.circular(12),
@@ -329,17 +360,17 @@ class _WalletScreenState extends State<WalletScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  '🏆 WINNING CASH',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF065F46)),
+                                  '🏆 WINNINGS',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '₹${wallet.winningCash.toInt()}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
                                 ),
                                 const Text(
-                                  '100% UPI Withdrawable',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+                                  '100% Withdrawable',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
                                 ),
                               ],
                             ),

@@ -77,7 +77,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       radius: 30,
                       backgroundColor: AppTheme.primaryAmber,
                       child: Text(
-                        user.inGameName.isNotEmpty ? user.inGameName[0] : 'B',
+                        (user.inGameName != null && user.inGameName!.isNotEmpty)
+                            ? user.inGameName![0].toUpperCase()
+                            : (user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : 'B'),
                         style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Colors.black),
                       ),
                     ),

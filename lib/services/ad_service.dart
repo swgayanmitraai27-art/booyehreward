@@ -7,11 +7,8 @@ class AdService {
   // Official Google Mobile Ads App ID (SW Gyan Bhumi: AI Study App)
   static const String appId = "ca-app-pub-2914481734058093~1029535853";
 
-  // Official Live Rewarded Video Ad Unit ID (booyehrewardads)
+  // Official 100% Live Rewarded Video Ad Unit ID (booyehrewardads)
   static const String liveRewardedAdUnitId = "ca-app-pub-2914481734058093/6194763828";
-
-  // Google Official Test Rewarded Ad Unit ID (Always available for testing)
-  static const String testRewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917";
 
   static String activeRewardedAdUnitId = liveRewardedAdUnitId;
   static bool _isInitialized = false;
@@ -30,22 +27,21 @@ class AdService {
     }
   }
 
-  /// Update Ad Unit ID at runtime
+  /// Update Ad Unit ID at runtime if needed
   static void setRewardedAdUnitId(String unitId) {
     if (unitId.trim().isNotEmpty) {
       activeRewardedAdUnitId = unitId.trim();
     }
   }
 
-  /// Load and Show Rewarded Video Ad
-  /// Works across Android Native (Google Mobile Ads) and Web (Interactive VideoAdModal fallback)
+  /// Load and Show 100% Real Live Google AdMob Rewarded Video Ad
   static Future<void> showRewardedAd({
     required BuildContext context,
     required VoidCallback onUserEarnedReward,
     VoidCallback? onAdDismissed,
   }) async {
     if (kIsWeb) {
-      // Flutter Web: Show high quality interactive video simulation modal
+      // Web Player Simulation
       if (!context.mounted) return;
       showDialog(
         context: context,
@@ -62,10 +58,9 @@ class AdService {
       return;
     }
 
-    // Android / iOS: Load and show real Google AdMob Rewarded Video
     final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-    // Show loading snackbar/indicator
+    // Show loading indicator
     scaffoldMessenger.showSnackBar(
       const SnackBar(
         duration: Duration(seconds: 2),
@@ -77,34 +72,18 @@ class AdService {
               child: CircularProgressIndicator(strokeWidth: 2, color: Colors.amber),
             ),
             SizedBox(width: 12),
-            Text('Loading Rewarded Video Ad...'),
+            Text('Loading Live Video Ad...'),
           ],
         ),
       ),
     );
 
-    _loadAndShow(
-      adUnitId: activeRewardedAdUnitId,
-      context: context,
-      onUserEarnedReward: onUserEarnedReward,
-      onAdDismissed: onAdDismissed,
-      isRetry: false,
-    );
-  }
-
-  static void _loadAndShow({
-    required String adUnitId,
-    required BuildContext context,
-    required VoidCallback onUserEarnedReward,
-    VoidCallback? onAdDismissed,
-    required bool isRetry,
-  }) {
     RewardedAd.load(
-      adUnitId: adUnitId,
+      adUnitId: activeRewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (RewardedAd ad) {
-          debugPrint('[AdService] RewardedAd loaded successfully from unit: $adUnitId');
+          debugPrint('[AdService] Real Live RewardedAd loaded successfully: $activeRewardedAdUnitId');
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (RewardedAd ad) {
               ad.dispose();
@@ -113,57 +92,36 @@ class AdService {
             onAdFailedToShowFullScreenContent: (RewardedAd ad, AdError error) {
               debugPrint('[AdService] Failed to show RewardedAd: ${error.message}');
               ad.dispose();
-              _showFallbackModal(context, onUserEarnedReward, onAdDismissed);
+              if (context.mounted) {
+                scaffoldMessenger.showSnackBar(
+                  SnackBar(
+                    backgroundColor: Colors.red.shade800,
+                    content: Text('Failed to show ad: ${error.message}'),
+                  ),
+                );
+              }
             },
           );
 
           ad.show(
             onUserEarnedReward: (AdWithoutView ad, RewardItem reward) {
-              debugPrint('[AdService] User earned reward: ${reward.amount} ${reward.type}');
+              debugPrint('[AdService] User earned real reward: ${reward.amount} ${reward.type}');
               onUserEarnedReward();
             },
           );
         },
         onAdFailedToLoad: (LoadAdError error) {
-          debugPrint('[AdService] Failed to load RewardedAd ($adUnitId): ${error.message} (code: ${error.code})');
-
-          // If Live Ad failed (e.g. AdMob ad unit pending approval or no-fill during new setup),
-          // seamlessly fallback to official Google Test Video Ad so testing NEVER breaks.
-          if (!isRetry && adUnitId != testRewardedAdUnitId) {
-            debugPrint('[AdService] Retrying with Google Test Rewarded Ad Unit ID for instant verification...');
-            _loadAndShow(
-              adUnitId: testRewardedAdUnitId,
-              context: context,
-              onUserEarnedReward: onUserEarnedReward,
-              onAdDismissed: onAdDismissed,
-              isRetry: true,
+          debugPrint('[AdService] Failed to load Real Live RewardedAd: ${error.message} (code: ${error.code})');
+          if (context.mounted) {
+            scaffoldMessenger.showSnackBar(
+              SnackBar(
+                backgroundColor: Colors.red.shade800,
+                content: Text('Ad loading error: ${error.message}'),
+              ),
             );
-          } else {
-            _showFallbackModal(context, onUserEarnedReward, onAdDismissed);
           }
         },
       ),
     );
-  }
-
-  static void _showFallbackModal(
-    BuildContext context,
-    VoidCallback onUserEarnedReward,
-    VoidCallback? onAdDismissed,
-  ) {
-    if (context.mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => VideoAdModal(
-          title: 'Rewarded Ad Player',
-          rewardDescription: '+1 Ad Progress Recorded!',
-          onAdCompleted: () {
-            onUserEarnedReward();
-            if (onAdDismissed != null) onAdDismissed();
-          },
-        ),
-      );
-    }
   }
 }

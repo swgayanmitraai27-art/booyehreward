@@ -243,11 +243,11 @@ class AppState extends ChangeNotifier {
     user.inGameName = inGameName;
     user.inGameUid = inGameUid;
 
-    String walletUsed = 'AD_COINS';
-    double balBefore = 0;
-    double balAfter = 0;
+    double balBefore = 0.0;
+    double balAfter = 0.0;
+    String walletUsed = '';
 
-    // VALIDATE WALLET (Free vs Paid)
+    // DEDUCT ENTRY FEE WITH SMART PRIORITY (Bonus Cash -> Deposit Cash -> Winning Cash)
     if (match.matchType == MatchType.free) {
       if (user.wallet.adCoins < match.entryFee) {
         return {
@@ -260,33 +260,47 @@ class AppState extends ChangeNotifier {
       balAfter = user.wallet.adCoins.toDouble();
       walletUsed = 'AD_COINS';
     } else {
-      // PAID MATCH
+      // PAID MATCH: Smart Priority Deduction
       final fee = match.entryFee;
-      if (user.wallet.depositCash >= fee) {
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else if (user.wallet.depositCash + user.wallet.winningCash >= fee) {
-        final fromDeposit = user.wallet.depositCash;
-        final fromWinning = fee - fromDeposit;
-        user.wallet.depositCash = 0;
-        user.wallet.winningCash -= fromWinning;
-        balBefore = fromDeposit + fromWinning;
-        balAfter = user.wallet.winningCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
+      if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
-          'message': 'Insufficient Cash! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
+          'message': 'Insufficient Balance! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
         };
       }
+
+      double remaining = fee;
+      balBefore = user.wallet.totalPlayableCash;
+
+      // 1. Deduct from 🎁 Bonus Cash
+      if (user.wallet.bonusCash > 0) {
+        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
+        user.wallet.bonusCash -= deduct;
+        remaining -= deduct;
+      }
+
+      // 2. Deduct from 💵 Deposit Cash
+      if (remaining > 0 && user.wallet.depositCash > 0) {
+        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
+        user.wallet.depositCash -= deduct;
+        remaining -= deduct;
+      }
+
+      // 3. Deduct from 🏆 Winning Cash
+      if (remaining > 0 && user.wallet.winningCash > 0) {
+        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
+        user.wallet.winningCash -= deduct;
+        remaining -= deduct;
+      }
+
+      balAfter = user.wallet.totalPlayableCash;
+      walletUsed = 'REAL_CASH';
     }
 
     final participant = MatchParticipant(
       uid: user.uid,
-      inGameName: user.inGameName,
-      inGameUid: user.inGameUid,
+      inGameName: user.inGameName ?? inGameName,
+      inGameUid: user.inGameUid ?? inGameUid,
       slotNumber: chosenSlot,
       paidWith: walletUsed,
       amountPaid: match.entryFee,
@@ -351,11 +365,11 @@ class AppState extends ChangeNotifier {
     user.inGameName = inGameName;
     user.inGameUid = inGameUid;
 
-    String walletUsed = 'AD_COINS';
-    double balBefore = 0;
-    double balAfter = 0;
+    double balBefore = 0.0;
+    double balAfter = 0.0;
+    String walletUsed = '';
 
-    // Deduct entry fee
+    // DEDUCT ENTRY FEE (Free vs Paid Smart Priority)
     if (match.matchType == MatchType.free) {
       if (user.wallet.adCoins < match.entryFee) {
         return {
@@ -369,25 +383,36 @@ class AppState extends ChangeNotifier {
       walletUsed = 'AD_COINS';
     } else {
       final fee = match.entryFee;
-      if (user.wallet.depositCash >= fee) {
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else if (user.wallet.depositCash + user.wallet.winningCash >= fee) {
-        final fromDeposit = user.wallet.depositCash;
-        final fromWinning = fee - fromDeposit;
-        user.wallet.depositCash = 0;
-        user.wallet.winningCash -= fromWinning;
-        balBefore = fromDeposit + fromWinning;
-        balAfter = user.wallet.winningCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
+      if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
           'message': 'Insufficient Cash! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
         };
       }
+
+      double remaining = fee;
+      balBefore = user.wallet.totalPlayableCash;
+
+      if (user.wallet.bonusCash > 0) {
+        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
+        user.wallet.bonusCash -= deduct;
+        remaining -= deduct;
+      }
+
+      if (remaining > 0 && user.wallet.depositCash > 0) {
+        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
+        user.wallet.depositCash -= deduct;
+        remaining -= deduct;
+      }
+
+      if (remaining > 0 && user.wallet.winningCash > 0) {
+        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
+        user.wallet.winningCash -= deduct;
+        remaining -= deduct;
+      }
+
+      balAfter = user.wallet.totalPlayableCash;
+      walletUsed = 'REAL_CASH';
     }
 
     // Find next available slot
@@ -404,8 +429,8 @@ class AppState extends ChangeNotifier {
 
     final teamMember = TeamMember(
       uid: user.uid,
-      inGameName: user.inGameName,
-      inGameUid: user.inGameUid,
+      inGameName: user.inGameName ?? inGameName,
+      inGameUid: user.inGameUid ?? inGameUid,
       isCaptain: true,
       slotNumber: assignedSlot,
       joinedAt: DateTime.now(),
@@ -417,7 +442,7 @@ class AppState extends ChangeNotifier {
       matchId: match.id,
       teamCode: teamCode,
       captainUid: user.uid,
-      captainName: user.inGameName,
+      captainName: user.inGameName ?? inGameName,
       maxSize: teamMaxSize,
       teamName: teamName.isNotEmpty ? teamName : 'Team $teamCode',
       members: [teamMember],
@@ -428,8 +453,8 @@ class AppState extends ChangeNotifier {
 
     final participant = MatchParticipant(
       uid: user.uid,
-      inGameName: user.inGameName,
-      inGameUid: user.inGameUid,
+      inGameName: user.inGameName ?? inGameName,
+      inGameUid: user.inGameUid ?? inGameUid,
       slotNumber: assignedSlot,
       paidWith: walletUsed,
       amountPaid: match.entryFee,
@@ -499,11 +524,11 @@ class AppState extends ChangeNotifier {
     user.inGameName = inGameName;
     user.inGameUid = inGameUid;
 
-    String walletUsed = 'AD_COINS';
-    double balBefore = 0;
-    double balAfter = 0;
+    double balBefore = 0.0;
+    double balAfter = 0.0;
+    String walletUsed = '';
 
-    // Deduct entry fee
+    // DEDUCT ENTRY FEE (Free vs Paid Smart Priority)
     if (match.matchType == MatchType.free) {
       if (user.wallet.adCoins < match.entryFee) {
         return {
@@ -517,25 +542,36 @@ class AppState extends ChangeNotifier {
       walletUsed = 'AD_COINS';
     } else {
       final fee = match.entryFee;
-      if (user.wallet.depositCash >= fee) {
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else if (user.wallet.depositCash + user.wallet.winningCash >= fee) {
-        final fromDeposit = user.wallet.depositCash;
-        final fromWinning = fee - fromDeposit;
-        user.wallet.depositCash = 0;
-        user.wallet.winningCash -= fromWinning;
-        balBefore = fromDeposit + fromWinning;
-        balAfter = user.wallet.winningCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
+      if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
           'message': 'Insufficient Cash! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
         };
       }
+
+      double remaining = fee;
+      balBefore = user.wallet.totalPlayableCash;
+
+      if (user.wallet.bonusCash > 0) {
+        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
+        user.wallet.bonusCash -= deduct;
+        remaining -= deduct;
+      }
+
+      if (remaining > 0 && user.wallet.depositCash > 0) {
+        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
+        user.wallet.depositCash -= deduct;
+        remaining -= deduct;
+      }
+
+      if (remaining > 0 && user.wallet.winningCash > 0) {
+        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
+        user.wallet.winningCash -= deduct;
+        remaining -= deduct;
+      }
+
+      balAfter = user.wallet.totalPlayableCash;
+      walletUsed = 'REAL_CASH';
     }
 
     // Find next available slot
@@ -549,8 +585,8 @@ class AppState extends ChangeNotifier {
 
     final teamMember = TeamMember(
       uid: user.uid,
-      inGameName: user.inGameName,
-      inGameUid: user.inGameUid,
+      inGameName: user.inGameName ?? inGameName,
+      inGameUid: user.inGameUid ?? inGameUid,
       isCaptain: false,
       slotNumber: assignedSlot,
       joinedAt: DateTime.now(),
@@ -561,8 +597,8 @@ class AppState extends ChangeNotifier {
 
     final participant = MatchParticipant(
       uid: user.uid,
-      inGameName: user.inGameName,
-      inGameUid: user.inGameUid,
+      inGameName: user.inGameName ?? inGameName,
+      inGameUid: user.inGameUid ?? inGameUid,
       slotNumber: assignedSlot,
       paidWith: walletUsed,
       amountPaid: match.entryFee,
@@ -633,7 +669,7 @@ class AppState extends ChangeNotifier {
       id: claimId,
       userId: user.uid,
       userName: user.displayName,
-      inGameUid: inGameUid.isNotEmpty ? inGameUid : user.inGameUid,
+      inGameUid: inGameUid.isNotEmpty ? inGameUid : (user.inGameUid ?? ''),
       whatsappNumber: whatsappNumber.trim(),
       itemTitle: item.title,
       rewardCoinsSpent: item.rewardCoinsPrice,
@@ -757,31 +793,56 @@ class AppState extends ChangeNotifier {
     };
   }
 
-  // --- DEPOSIT CASH & AUTO-CREDIT WALLET (WITH 10% EXTRA DEPOSIT CASH) ---
+  // --- DEPOSIT CASH & AUTO-CREDIT WALLET (REAL CASH TO DEPOSIT, 10% BONUS TO BONUS CASH) ---
   void depositCash(double amount, String paymentId, {String description = ''}) {
     final extraBonus = (amount * 0.10);
-    final totalAdded = amount + extraBonus;
-    final balBefore = user.wallet.depositCash;
-    user.wallet.depositCash += totalAdded;
+    final depBefore = user.wallet.depositCash;
+    final bonusBefore = user.wallet.bonusCash;
 
+    // Real deposited money goes strictly to Deposit Cash (Match Entry Only)
+    user.wallet.depositCash += amount;
+    // 10% Extra Cashback goes strictly to Bonus Cash (Match Entry Only)
+    user.wallet.bonusCash += extraBonus;
+
+    // 1. Record Deposit Transaction
     final depositTxn = TransactionModel(
       id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
       userId: user.uid,
       userName: user.displayName,
       type: TransactionType.deposit,
       walletAffected: WalletType.depositCash,
-      amount: totalAdded,
+      amount: amount,
       currency: 'INR',
-      balanceBefore: balBefore,
+      balanceBefore: depBefore,
       balanceAfter: user.wallet.depositCash,
       status: 'SUCCESS',
       description: description.isNotEmpty
           ? description
-          : 'Added ₹${amount.toInt()} (+10% Bonus = ₹${totalAdded.toStringAsFixed(1)}) to Deposit Cash ($paymentId)',
+          : 'Deposit: Added ₹${amount.toInt()} Real Cash ($paymentId)',
       createdAt: DateTime.now(),
     );
     transactions.insert(0, depositTxn);
     _syncTransaction(depositTxn);
+
+    // 2. Record 10% Extra Bonus Cashback Transaction
+    if (extraBonus > 0) {
+      final bonusTxn = TransactionModel(
+        id: 'txn_bonus_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.bonusCashback,
+        walletAffected: WalletType.bonusCash,
+        amount: extraBonus,
+        currency: 'INR',
+        balanceBefore: bonusBefore,
+        balanceAfter: user.wallet.bonusCash,
+        status: 'SUCCESS',
+        description: '🎁 10% Extra Deposit Cashback (+₹${extraBonus.toStringAsFixed(1)} Bonus Cash)',
+        createdAt: DateTime.now(),
+      );
+      transactions.insert(0, bonusTxn);
+      _syncTransaction(bonusTxn);
+    }
 
     _syncUser();
     notifyListeners();
