@@ -1390,26 +1390,32 @@ class AppState extends ChangeNotifier {
         matches = []; // Real live: empty if admin hasn't created any
       }
 
-      // 3. Sync Transactions
+      // 3. Sync Transactions (Filtered strictly by User UID)
       final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
       if (txnDocs.isNotEmpty) {
-        transactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+        final allTxns = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+        transactions = allTxns.where((t) => t.userId == user.uid).toList();
+        transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
       } else {
         transactions = [];
       }
 
-      // 4. Sync Withdrawals
+      // 4. Sync Withdrawals (Filtered strictly by User UID)
       final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
       if (withDocs.isNotEmpty) {
-        withdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+        final allWiths = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+        withdrawals = allWiths.where((w) => w.userId == user.uid).toList();
+        withdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
       } else {
         withdrawals = [];
       }
 
-      // 5. Sync Voucher Claims
+      // 5. Sync Voucher Claims (Filtered strictly by User UID)
       final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
       if (claimDocs.isNotEmpty) {
-        voucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+        final allClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+        voucherClaims = allClaims.where((c) => c.userId == user.uid).toList();
+        voucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
       } else {
         voucherClaims = [];
       }
