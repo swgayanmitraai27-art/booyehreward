@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "841226454678",
+    "firebase_url": "https://sw-gyanmitra-finall2-426-dcc41-default-rtdb.firebaseio.com",
+    "project_id": "sw-gyanmitra-finall2-426-dcc41",
+    "storage_bucket": "sw-gyanmitra-finall2-426-dcc41.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:841226454678:android:70e8a534c265da58f2e4b7",
+        "android_client_info": {
+          "package_name": "com.swgayanbhumi.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "841226454678-6ek4s33iufn5m19rv5la2h1t1onej7tt.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3A-pGiFPDFxnXVI-D_gubGQzzL-uvzwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "841226454678-6ek4s33iufn5m19rv5la2h1t1onej7tt.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
