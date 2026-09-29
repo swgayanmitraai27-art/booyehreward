@@ -1054,7 +1054,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   // --- 3. WITHDRAWALS MANAGEMENT ---
   Widget _buildWithdrawalsSection() {
-    final withdrawals = widget.appState.withdrawals;
+    final withdrawals = widget.appState.allGlobalWithdrawals.isNotEmpty 
+        ? widget.appState.allGlobalWithdrawals 
+        : widget.appState.withdrawals;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1162,7 +1164,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   // --- 4. STORE & WHATSAPP CLAIMS MANAGEMENT ---
   Widget _buildStoreManagementSection() {
-    final claims = widget.appState.voucherClaims;
+    final claims = widget.appState.allGlobalVoucherClaims.isNotEmpty 
+        ? widget.appState.allGlobalVoucherClaims 
+        : widget.appState.voucherClaims;
 
     return Container(
       padding: const EdgeInsets.all(16),

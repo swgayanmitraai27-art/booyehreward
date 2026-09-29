@@ -16,8 +16,12 @@ class AppState extends ChangeNotifier {
   late UserModel user;
   List<MatchModel> matches = [];
   List<TransactionModel> transactions = [];
+  List<TransactionModel> allGlobalTransactions = [];
   List<WithdrawalModel> withdrawals = [];
+  List<WithdrawalModel> allGlobalWithdrawals = [];
   List<VoucherClaim> voucherClaims = [];
+  List<VoucherClaim> allGlobalVoucherClaims = [];
+  int globalTotalAdsWatched = 0;
   List<BannerModel> banners = [];
   String telegramSupportUrl = 'https://t.me/swgayanmitra';
   bool isLiveSyncing = false;
@@ -751,6 +755,18 @@ class AppState extends ChangeNotifier {
     user.adTracker.dailyLimitRemaining -= 1;
     user.adTracker.adsWatchedSinceLastCoin += 1;
     user.adTracker.lastAdTimestamp = DateTime.now();
+    globalTotalAdsWatched += 1;
+
+    // Asynchronously update global ad stats in Firestore
+    FirestoreRestService.setDocument(
+      'skillwinner_stats',
+      'ad_stats',
+      {
+        'totalAdsWatched': globalTotalAdsWatched,
+        'lastUpdated': DateTime.now().toIso8601String(),
+      },
+    );
+    _syncUser();
 
     bool coinAwarded = false;
     String message = 'Ad completed (${user.adTracker.adsWatchedSinceLastCoin}/3). Watch ${3 - user.adTracker.adsWatchedSinceLastCoin} more for 1 🟡 Ad Coin!';
@@ -763,26 +779,26 @@ class AppState extends ChangeNotifier {
       coinAwarded = true;
       message = '🎉 Milestone Reached! You earned +1 🟡 Ad Coin!';
 
-      transactions.insert(
-        0,
-        TransactionModel(
-          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.adReward,
-          walletAffected: WalletType.adCoins,
-          amount: 1,
-          currency: 'AD_COINS',
-          balanceBefore: balBefore,
-          balanceAfter: user.wallet.adCoins.toDouble(),
-          status: 'SUCCESS',
-          description: 'Earned 1 Ad Coin by watching 3 Rewarded Ads',
-          createdAt: DateTime.now(),
-        ),
+      final newTxn = TransactionModel(
+        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.adReward,
+        walletAffected: WalletType.adCoins,
+        amount: 1,
+        currency: 'AD_COINS',
+        balanceBefore: balBefore,
+        balanceAfter: user.wallet.adCoins.toDouble(),
+        status: 'SUCCESS',
+        description: 'Earned 1 Ad Coin by watching 3 Rewarded Ads',
+        createdAt: DateTime.now(),
       );
 
+      transactions.insert(0, newTxn);
+      allGlobalTransactions.insert(0, newTxn);
+
       _syncUser();
-      _syncTransaction(transactions.first);
+      _syncTransaction(newTxn);
     }
 
     notifyListeners();
@@ -1228,13 +1244,13 @@ class AppState extends ChangeNotifier {
 
   // --- ADMIN FINANCIAL & ECONOMY ANALYTICS ---
   Map<String, dynamic> get adminFinancialMetrics {
-    // 💵 PAID MATCHES METRICS
-    double totalDeposits = transactions
-        .where((t) => t.type == TransactionType.deposit && t.status == 'SUCCESS')
+    // 💵 PAID MATCHES METRICS (GLOBAL PLATFORM LEVEL)
+    double totalDeposits = allGlobalTransactions
+        .where((t) => (t.type == TransactionType.deposit || t.description.toLowerCase().contains('deposit')) && t.status == 'SUCCESS')
         .fold(0.0, (sum, t) => sum + t.amount);
 
-    double totalCashEntryFees = transactions
-        .where((t) => t.type == TransactionType.matchEntryFee && t.walletAffected == WalletType.depositCash)
+    double totalCashEntryFees = allGlobalTransactions
+        .where((t) => t.type == TransactionType.matchEntryFee && (t.walletAffected == WalletType.depositCash || t.currency == 'INR'))
         .fold(0.0, (sum, t) => sum + t.amount.abs());
 
     // Also calculate from paid matches participants if no transactions recorded yet
@@ -1248,14 +1264,14 @@ class AppState extends ChangeNotifier {
     }
     if (totalCashEntryFees == 0) totalCashEntryFees = matchCalculatedPaidEntry;
 
-    double totalCashPrizesWon = transactions
+    double totalCashPrizesWon = allGlobalTransactions
         .where((t) => t.type == TransactionType.matchWinningCash && t.walletAffected == WalletType.winningCash)
         .fold(0.0, (sum, t) => sum + t.amount);
 
-    final pendingList = withdrawals.where((w) => w.status == WithdrawalStatus.pending).toList();
+    final pendingList = allGlobalWithdrawals.where((w) => w.status == WithdrawalStatus.pending).toList();
     double totalPendingPayout = pendingList.fold(0.0, (sum, w) => sum + w.amount);
 
-    double totalPaidOut = withdrawals
+    double totalPaidOut = allGlobalWithdrawals
         .where((w) => w.status == WithdrawalStatus.completed)
         .fold(0.0, (sum, w) => sum + w.amount);
 
@@ -1271,12 +1287,15 @@ class AppState extends ChangeNotifier {
       totalAdCoinsCollected += m.participants.fold(0.0, (s, p) => s + p.amountPaid);
     }
 
-    double totalRewardCoinsIssued = transactions
+    double totalRewardCoinsIssued = allGlobalTransactions
         .where((t) => t.type == TransactionType.matchWinningRewardCoins)
         .fold(0.0, (sum, t) => sum + t.amount);
 
-    // Each Ad Coin requires 3 ads watched, plus direct ad watching
-    int totalEstimatedAdsWatched = (totalAdCoinsCollected * 3).toInt() + user.adTracker.adsWatchedToday;
+    // Global Ads Watched: Real count from global ad stats & conversions
+    int totalEstimatedAdsWatched = globalTotalAdsWatched > 0
+        ? globalTotalAdsWatched
+        : ((totalAdCoinsCollected * 3).toInt() + user.adTracker.adsWatchedToday);
+
     // Estimated AdMob revenue: eCPM ~ ₹60 per 1000 ads = ₹0.06 per ad
     double estimatedAdRevenue = totalEstimatedAdsWatched * 0.06;
     // Reward coins cost: 10 coins = ₹1
@@ -1293,8 +1312,8 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    int pendingVouchers = voucherClaims.where((v) => v.status == VoucherClaimStatus.pending).length;
-    int deliveredVouchers = voucherClaims.where((v) => v.status == VoucherClaimStatus.delivered).length;
+    int pendingVouchers = allGlobalVoucherClaims.where((v) => v.status == VoucherClaimStatus.pending).length;
+    int deliveredVouchers = allGlobalVoucherClaims.where((v) => v.status == VoucherClaimStatus.delivered).length;
 
     return {
       // Combined / General
@@ -1326,7 +1345,7 @@ class AppState extends ChangeNotifier {
       // Store Voucher Claims
       'pendingVoucherClaims': pendingVouchers,
       'deliveredVoucherClaims': deliveredVouchers,
-      'totalVouchersClaimed': voucherClaims.length,
+      'totalVouchersClaimed': allGlobalVoucherClaims.length,
     };
   }
 
@@ -1390,43 +1409,61 @@ class AppState extends ChangeNotifier {
         matches = []; // Real live: empty if admin hasn't created any
       }
 
-      // 3. Sync Transactions (Filtered strictly by User UID)
+      // 3. Sync Transactions (Global Collection for Admin, Filtered for User)
       final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
       if (txnDocs.isNotEmpty) {
-        final allTxns = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
-        transactions = allTxns.where((t) => t.userId == user.uid).toList();
-        transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        allGlobalTransactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+        allGlobalTransactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
       } else {
+        allGlobalTransactions = [];
         transactions = [];
       }
 
-      // 4. Sync Withdrawals (Filtered strictly by User UID)
+      // 4. Sync Withdrawals (Global Collection for Admin, Filtered for User)
       final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
       if (withDocs.isNotEmpty) {
-        final allWiths = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
-        withdrawals = allWiths.where((w) => w.userId == user.uid).toList();
-        withdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        allGlobalWithdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+        allGlobalWithdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        withdrawals = allGlobalWithdrawals.where((w) => w.userId == user.uid).toList();
       } else {
+        allGlobalWithdrawals = [];
         withdrawals = [];
       }
 
-      // 5. Sync Voucher Claims (Filtered strictly by User UID)
+      // 5. Sync Voucher Claims (Global Collection for Admin, Filtered for User)
       final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
       if (claimDocs.isNotEmpty) {
-        final allClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
-        voucherClaims = allClaims.where((c) => c.userId == user.uid).toList();
-        voucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        allGlobalVoucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+        allGlobalVoucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+        voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
       } else {
+        allGlobalVoucherClaims = [];
         voucherClaims = [];
       }
 
-      // 6. Sync Dynamic Banners from Firestore
+      // 6. Sync Global Ad Stats (skillwinner_stats/ad_stats)
+      try {
+        final adDoc = await FirestoreRestService.getDocument('skillwinner_stats', 'ad_stats');
+        if (adDoc != null && adDoc['totalAdsWatched'] != null) {
+          globalTotalAdsWatched = (adDoc['totalAdsWatched'] as num).toInt();
+        } else {
+          final totalAdRewardCoins = allGlobalTransactions
+              .where((t) => t.type == TransactionType.adReward || t.walletAffected == WalletType.adCoins)
+              .fold(0, (sum, t) => sum + t.amount.abs().toInt());
+          globalTotalAdsWatched = (totalAdRewardCoins * 3) + user.adTracker.adsWatchedToday;
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync ad stats error: $e');
+      }
+
+      // 7. Sync Dynamic Banners from Firestore
       final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
       if (bannerDocs.isNotEmpty) {
         banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
       }
 
-      // 7. Sync Telegram Support & App Config
+      // 8. Sync Telegram Support & App Config
       final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
       if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
         telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
