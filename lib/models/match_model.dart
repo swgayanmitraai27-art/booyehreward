@@ -89,7 +89,7 @@ class FinancialBreakdown {
   );
 
   /// Automated Profit Sharing Calculation Engine:
-  /// - platform_commission_gross = 30% of total_entry_collection
+  /// - platform_commission_gross = 25% of total_entry_collection
   /// - gateway_fee_deduction = 2.36% of total_entry_collection (Razorpay standard 2% + 18% GST)
   /// - net_profit = platform_commission_gross - gateway_fee_deduction
   /// - founder_60 = 60% of net_profit
@@ -105,7 +105,7 @@ class FinancialBreakdown {
         shares: ProfitShares(founder60: 0, host25: 0, investor15: 0),
       );
     }
-    final grossComm = totalCollection * 0.30;
+    final grossComm = totalCollection * 0.25;
     final gatewayFee = totalCollection * 0.0236;
     final net = grossComm - gatewayFee;
     final netProfit = net > 0 ? net : 0.0;
@@ -289,10 +289,10 @@ class MatchModel {
     return TeamType.solo;
   }
 
-  // --- 70/30 AUTO-DISTRIBUTION FINANCIAL ENGINE ---
+  // --- 75/25 AUTO-DISTRIBUTION FINANCIAL ENGINE ---
   double get totalCollection => entryFee * maxSlots;
-  double get adminCommission => matchType == MatchType.paid ? (totalCollection * 0.30) : 0;
-  double get distributablePrizePool => matchType == MatchType.paid ? (totalCollection * 0.70) : prizePool.totalPool;
+  double get adminCommission => matchType == MatchType.paid ? (totalCollection * 0.25) : 0;
+  double get distributablePrizePool => matchType == MatchType.paid ? (totalCollection * 0.75) : prizePool.totalPool;
 
   int get maxPossibleKills => maxSlots > 1 ? (maxSlots - 1) : 0;
   double get reservedKillPool => maxPossibleKills * prizePool.perKill;
@@ -309,14 +309,15 @@ class MatchModel {
 
   int get totalTeams => (maxSlots / teamSize).ceil();
 
-  // Standard Esports Percentage Distribution based on Team Type
-  double getRankPercentage(int rank) {
-    if (teamType == TeamType.squad) {
+  // Standard Esports Percentage Distribution based on Distribution Mode (Top 3, Top 5, Top 10)
+  double getRankPercentage(int rank, {String? distMode}) {
+    final mode = distMode ?? (prizePool.fifthPlace != null ? 'top5' : (prizePool.thirdPlace != null ? 'top3' : 'top10'));
+    if (mode == 'top3') {
       if (rank == 1) return 0.50; // 50%
       if (rank == 2) return 0.30; // 30%
       if (rank == 3) return 0.20; // 20%
       return 0.0;
-    } else if (teamType == TeamType.duo) {
+    } else if (mode == 'top5') {
       if (rank == 1) return 0.40; // 40%
       if (rank == 2) return 0.25; // 25%
       if (rank == 3) return 0.15; // 15%
@@ -324,23 +325,27 @@ class MatchModel {
       if (rank == 5) return 0.10; // 10%
       return 0.0;
     } else {
-      // Solo
-      if (rank == 1) return 0.25; // 25%
-      if (rank == 2) return 0.15; // 15%
-      if (rank == 3) return 0.10; // 10%
-      if (rank == 4) return 0.08; // 8%
-      if (rank == 5) return 0.08; // 8%
-      if (rank >= 6 && rank <= 10) return 0.068; // 6.8% each
+      // Top 10
+      if (rank == 1) return 0.30; // 30%
+      if (rank == 2) return 0.20; // 20%
+      if (rank == 3) return 0.15; // 15%
+      if (rank == 4 || rank == 5) return 0.075; // 7.5% each
+      if (rank >= 6 && rank <= 10) return 0.04; // 4% each
       return 0.0;
     }
   }
 
   double getTeamRankPrize(int rank) {
+    if (rank == 1 && prizePool.firstPlace > 0) return prizePool.firstPlace;
+    if (rank == 2 && prizePool.secondPlace != null && prizePool.secondPlace! > 0) return prizePool.secondPlace!;
+    if (rank == 3 && prizePool.thirdPlace != null && prizePool.thirdPlace! > 0) return prizePool.thirdPlace!;
+    if (rank == 4 && prizePool.fourthPlace != null && prizePool.fourthPlace! > 0) return prizePool.fourthPlace!;
+    if (rank == 5 && prizePool.fifthPlace != null && prizePool.fifthPlace! > 0) return prizePool.fifthPlace!;
     return rankPrizePool * getRankPercentage(rank);
   }
 
   double getIndividualRankPrize(int rank) {
-    return getTeamRankPrize(rank) / teamSize;
+    return getTeamRankPrize(rank) / (teamSize > 0 ? teamSize : 1);
   }
 
   double calculatePlayerPayout({required int rank, required int kills}) {

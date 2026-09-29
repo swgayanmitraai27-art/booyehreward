@@ -20,9 +20,13 @@ class AdminPanelScreen extends StatefulWidget {
 }
 
 class _AdminPanelScreenState extends State<AdminPanelScreen> {
-  int activeSection = 0; // 0: Finance & Analytics, 1: Results, 2: Room Publisher, 3: Withdrawals, 4: Store Claims, 5: Create Match, 6: Banners, 7: Settings
+  int activeSection = 0; // 0: Finance & Analytics, 1: Verification, 2: Results, 3: Room Publisher, 4: Withdrawals, 5: Store Claims, 6: Create Match, 7: Banners, 8: Settings
   int financeViewTab = 0; // 0: All Summary, 1: Paid (Real Cash), 2: Free (Ad Coins)
   String selectedLedgerDateFilter = 'All Time'; // 'All Time', 'Today', 'Last 7 Days', 'This Month'
+
+  // Match Players Verification state
+  String? selectedMatchIdForVerification;
+  final TextEditingController _verificationSearchController = TextEditingController();
 
   // Result declaration state
   String? selectedMatchIdForResult;
@@ -48,18 +52,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   // Telegram Support & Settings state
   final TextEditingController _telegramUrlController = TextEditingController();
 
-  // Create Match state (100% Dynamic with 70/30 Financial Engine)
+  // Create Match state (100% Dynamic with 75/25 Financial Engine)
   final TextEditingController _matchTitleController = TextEditingController(text: '⚡ Free Fire Clash Squad Championship');
   final TextEditingController _matchBannerUrlController = TextEditingController(text: 'imgasest/cshomescreen.png');
   final TextEditingController _entryFeeController = TextEditingController(text: '50');
   final TextEditingController _maxSlotsController = TextEditingController(text: '8');
 
-  // BR Specific Rank Prizes & Per Kill
+  // BR Specific Rank Prizes, Per Kill, and Distribution Mode
+  String _brPrizeDistributionMode = 'top3'; // 'top3', 'top5', 'top10'
   final TextEditingController _firstPrizeController = TextEditingController(text: '500');
   final TextEditingController _secondPrizeController = TextEditingController(text: '200');
   final TextEditingController _thirdPrizeController = TextEditingController(text: '100');
-  final TextEditingController _fourthPrizeController = TextEditingController(text: '50');
-  final TextEditingController _fifthPrizeController = TextEditingController(text: '50');
+  final TextEditingController _fourthPrizeController = TextEditingController(text: '0');
+  final TextEditingController _fifthPrizeController = TextEditingController(text: '0');
   final TextEditingController _perKillController = TextEditingController(text: '10');
 
   MatchType newMatchType = MatchType.paid;
@@ -82,6 +87,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     for (var c in rankControllers.values) {
       c.dispose();
     }
+    _verificationSearchController.dispose();
     _roomIdController.dispose();
     _roomPassController.dispose();
     _storeTitleController.dispose();
@@ -110,6 +116,38 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('$label copied to clipboard!')),
     );
+  }
+
+  void _autoCalculateBRPrizes() {
+    final entryFee = double.tryParse(_entryFeeController.text) ?? 50;
+    final totalPlayers = int.tryParse(_maxSlotsController.text) ?? 48;
+    final totalPool = entryFee * totalPlayers;
+    final distributablePrizePool = newMatchType == MatchType.paid ? (totalPool * 0.75) : (totalPool * 0.4);
+    final perKill = double.tryParse(_perKillController.text) ?? 0;
+    final maxKills = totalPlayers > 1 ? (totalPlayers - 1) : 0;
+    final reservedKillPool = maxKills * perKill;
+    final rankPool = (distributablePrizePool - reservedKillPool) > 0 ? (distributablePrizePool - reservedKillPool) : 0.0;
+
+    if (_brPrizeDistributionMode == 'top3') {
+      _firstPrizeController.text = (rankPool * 0.50).toInt().toString();
+      _secondPrizeController.text = (rankPool * 0.30).toInt().toString();
+      _thirdPrizeController.text = (rankPool * 0.20).toInt().toString();
+      _fourthPrizeController.text = '0';
+      _fifthPrizeController.text = '0';
+    } else if (_brPrizeDistributionMode == 'top5') {
+      _firstPrizeController.text = (rankPool * 0.40).toInt().toString();
+      _secondPrizeController.text = (rankPool * 0.25).toInt().toString();
+      _thirdPrizeController.text = (rankPool * 0.15).toInt().toString();
+      _fourthPrizeController.text = (rankPool * 0.10).toInt().toString();
+      _fifthPrizeController.text = (rankPool * 0.10).toInt().toString();
+    } else {
+      // top10
+      _firstPrizeController.text = (rankPool * 0.30).toInt().toString();
+      _secondPrizeController.text = (rankPool * 0.20).toInt().toString();
+      _thirdPrizeController.text = (rankPool * 0.15).toInt().toString();
+      _fourthPrizeController.text = (rankPool * 0.075).toInt().toString();
+      _fifthPrizeController.text = (rankPool * 0.075).toInt().toString();
+    }
   }
 
   @override
@@ -150,7 +188,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 16),
 
-          // 📊 FINANCIAL CARDS: 70/30 SPLIT & SEPARATED REVENUES
+          // 📊 FINANCIAL CARDS: 75/25 SPLIT & SEPARATED REVENUES
           _buildFinancialAnalyticsContainer(metrics),
           const SizedBox(height: 18),
 
@@ -161,32 +199,35 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               children: [
                 _buildTabBtn(0, '📈 Finance & Analytics'),
                 const SizedBox(width: 8),
-                _buildTabBtn(1, '🏆 Declare Results'),
+                _buildTabBtn(1, '👥 Match Players & Room Verification'),
                 const SizedBox(width: 8),
-                _buildTabBtn(2, '🔑 Room Publisher'),
+                _buildTabBtn(2, '🏆 Declare Results'),
                 const SizedBox(width: 8),
-                _buildTabBtn(3, '💵 Withdrawals (${metrics['pendingCount']})'),
+                _buildTabBtn(3, '🔑 Room Publisher'),
                 const SizedBox(width: 8),
-                _buildTabBtn(4, '🎁 Store Claims (${metrics['pendingVoucherClaims']})'),
+                _buildTabBtn(4, '💵 Withdrawals (${metrics['pendingCount']})'),
                 const SizedBox(width: 8),
-                _buildTabBtn(5, '➕ Create Match (70/30 Engine)'),
+                _buildTabBtn(5, '🎁 Store Claims (${metrics['pendingVoucherClaims']})'),
                 const SizedBox(width: 8),
-                _buildTabBtn(6, '📢 Banners & Slider (${widget.appState.banners.length})'),
+                _buildTabBtn(6, '➕ Create Match (75/25 Engine)'),
                 const SizedBox(width: 8),
-                _buildTabBtn(7, '⚙️ Telegram & App Settings'),
+                _buildTabBtn(7, '📢 Banners & Slider (${widget.appState.banners.length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(8, '⚙️ Telegram & App Settings'),
               ],
             ),
           ),
           const SizedBox(height: 16),
 
           if (activeSection == 0) _buildFinanceAndAnalyticsSection(),
-          if (activeSection == 1) _buildResultDeclarationSection(),
-          if (activeSection == 2) _buildRoomPublisherSection(),
-          if (activeSection == 3) _buildWithdrawalsSection(),
-          if (activeSection == 4) _buildStoreManagementSection(),
-          if (activeSection == 5) _buildCreateMatchSection(),
-          if (activeSection == 6) _buildBannersSection(),
-          if (activeSection == 7) _buildSettingsSection(),
+          if (activeSection == 1) _buildMatchPlayersVerificationSection(),
+          if (activeSection == 2) _buildResultDeclarationSection(),
+          if (activeSection == 3) _buildRoomPublisherSection(),
+          if (activeSection == 4) _buildWithdrawalsSection(),
+          if (activeSection == 5) _buildStoreManagementSection(),
+          if (activeSection == 6) _buildCreateMatchSection(),
+          if (activeSection == 7) _buildBannersSection(),
+          if (activeSection == 8) _buildSettingsSection(),
         ],
       ),
     );
@@ -220,7 +261,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Icon(Icons.analytics, color: Colors.amber, size: 18),
                   SizedBox(width: 6),
                   Text(
-                    '70/30 PLATFORM ECONOMY',
+                    '75/25 PLATFORM ECONOMY',
                     style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
                   ),
                 ],
@@ -329,7 +370,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'Organizer Net Profit (30% Commission + Ad Margin):',
+                'Organizer Net Profit (25% Commission + Ad Margin):',
                 style: TextStyle(color: Colors.white70, fontSize: 10.5, fontWeight: FontWeight.bold),
               ),
               Text(
@@ -361,16 +402,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               child: _buildMetricCard(
                 title: 'PRIZES DISTRIBUTED',
                 value: '₹${(metrics['totalCashPrizesWon'] as num).toInt()}',
-                subtitle: '70% Distributable Pool',
+                subtitle: '75% Distributable Pool',
                 color: const Color(0xFFF472B6),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
               child: _buildMetricCard(
-                title: '30% ADMIN MARGIN',
+                title: '25% PLATFORM COMM.',
                 value: '₹${(metrics['netCashMargin'] as num).toInt()}',
-                subtitle: 'Guaranteed 30% Profit',
+                subtitle: '25% Platform Margin',
                 color: const Color(0xFF34D399),
               ),
             ),
@@ -503,7 +544,388 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   // ==========================================
-  // --- 1. RESULT DECLARATION (CS TEAM A/B vs BR DYNAMIC) ---
+  // --- 1. MATCH PLAYERS & ROOM VERIFICATION SECTION ---
+  // ==========================================
+  Widget _buildMatchPlayersVerificationSection() {
+    final matches = widget.appState.matches;
+    if (matches.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Center(
+          child: Column(
+            children: [
+              Icon(Icons.sports_esports_outlined, size: 48, color: Colors.grey),
+              SizedBox(height: 8),
+              Text('No matches created yet.', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final selectedMatch = matches.firstWhere(
+      (m) => m.id == (selectedMatchIdForVerification ?? matches.first.id),
+      orElse: () => matches.first,
+    );
+
+    final searchQuery = _verificationSearchController.text.trim().toLowerCase();
+    final filteredParticipants = selectedMatch.participants.where((p) {
+      if (searchQuery.isEmpty) return true;
+      return p.inGameName.toLowerCase().contains(searchQuery) ||
+          p.inGameUid.toLowerCase().contains(searchQuery) ||
+          p.uid.toLowerCase().contains(searchQuery) ||
+          '#${p.slotNumber}'.contains(searchQuery);
+    }).toList();
+
+    final isPaid = selectedMatch.matchType == MatchType.paid;
+    final totalPrizePool = isPaid ? selectedMatch.distributablePrizePool : selectedMatch.prizePool.totalPool;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header & Free Fire Intruder Room Notice
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.verified_user, color: Color(0xFF7C3AED), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    'ROOM INTRUDERS & PLAYERS VERIFICATION',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED), letterSpacing: 0.8),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: selectedMatch.status == MatchStatus.upcoming
+                      ? Colors.blue.shade50
+                      : (selectedMatch.status == MatchStatus.ongoing ? Colors.orange.shade50 : Colors.green.shade50),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  selectedMatch.status.name.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 9.5,
+                    fontWeight: FontWeight.w900,
+                    color: selectedMatch.status == MatchStatus.upcoming
+                        ? Colors.blue.shade800
+                        : (selectedMatch.status == MatchStatus.ongoing ? Colors.orange.shade800 : Colors.green.shade800),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Cross-check Free Fire Custom Room lobby with this list. If anyone is in the custom room whose UID / IGN is NOT in this list, kick them out directly from Free Fire room.',
+            style: TextStyle(fontSize: 11, color: Color(0xFF64748B), height: 1.3),
+          ),
+          const SizedBox(height: 14),
+
+          // Match Selector Dropdown
+          DropdownButtonFormField<String>(
+            initialValue: selectedMatch.id,
+            isExpanded: true,
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'Select Tournament Match',
+              prefixIcon: const Icon(Icons.sports_esports, size: 20, color: Color(0xFF7C3AED)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            items: matches.map((m) {
+              return DropdownMenuItem(
+                value: m.id,
+                child: Text(
+                  '${m.title} [${m.mode.name.toUpperCase()} • ${m.teamType.name.toUpperCase()}] (${m.participants.length}/${m.maxSlots} Players)',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              );
+            }).toList(),
+            onChanged: (val) {
+              setState(() {
+                selectedMatchIdForVerification = val;
+              });
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Summary Stats Cards
+          Row(
+            children: [
+              Expanded(
+                child: _buildVerificationStatCard(
+                  title: 'JOINED PLAYERS',
+                  value: '${selectedMatch.participants.length} / ${selectedMatch.maxSlots}',
+                  subtitle: '${selectedMatch.maxSlots - selectedMatch.participants.length} Slots Left',
+                  color: const Color(0xFF2563EB),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildVerificationStatCard(
+                  title: isPaid ? 'COLLECTED (₹)' : 'COINS (🟡)',
+                  value: isPaid
+                      ? '₹${selectedMatch.participants.fold(0.0, (s, p) => s + p.amountPaid).toInt()}'
+                      : '🟡 ${selectedMatch.participants.fold(0.0, (s, p) => s + p.amountPaid).toInt()}',
+                  subtitle: '${selectedMatch.entryFee.toInt()} Entry / Player',
+                  color: const Color(0xFF059669),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _buildVerificationStatCard(
+                  title: '75% PRIZE POOL',
+                  value: isPaid ? '₹${totalPrizePool.toInt()}' : '${totalPrizePool.toInt()} 🎟️',
+                  subtitle: isPaid ? '25% Margin: ₹${selectedMatch.adminCommission.toInt()}' : 'Reward Coins',
+                  color: Colors.amber.shade800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Search Bar & Copy All Actions Bar
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _verificationSearchController,
+                  onChanged: (v) => setState(() {}),
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'Search by Free Fire UID, IGN, or Slot...',
+                    prefixIcon: const Icon(Icons.search, size: 18, color: Colors.grey),
+                    suffixIcon: _verificationSearchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 16),
+                            onPressed: () {
+                              _verificationSearchController.clear();
+                              setState(() {});
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: selectedMatch.participants.isEmpty
+                    ? null
+                    : () {
+                        final uids = selectedMatch.participants.map((p) => p.inGameUid).join(', ');
+                        _copy(uids, 'All Free Fire UIDs');
+                      },
+                icon: const Icon(Icons.copy_all, size: 16),
+                label: const Text('COPY ALL UIDS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Player List
+          if (selectedMatch.participants.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Text(
+                'No players have registered for this match yet.\nWhen players join, their Free Fire UID & Name will appear here.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.4),
+              ),
+            )
+          else if (filteredParticipants.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              alignment: Alignment.center,
+              child: Text(
+                'No player found matching "${_verificationSearchController.text.trim()}".',
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filteredParticipants.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final p = filteredParticipants[index];
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      // Slot Badge
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '#${p.slotNumber}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Player Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    p.inGameName,
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (p.teamName != null && p.teamName!.isNotEmpty) ...[
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: p.teamName == 'Team A' ? const Color(0xFFDCFCE7) : const Color(0xFFDBEAFE),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      p.teamName!,
+                                      style: TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                        color: p.teamName == 'Team A' ? const Color(0xFF166534) : const Color(0xFF1E40AF),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                const Text('FF UID: ', style: TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+                                Text(
+                                  p.inGameUid,
+                                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED)),
+                                ),
+                                const SizedBox(width: 4),
+                                InkWell(
+                                  onTap: () => _copy(p.inGameUid, 'UID ${p.inGameUid}'),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEDE9FE),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Icon(Icons.copy, size: 12, color: Color(0xFF7C3AED)),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'Paid: ${p.paidWith} (₹${p.amountPaid.toInt()}) • Joined: ${p.joinedAt.hour}:${p.joinedAt.minute.toString().padLeft(2, '0')}',
+                              style: const TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Verified Status Badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.check_circle, size: 12, color: Color(0xFF059669)),
+                            SizedBox(width: 4),
+                            Text(
+                              'VERIFIED',
+                              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVerificationStatCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withAlpha(80)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: color)),
+          const SizedBox(height: 2),
+          Text(value, style: AppTheme.gamingNumber(fontSize: 14, color: const Color(0xFF0F172A))),
+          const SizedBox(height: 1),
+          Text(subtitle, style: const TextStyle(fontSize: 8, color: Color(0xFF64748B))),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // --- 2. RESULT DECLARATION (CS TEAM A/B vs BR DYNAMIC) ---
   // ==========================================
   Widget _buildResultDeclarationSection() {
     final matches = widget.appState.matches;
@@ -538,7 +960,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  isFree ? 'Prize: 🎟️ Reward Coins' : 'Prize: 🏆 Winning Cash (70% Pool: ₹${selectedMatch.distributablePrizePool.toInt()})',
+                  isFree ? 'Prize: 🎟️ Reward Coins' : 'Prize: 🏆 Winning Cash (75% Pool: ₹${selectedMatch.distributablePrizePool.toInt()})',
                   style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w900,
@@ -629,7 +1051,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('70% DISTRIBUTABLE PRIZE POOL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+                  const Text('75% DISTRIBUTABLE PRIZE POOL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
                   Text(
                     isPaid ? '₹${prizePool.toInt()} Real Cash' : '${prizePool.toInt()} 🎟️ Reward Coins',
                     style: AppTheme.gamingNumber(fontSize: 16, color: const Color(0xFF047857)),
@@ -685,7 +1107,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('• ${p.inGameName} (#${p.slotNumber})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                Text('  UID: ${p.inGameUid}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF047857), fontWeight: FontWeight.w600)),
+                                Row(
+                                  children: [
+                                    Text('  UID: ${p.inGameUid}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF047857), fontWeight: FontWeight.w600)),
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      onTap: () => _copy(p.inGameUid, 'UID ${p.inGameUid}'),
+                                      child: const Icon(Icons.copy, size: 11, color: Color(0xFF16A34A)),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           )),
@@ -749,7 +1180,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text('• ${p.inGameName} (#${p.slotNumber})', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                Text('  UID: ${p.inGameUid}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF1E40AF), fontWeight: FontWeight.w600)),
+                                Row(
+                                  children: [
+                                    Text('  UID: ${p.inGameUid}', style: const TextStyle(fontSize: 9.5, color: Color(0xFF1E40AF), fontWeight: FontWeight.w600)),
+                                    const SizedBox(width: 4),
+                                    InkWell(
+                                      onTap: () => _copy(p.inGameUid, 'UID ${p.inGameUid}'),
+                                      child: const Icon(Icons.copy, size: 11, color: Color(0xFF2563EB)),
+                                    ),
+                                  ],
+                                ),
                               ],
                             ),
                           )),
@@ -867,8 +1307,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(p.inGameName, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
-                          Text('UID: ${p.inGameUid} • Est: ${isPaid ? '₹${totalEstimatedPrize.toInt()}' : '${totalEstimatedPrize.toInt()} 🎟️'}',
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF047857), fontWeight: FontWeight.bold)),
+                          Row(
+                            children: [
+                              Text('UID: ${p.inGameUid}', style: const TextStyle(fontSize: 10, color: Color(0xFF047857), fontWeight: FontWeight.bold)),
+                              const SizedBox(width: 4),
+                              InkWell(
+                                onTap: () => _copy(p.inGameUid, 'UID ${p.inGameUid}'),
+                                child: const Icon(Icons.copy, size: 10, color: Color(0xFF047857)),
+                              ),
+                              const SizedBox(width: 6),
+                              Text('• Est: ${isPaid ? '₹${totalEstimatedPrize.toInt()}' : '${totalEstimatedPrize.toInt()} 🎟️'}',
+                                  style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -1345,16 +1796,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   // ==========================================
-  // --- 5. CREATE MATCH (100% DYNAMIC 70/30 ENGINE) ---
+  // --- 6. CREATE MATCH (100% DYNAMIC 75/25 ENGINE) ---
   // ==========================================
   Widget _buildCreateMatchSection() {
     final entryFee = double.tryParse(_entryFeeController.text) ?? 50;
     final totalPlayers = int.tryParse(_maxSlotsController.text) ?? 8;
 
-    // 70/30 Financial Engine Calculation
+    // 75/25 Financial Engine Calculation
     final double totalPool = entryFee * totalPlayers;
-    final double adminCommission = totalPool * 0.30; // 30% Admin Commission
-    final double distributablePrizePool = totalPool * 0.70; // 70% Distributable Prize Pool
+    final double adminCommission = totalPool * 0.25; // 25% Admin Commission
+    final double distributablePrizePool = totalPool * 0.75; // 75% Distributable Prize Pool
 
     // For BR mode: Calculate dynamic rank prizes total + per kill
     final firstPrize = double.tryParse(_firstPrizeController.text) ?? 0;
@@ -1365,7 +1816,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final perKill = double.tryParse(_perKillController.text) ?? 0;
 
     final double totalRankPrizes = firstPrize + secondPrize + thirdPrize + fourthPrize + fifthPrize;
-    final bool isBRValid = newMatchMode != MatchMode.br || (totalRankPrizes <= distributablePrizePool);
+    final double maxKillCost = (totalPlayers > 1 ? (totalPlayers - 1) : 0) * perKill;
+    final double totalEstimatedPayout = totalRankPrizes + maxKillCost;
+    final bool isBRValid = newMatchMode != MatchMode.br || (totalEstimatedPayout <= distributablePrizePool + 0.5);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1381,7 +1834,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'DYNAMIC MATCH CREATION (70/30 ENGINE)',
+                'DYNAMIC MATCH CREATION (75/25 ENGINE)',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
               ),
               Container(
@@ -1391,7 +1844,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  newMatchType == MatchType.free ? '🟡 FREE AD MATCH' : '💵 PAID 70/30 ENGINE',
+                  newMatchType == MatchType.free ? '🟡 FREE AD MATCH' : '💵 PAID 75/25 ENGINE',
                   style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w900,
@@ -1425,6 +1878,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     setState(() {
                       newMatchType = MatchType.free;
                       _entryFeeController.text = '5';
+                      _autoCalculateBRPrizes();
                     });
                   },
                 ),
@@ -1432,12 +1886,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: ChoiceChip(
-                  label: const Text('💵 PAID MATCH (Real Cash 70/30)'),
+                  label: const Text('💵 PAID MATCH (Real Cash 75/25)'),
                   selected: newMatchType == MatchType.paid,
                   onSelected: (val) {
                     setState(() {
                       newMatchType = MatchType.paid;
                       _entryFeeController.text = '50';
+                      _autoCalculateBRPrizes();
                     });
                   },
                 ),
@@ -1477,6 +1932,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         _matchBannerUrlController.text = 'imgasest/brhomescreen .png';
                         _maxSlotsController.text = '48';
                         newTeamType = TeamType.solo;
+                        _autoCalculateBRPrizes();
                       }
                     });
                   },
@@ -1514,6 +1970,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         _maxSlotsController.text = team == TeamType.squad ? '8' : (team == TeamType.duo ? '4' : '2');
                       } else if (newMatchMode == MatchMode.loneWolf) {
                         _maxSlotsController.text = team == TeamType.solo ? '2' : (team == TeamType.duo ? '4' : '8');
+                      } else {
+                        _autoCalculateBRPrizes();
                       }
                     });
                   },
@@ -1571,7 +2029,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 child: TextField(
                   controller: _entryFeeController,
                   keyboardType: TextInputType.number,
-                  onChanged: (v) => setState(() {}),
+                  onChanged: (v) {
+                    setState(() {
+                      if (newMatchMode == MatchMode.br) _autoCalculateBRPrizes();
+                    });
+                  },
                   decoration: InputDecoration(
                     labelText: newMatchType == MatchType.free ? 'Entry Fee (🟡 Ad Coins)' : 'Entry Fee (₹ Real Cash)',
                     prefixIcon: Icon(newMatchType == MatchType.free ? Icons.monetization_on : Icons.currency_rupee, size: 18),
@@ -1584,7 +2046,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 child: TextField(
                   controller: _maxSlotsController,
                   keyboardType: TextInputType.number,
-                  onChanged: (v) => setState(() {}),
+                  onChanged: (v) {
+                    setState(() {
+                      if (newMatchMode == MatchMode.br) _autoCalculateBRPrizes();
+                    });
+                  },
                   decoration: InputDecoration(
                     labelText: 'Total Players (Slots)',
                     hintText: 'Any number: 2, 4, 8, 48, 50...',
@@ -1597,7 +2063,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 14),
 
-          // 4. 70/30 FINANCIAL ENGINE LIVE CARD
+          // 4. 75/25 FINANCIAL ENGINE LIVE CARD
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -1614,7 +2080,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       children: [
                         Icon(Icons.pie_chart, color: Colors.amber, size: 16),
                         SizedBox(width: 6),
-                        Text('70/30 AUTOMATIC FINANCIAL ENGINE', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.w900)),
+                        Text('75/25 AUTOMATIC FINANCIAL ENGINE', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.w900)),
                       ],
                     ),
                     Text('Auto-Calculated', style: TextStyle(color: Colors.white54, fontSize: 9.5)),
@@ -1654,12 +2120,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('ADMIN PROFIT (30%)', style: TextStyle(color: Color(0xFF34D399), fontSize: 8.5, fontWeight: FontWeight.bold)),
+                            const Text('COMMISSION (25%)', style: TextStyle(color: Color(0xFF34D399), fontSize: 8.5, fontWeight: FontWeight.bold)),
                             Text(
                               newMatchType == MatchType.free ? 'Zero Loss' : '₹${adminCommission.toInt()}',
                               style: AppTheme.gamingNumber(fontSize: 14, color: const Color(0xFF34D399)),
                             ),
-                            const Text('30% Commission', style: TextStyle(color: Colors.white54, fontSize: 8)),
+                            const Text('25% Platform Margin', style: TextStyle(color: Colors.white54, fontSize: 8)),
                           ],
                         ),
                       ),
@@ -1675,12 +2141,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('PRIZE POOL (70%)', style: TextStyle(color: Colors.amber, fontSize: 8.5, fontWeight: FontWeight.bold)),
+                            const Text('PRIZE POOL (75%)', style: TextStyle(color: Colors.amber, fontSize: 8.5, fontWeight: FontWeight.bold)),
                             Text(
                               newMatchType == MatchType.free ? '${(totalPool * 0.4).toInt()} 🎟️' : '₹${distributablePrizePool.toInt()}',
                               style: AppTheme.gamingNumber(fontSize: 14, color: Colors.amber),
                             ),
-                            const Text('70% Distributable', style: TextStyle(color: Colors.white54, fontSize: 8)),
+                            const Text('75% Distributable', style: TextStyle(color: Colors.white54, fontSize: 8)),
                           ],
                         ),
                       ),
@@ -1694,7 +2160,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
           // 5. SPECIFIC DISTRIBUTION RULES BY MODE
           if (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ...[
-            // CS / Lone Wolf: Per Kill Disabled. Full 70% pool to winning team!
+            // CS / Lone Wolf: Per Kill Disabled. Full 75% pool to winning team!
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -1715,7 +2181,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   const SizedBox(height: 4),
                   Text(
                     '• Per Kill rewards are DISABLED for CS / Lone Wolf.\n'
-                    '• Entire 70% Prize Pool (₹${distributablePrizePool.toInt()}) will be divided EQUALLY among winning team members (≈ ₹${(distributablePrizePool / ((totalPlayers / 2) > 0 ? (totalPlayers / 2) : 1)).toInt()} per player).',
+                    '• Entire 75% Prize Pool (₹${distributablePrizePool.toInt()}) will be divided EQUALLY among winning team members (≈ ₹${(distributablePrizePool / ((totalPlayers / 2) > 0 ? (totalPlayers / 2) : 1)).toInt()} per player).',
                     style: const TextStyle(fontSize: 11, color: Color(0xFF065F46)),
                   ),
                 ],
@@ -1733,8 +2199,62 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('BR (FULL MAP) DYNAMIC RANK PRIZES & PER KILL', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('BR PRIZE DISTRIBUTION MODE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+                      Text(
+                        '75% Pool: ₹${distributablePrizePool.toInt()}',
+                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 8),
+
+                  // Distribution Mode Selector Chips
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Text('🏆 Top 3 (50/30/20)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          selected: _brPrizeDistributionMode == 'top3',
+                          onSelected: (val) {
+                            setState(() {
+                              _brPrizeDistributionMode = 'top3';
+                              _autoCalculateBRPrizes();
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Text('🎖️ Top 5 (Esports)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          selected: _brPrizeDistributionMode == 'top5',
+                          onSelected: (val) {
+                            setState(() {
+                              _brPrizeDistributionMode = 'top5';
+                              _autoCalculateBRPrizes();
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: ChoiceChip(
+                          label: const Text('🌟 Top 10 (Wide)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          selected: _brPrizeDistributionMode == 'top10',
+                          onSelected: (val) {
+                            setState(() {
+                              _brPrizeDistributionMode = 'top10';
+                              _autoCalculateBRPrizes();
+                            });
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
 
                   Row(
                     children: [
@@ -1812,7 +2332,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         child: TextField(
                           controller: _perKillController,
                           keyboardType: TextInputType.number,
-                          onChanged: (v) => setState(() {}),
+                          onChanged: (v) {
+                            setState(() {
+                              _autoCalculateBRPrizes();
+                            });
+                          },
                           decoration: InputDecoration(
                             labelText: 'Per Kill (₹)',
                             isDense: true,
@@ -1839,8 +2363,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         Expanded(
                           child: Text(
                             isBRValid
-                                ? '✓ Valid: Rank Prizes (₹${totalRankPrizes.toInt()}) are within 70% pool limit (₹${distributablePrizePool.toInt()}). If Duo/Squad, prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.'
-                                : '⚠️ Warning: Rank Prizes (₹${totalRankPrizes.toInt()}) exceed 70% pool limit (₹${distributablePrizePool.toInt()}). Please reduce rank prizes.',
+                                ? '✓ Valid: Rank Prizes (₹${totalRankPrizes.toInt()}) + Max Kills (₹${maxKillCost.toInt()}) are within 75% pool limit (₹${distributablePrizePool.toInt()}). If Duo/Squad, prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.'
+                                : '⚠️ Warning: Total Payout (₹${totalEstimatedPayout.toInt()}) exceeds 75% pool limit (₹${distributablePrizePool.toInt()}). Please reduce rank prizes or per-kill amount.',
                             style: TextStyle(fontSize: 10, color: isBRValid ? const Color(0xFF065F46) : Colors.red, fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -2009,7 +2533,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.winningGreen,
-                    content: Text('Match created! 70% Pool: ₹${distributablePrizePool.toInt()} | 30% Admin Profit: ₹${adminCommission.toInt()}'),
+                    content: Text('Match created! 75% Pool: ₹${distributablePrizePool.toInt()} | 25% Platform Margin: ₹${adminCommission.toInt()}'),
                   ),
                 );
               },
@@ -2253,7 +2777,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Expanded(child: _buildTopMetricCard(
                     title: 'TOTAL NET PROFIT',
                     amount: totalNetProfit,
-                    subtext: 'Gross ₹${grossCommission.toStringAsFixed(0)} (30%) - Fee ₹${gatewayFees.toStringAsFixed(1)}',
+                    subtext: 'Gross ₹${grossCommission.toStringAsFixed(0)} (25%) - Fee ₹${gatewayFees.toStringAsFixed(1)}',
                     badge: 'LIFETIME / FILTERED',
                     gradientColors: [const Color(0xFF064E3B), const Color(0xFF065F46)],
                     icon: Icons.account_balance_wallet,
@@ -2362,7 +2886,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Formula: Total Collection (₹${totalCollection.toStringAsFixed(0)}) ➔ Gross Platform Comm (30%) - Razorpay Fee (2.36%) = Net Profit (100%) ➔ [Founder: 60% | Host: 25% | Investor: 15%]',
+                  'Formula: Total Collection (₹${totalCollection.toStringAsFixed(0)}) ➔ Gross Platform Comm (25%) - Razorpay Fee (2.36%) = Net Profit (100%) ➔ [Founder: 60% | Host: 25% | Investor: 15%]',
                   style: const TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 10.5,
@@ -2607,7 +3131,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                                 ),
                                 Container(width: 1, height: 28, color: const Color(0xFFE2E8F0)),
                                 _buildLedgerStatItem(
-                                  label: 'GROSS (30%)',
+                                  label: 'GROSS (25%)',
                                   value: '₹${fb.platformCommissionGross.toStringAsFixed(1)}',
                                   valueColor: const Color(0xFF2563EB),
                                 ),
@@ -2919,7 +3443,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     const SizedBox(height: 8),
                     _buildJsonRow('status', '"COMPLETED"'),
                     _buildJsonRow('total_entry_collection', '₹${fb.totalEntryCollection.toStringAsFixed(2)}'),
-                    _buildJsonRow('platform_commission_gross (30%)', '₹${fb.platformCommissionGross.toStringAsFixed(2)}'),
+                    _buildJsonRow('platform_commission_gross (25%)', '₹${fb.platformCommissionGross.toStringAsFixed(2)}'),
                     _buildJsonRow('gateway_fee_deduction (2.36%)', '₹${fb.gatewayFeeDeduction.toStringAsFixed(2)}'),
                     _buildJsonRow('net_profit', '₹${fb.netProfit.toStringAsFixed(2)}'),
                     const Padding(

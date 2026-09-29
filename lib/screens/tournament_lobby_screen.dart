@@ -103,7 +103,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Watch ads for 🟡 Ad Coins in Free Tournaments or deposit cash for Pro 70/30 Matches with Instant UPI withdrawals.',
+                  'Watch ads for 🟡 Ad Coins in Free Tournaments or deposit cash for Pro 75/25 Matches with Instant UPI withdrawals.',
                   style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
                 ),
                 const SizedBox(height: 14),
@@ -679,7 +679,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    isFree ? '🟡 FREE MATCH' : '💵 PAID 70/30 MATCH',
+                    isFree ? '🟡 FREE MATCH' : '💵 PAID 75/25 MATCH',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 9.5,

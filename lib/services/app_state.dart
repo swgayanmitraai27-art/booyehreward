@@ -930,6 +930,56 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Helper to credit prize to other players' Firestore user wallets and create transactions
+  Future<void> _creditWinningToParticipant({
+    required String uid,
+    required String inGameName,
+    required double amount,
+    required bool isPaid,
+    required String matchTitle,
+    required int? rank,
+    required int kills,
+  }) async {
+    if (uid.isEmpty || uid == user.uid) return;
+    try {
+      final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uid);
+      if (userDoc != null && userDoc.isNotEmpty) {
+        final targetUser = UserModel.fromJson(userDoc);
+        final double balBefore = isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble();
+        if (isPaid) {
+          targetUser.wallet.winningCash += amount;
+          targetUser.stats.totalWinningsCash += amount;
+        } else {
+          targetUser.wallet.rewardCoins += amount.toInt();
+          targetUser.stats.totalRewardCoinsWon += amount.toInt();
+        }
+        targetUser.stats.totalKills += kills;
+        if (rank == 1) targetUser.stats.matchesWon += 1;
+
+        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, uid, targetUser.toJson());
+
+        final winTxn = TransactionModel(
+          id: 'txn_${DateTime.now().millisecondsSinceEpoch}_$uid',
+          userId: uid,
+          userName: targetUser.displayName.isNotEmpty ? targetUser.displayName : inGameName,
+          type: isPaid ? TransactionType.matchWinningCash : TransactionType.matchWinningRewardCoins,
+          walletAffected: isPaid ? WalletType.winningCash : WalletType.rewardCoins,
+          amount: amount,
+          currency: isPaid ? 'INR' : 'REWARD_COINS',
+          balanceBefore: balBefore,
+          balanceAfter: isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble(),
+          status: 'SUCCESS',
+          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "₹${amount.toInt()} Winning Cash" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
+          createdAt: DateTime.now(),
+        );
+        allGlobalTransactions.insert(0, winTxn);
+        await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, winTxn.id, winTxn.toJson());
+      }
+    } catch (e) {
+      debugPrint('[AppState] Failed to credit winning to participant $uid: $e');
+    }
+  }
+
   // --- ADMIN: CLASH SQUAD / LONE WOLF 1-CLICK TEAM WINNER DECLARATION ---
   void adminDeclareCSTeamWinner({
     required String matchId,
@@ -952,7 +1002,7 @@ class AppState extends ChangeNotifier {
     final winningParticipants = (winningTeam == 'Team A') ? match.teamAParticipants : match.teamBParticipants;
     final losingParticipants = (winningTeam == 'Team A') ? match.teamBParticipants : match.teamAParticipants;
 
-    // Distributable Prize Pool (70% for paid, totalPool for free)
+    // Distributable Prize Pool (75% for paid, totalPool for free)
     final double totalPrizePool = isPaid ? match.distributablePrizePool : match.prizePool.totalPool;
     final int winningCount = winningParticipants.isNotEmpty ? winningParticipants.length : (match.maxSlots / 2).ceil();
     final double prizePerPlayer = totalPrizePool / (winningCount > 0 ? winningCount : 1);
@@ -1009,6 +1059,16 @@ class AppState extends ChangeNotifier {
           transactions.insert(0, winTxn);
           _syncTransaction(winTxn);
         }
+      } else if (p.uid.isNotEmpty) {
+        _creditWinningToParticipant(
+          uid: p.uid,
+          inGameName: p.inGameName,
+          amount: prizePerPlayer,
+          isPaid: isPaid,
+          matchTitle: match.title,
+          rank: 1,
+          kills: 0,
+        );
       }
     }
 
@@ -1106,6 +1166,16 @@ class AppState extends ChangeNotifier {
             _syncTransaction(winTxn);
           }
         }
+      } else if (participant.uid.isNotEmpty && totalPrize > 0) {
+        _creditWinningToParticipant(
+          uid: participant.uid,
+          inGameName: participant.inGameName,
+          amount: totalPrize,
+          isPaid: isPaid,
+          matchTitle: match.title,
+          rank: rank,
+          kills: kills,
+        );
       }
     }
 
