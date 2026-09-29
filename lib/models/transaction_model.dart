@@ -84,8 +84,8 @@ class TransactionModel {
     balanceAfter: ((json['balanceAfter'] ?? 0) as num).toDouble(),
     status: (json['status'] ?? 'SUCCESS') as String,
     description: (json['description'] ?? '') as String,
-    createdAt: json['createdAt'] != null
-        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+    createdAt: (json['createdAt'] != null || json['created_at'] != null)
+        ? (DateTime.tryParse((json['createdAt'] ?? json['created_at']).toString())?.toLocal() ?? DateTime.now())
         : DateTime.now(),
     metadata: json['metadata'] != null ? Map<String, dynamic>.from(json['metadata'] as Map) : null,
   );

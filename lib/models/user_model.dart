@@ -28,9 +28,9 @@ class UserWallet {
   };
 
   factory UserWallet.fromJson(Map<String, dynamic> json) => UserWallet(
-    adCoins: ((json['adCoins'] ?? json['ad_coins'] ?? json['bonus'] ?? 0) as num).toInt(),
+    adCoins: ((json['adCoins'] ?? json['ad_coins'] ?? json['bonus_balance'] ?? json['bonus'] ?? 0) as num).toInt(),
     rewardCoins: ((json['rewardCoins'] ?? json['reward_coins'] ?? 0) as num).toInt(),
-    bonusCash: ((json['bonusCash'] ?? json['bonus_cash'] ?? json['bonus_balance'] ?? 0) as num).toDouble(),
+    bonusCash: ((json['bonusCash'] ?? json['bonus_cash'] ?? 0) as num).toDouble(),
     depositCash: ((json['depositCash'] ?? json['real_balance'] ?? json['realCash'] ?? json['real'] ?? 0) as num).toDouble(),
     winningCash: ((json['winningCash'] ?? json['total_winnings'] ?? json['winnings'] ?? 0) as num).toDouble(),
   );
