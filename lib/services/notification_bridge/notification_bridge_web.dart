@@ -37,7 +37,7 @@ void showBrowserNotification(String title, String body, {String? imageUrl, Strin
         'showWebNotification'.toJS,
         title.toJS,
         body.toJS,
-        (imageUrl ?? 'https://www.swgayanbhumi.in/logo.png').toJS,
+        (imageUrl ?? 'https://booyehreward.vercel.app/booyah_logo.png').toJS,
         (url ?? '').toJS,
       );
     }

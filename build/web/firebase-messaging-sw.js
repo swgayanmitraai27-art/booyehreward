@@ -19,8 +19,8 @@ messaging.onBackgroundMessage(function(payload) {
   const notificationTitle = payload.notification?.title || payload.data?.title || 'Booyah Rewards Alert';
   const notificationOptions = {
     body: payload.notification?.body || payload.data?.body || 'Match updates and tournament lobby alerts.',
-    icon: payload.notification?.image || 'https://www.swgayanbhumi.in/logo.png',
-    badge: 'https://www.swgayanbhumi.in/logo.png',
+    icon: payload.notification?.image || 'https://booyehreward.vercel.app/booyah_logo.png',
+    badge: 'https://booyehreward.vercel.app/booyah_logo.png',
     data: payload.data
   };
 

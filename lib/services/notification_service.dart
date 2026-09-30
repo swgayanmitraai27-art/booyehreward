@@ -68,7 +68,7 @@ class NotificationService {
       showBrowserNotification(
         '🔥 Booyah Rewards Alert!',
         'Desktop & Browser Push Notifications are working perfectly! 🎮',
-        imageUrl: 'https://www.swgayanbhumi.in/logo.png',
+        imageUrl: 'https://booyehreward.vercel.app/booyah_logo.png',
       );
     }
   }

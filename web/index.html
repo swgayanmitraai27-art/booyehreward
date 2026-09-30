@@ -59,7 +59,7 @@
       try {
         var options = JSON.parse(optionsJson);
         options.name = options.name || 'Booyah Rewards';
-        options.image = options.image || 'https://www.swgayanbhumi.in/logo.png';
+        options.image = options.image || 'https://booyehreward.vercel.app/booyah_logo.png';
         options.theme = options.theme || { color: '#E50914' };
         
         // Clean order_id: remove if empty or dummy
@@ -141,8 +141,8 @@
       try {
         var options = {
           body: body || "Tournament alert",
-          icon: iconUrl || "https://www.swgayanbhumi.in/logo.png",
-          badge: "https://www.swgayanbhumi.in/logo.png",
+          icon: iconUrl || "https://booyehreward.vercel.app/booyah_logo.png",
+          badge: "https://booyehreward.vercel.app/booyah_logo.png",
           vibrate: [200, 100, 200]
         };
         var notif = new Notification(title || "Booyah Rewards", options);
