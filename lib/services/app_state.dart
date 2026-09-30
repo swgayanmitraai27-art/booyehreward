@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -13,11 +14,15 @@ import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
 import 'notification_service.dart';
+import 'notification_bridge/notification_bridge.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
   final NotificationService _notificationService = NotificationService();
   NotificationService get notificationService => _notificationService;
+
+  Timer? _liveSyncTimer;
+  final Set<String> _alertedNotifIds = {};
 
   List<MatchModel> matches = [];
   List<TransactionModel> transactions = [];
@@ -119,11 +124,20 @@ class AppState extends ChangeNotifier {
     _initData();
     _initNotifications();
     _syncWithFirestore();
+    _startLiveSyncTimer();
+  }
+
+  void _startLiveSyncTimer() {
+    _liveSyncTimer?.cancel();
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      _syncWithFirestore();
+    });
   }
 
   void _initNotifications() {
     _notificationService.initialize(userId: user.uid);
     _notificationService.onNotificationReceived.listen((notif) {
+      _alertedNotifIds.add(notif.id);
       allGlobalNotifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
       allGlobalNotifications.insert(0, notif);
 
@@ -134,6 +148,9 @@ class AppState extends ChangeNotifier {
       if (isRelevant) {
         notifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
         notifications.insert(0, notif);
+        if (kIsWeb) {
+          showBrowserNotification(notif.title, notif.body, imageUrl: notif.imageUrl);
+        }
       }
       notifyListeners();
     });
@@ -1642,13 +1659,28 @@ class AppState extends ChangeNotifier {
         }
         allGlobalNotifications = dedupMap.values.toList();
         allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        notifications = allGlobalNotifications.where((n) {
+        final newRelevantNotifs = allGlobalNotifications.where((n) {
           if (n.targetType == 'all') return true;
           if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
           if (n.targetType == 'user' && n.targetId == user.uid) return true;
           if (n.targetType == 'admin' && user.role == 'admin') return true;
           return false;
         }).toList();
+
+        // Trigger native desktop notification for any new arrived notification
+        for (final n in newRelevantNotifs) {
+          if (!_alertedNotifIds.contains(n.id)) {
+            _alertedNotifIds.add(n.id);
+            // If created within last 2 minutes, trigger popup
+            if (DateTime.now().difference(n.createdAt).inMinutes.abs() <= 2) {
+              if (kIsWeb) {
+                showBrowserNotification(n.title, n.body, imageUrl: n.imageUrl);
+              }
+            }
+          }
+        }
+
+        notifications = newRelevantNotifs;
       } else {
         allGlobalNotifications = [];
         notifications = [];
