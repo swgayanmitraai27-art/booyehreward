@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/match_model.dart';
 import '../models/notification_model.dart';
 import 'firebase_config.dart';
@@ -13,7 +15,7 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  // Stored FCM Device Token (if available from native/web)
+  // Stored FCM Device Token
   String? _fcmToken;
   String? get fcmToken => _fcmToken;
 
@@ -24,11 +26,28 @@ class NotificationService {
   final StreamController<AppNotification> _notificationStreamController = StreamController<AppNotification>.broadcast();
   Stream<AppNotification> get onNotificationReceived => _notificationStreamController.stream;
 
-  /// Initialize Push Notification Service
+  // Local Notifications Plugin for Android foreground alerts
+  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+
+  static const AndroidNotificationChannel _androidChannel = AndroidNotificationChannel(
+    'high_importance_channel',
+    'Booyah Rewards Alerts',
+    description: 'Notifications for match updates, room credentials, and prize rewards.',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
+
+  bool _isInitialized = false;
+
+  /// Initialize Push Notification Service for Web and Native Android/iOS
   Future<void> initialize({String? userId}) async {
+    if (_isInitialized && userId == null) return;
+    _isInitialized = true;
+
     debugPrint('🔔 [NotificationService] Initializing Push Notifications & FCM System...');
-    
-    // 1. If Web, request browser desktop notification permission
+
+    // 1. Web Platform Notification Permission & FCM
     if (kIsWeb) {
       try {
         final permStatus = await requestBrowserNotificationPermission();
@@ -36,11 +55,101 @@ class NotificationService {
       } catch (e) {
         debugPrint('⚠️ [NotificationService] Web permission request notice: $e');
       }
+    } else {
+      // 2. Mobile Android / iOS FCM & Local Notification Channel Setup
+      try {
+        // Initialize Local Notifications
+        const AndroidInitializationSettings initializationSettingsAndroid =
+            AndroidInitializationSettings('@mipmap/ic_launcher');
+        const InitializationSettings initializationSettings =
+            InitializationSettings(android: initializationSettingsAndroid);
+
+        await _localNotifications.initialize(
+          settings: initializationSettings,
+          onDidReceiveNotificationResponse: (NotificationResponse response) {
+            debugPrint('🔔 [LocalNotification] Clicked with payload: ${response.payload}');
+          },
+        );
+
+        // Create Android High Importance Channel
+        final androidImpl = _localNotifications.resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImpl != null) {
+          await androidImpl.createNotificationChannel(_androidChannel);
+          await androidImpl.requestNotificationsPermission();
+        }
+
+        // Request FCM Permissions
+        final settings = await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+        debugPrint('🔔 [FCM] Notification authorization status: ${settings.authorizationStatus}');
+
+        // Set foreground presentation options
+        await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+          alert: true,
+          badge: true,
+          sound: true,
+        );
+
+        // Fetch & Store FCM Device Token
+        _fcmToken = await FirebaseMessaging.instance.getToken();
+        debugPrint('📱 [FCM] Device Token: $_fcmToken');
+
+        // Handle foreground notifications
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          debugPrint('🔔 [FCM Foreground] Received: ${message.notification?.title} | ${message.notification?.body}');
+          
+          final notification = message.notification;
+          if (notification != null) {
+            _localNotifications.show(
+              id: notification.hashCode,
+              title: notification.title,
+              body: notification.body,
+              notificationDetails: NotificationDetails(
+                android: AndroidNotificationDetails(
+                  _androidChannel.id,
+                  _androidChannel.name,
+                  channelDescription: _androidChannel.description,
+                  importance: Importance.max,
+                  priority: Priority.high,
+                  icon: '@mipmap/ic_launcher',
+                  playSound: true,
+                  enableVibration: true,
+                ),
+              ),
+              payload: jsonEncode(message.data),
+            );
+          }
+
+          final appNotif = AppNotification(
+            id: message.messageId ?? 'fcm_${DateTime.now().millisecondsSinceEpoch}',
+            title: notification?.title ?? 'Notification',
+            body: notification?.body ?? '',
+            type: NotificationType.systemAlert,
+            targetType: 'all',
+            createdAt: DateTime.now(),
+            data: message.data,
+          );
+          _notificationStreamController.add(appNotif);
+        });
+
+        // Handle notification click when app opens from background
+        FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+          debugPrint('🔔 [FCM] App opened from push notification: ${message.data}');
+        });
+
+      } catch (e) {
+        debugPrint('⚠️ [NotificationService] Mobile FCM Setup Exception: $e');
+      }
     }
 
-    // 2. Subscribe to global announcements topic
+    // Subscribe to global announcements topic
     await subscribeToTopic('all_users');
-    
+
     if (userId != null && userId.isNotEmpty) {
       await subscribeToTopic('user_$userId');
     }
@@ -50,19 +159,36 @@ class NotificationService {
   Future<String> requestPermission() async {
     if (kIsWeb) {
       return await requestBrowserNotificationPermission();
+    } else {
+      try {
+        final settings = await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          provisional: false,
+        );
+        return settings.authorizationStatus == AuthorizationStatus.authorized ? 'granted' : 'denied';
+      } catch (e) {
+        return 'granted';
+      }
     }
-    return 'granted';
   }
 
-  /// Get current browser permission status
+  /// Get current browser / mobile permission status
   Future<String> getPermissionStatus() async {
     if (kIsWeb) {
       return await getBrowserNotificationPermissionStatus();
+    } else {
+      try {
+        final settings = await FirebaseMessaging.instance.getNotificationSettings();
+        return settings.authorizationStatus == AuthorizationStatus.authorized ? 'granted' : 'denied';
+      } catch (e) {
+        return 'granted';
+      }
     }
-    return 'granted';
   }
 
-  /// Trigger a live test desktop notification popup
+  /// Trigger a live test notification
   void triggerTestBrowserNotification() {
     if (kIsWeb) {
       showBrowserNotification(
@@ -70,26 +196,56 @@ class NotificationService {
         'Desktop & Browser Push Notifications are working perfectly! 🎮',
         imageUrl: 'https://booyehreward.vercel.app/booyah_logo.png',
       );
+    } else {
+      _localNotifications.show(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: '🔥 Booyah Rewards Alert!',
+        body: 'Push notifications on Android are working perfectly! 🎮',
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _androidChannel.id,
+            _androidChannel.name,
+            channelDescription: _androidChannel.description,
+            importance: Importance.max,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+          ),
+        ),
+      );
     }
   }
 
   /// Subscribe device to an FCM / In-App Topic (e.g. 'all_users', 'match_123', 'admin_alerts')
   Future<void> subscribeToTopic(String topic) async {
     _subscribedTopics.add(topic);
-    debugPrint('🔔 [NotificationService] Subscribed to topic: $topic');
+    if (!kIsWeb) {
+      try {
+        await FirebaseMessaging.instance.subscribeToTopic(topic);
+        debugPrint('🔔 [NotificationService] Subscribed native Android FCM to topic: $topic');
+      } catch (e) {
+        debugPrint('⚠️ [NotificationService] Native FCM topic subscribe error: $e');
+      }
+    } else {
+      debugPrint('🔔 [NotificationService] Subscribed to topic: $topic');
+    }
   }
 
   /// Unsubscribe from a Topic
   Future<void> unsubscribeFromTopic(String topic) async {
     _subscribedTopics.remove(topic);
-    debugPrint('🔔 [NotificationService] Unsubscribed from topic: $topic');
+    if (!kIsWeb) {
+      try {
+        await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
+        debugPrint('🔔 [NotificationService] Unsubscribed native Android FCM from topic: $topic');
+      } catch (e) {
+        debugPrint('⚠️ [NotificationService] Native FCM topic unsubscribe error: $e');
+      }
+    } else {
+      debugPrint('🔔 [NotificationService] Unsubscribed from topic: $topic');
+    }
   }
 
   /// Trigger Dynamic Auto-Start Alerts when a Match is 100% FULL
-  /// 1. Broadcasts FCM Push to joined players / match topic:
-  ///    "Your Match is FULL! The Room ID and Password will be provided in exactly 15 minutes. Open the app now!"
-  /// 2. Sends Admin Alert to Admin Panel:
-  ///    "Match [ID] is full. Please create the custom room and enter the Room ID within 15 minutes."
   Future<void> triggerMatchFullAutoAlert({required MatchModel match}) async {
     final now = DateTime.now();
     final matchId = match.id;
