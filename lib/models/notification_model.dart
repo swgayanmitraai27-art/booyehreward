@@ -42,28 +42,40 @@ class AppNotification {
     'target_type': targetType,
     'target_id': targetId,
     'match_id': matchId,
-    'created_at': createdAt.toIso8601String(),
+    'created_at': createdAt.toUtc().toIso8601String(),
     'is_read': isRead,
     'image_url': imageUrl,
     'data': data,
   };
 
-  factory AppNotification.fromJson(Map<String, dynamic> json) => AppNotification(
-    id: json['id'] ?? 'notif_${DateTime.now().millisecondsSinceEpoch}',
-    title: json['title'] ?? '',
-    body: json['body'] ?? '',
-    type: NotificationType.values.firstWhere(
-      (e) => e.name == json['type'],
-      orElse: () => NotificationType.systemAlert,
-    ),
-    targetType: json['target_type'] ?? json['targetType'] ?? 'all',
-    targetId: json['target_id'] ?? json['targetId'],
-    matchId: json['match_id'] ?? json['matchId'],
-    createdAt: json['created_at'] != null
-        ? DateTime.parse(json['created_at'])
-        : (json['createdAt'] != null ? DateTime.parse(json['createdAt']) : DateTime.now()),
-    isRead: json['is_read'] ?? json['isRead'] ?? false,
-    imageUrl: json['image_url'] ?? json['imageUrl'],
-    data: json['data'] != null ? Map<String, dynamic>.from(json['data']) : null,
-  );
+  factory AppNotification.fromJson(Map<String, dynamic> json) {
+    DateTime parsedDate;
+    try {
+      final dateVal = json['created_at'] ?? json['createdAt'];
+      if (dateVal != null) {
+        parsedDate = DateTime.parse(dateVal.toString()).toLocal();
+      } else {
+        parsedDate = DateTime.now();
+      }
+    } catch (_) {
+      parsedDate = DateTime.now();
+    }
+
+    return AppNotification(
+      id: json['id']?.toString() ?? 'notif_${DateTime.now().millisecondsSinceEpoch}',
+      title: json['title']?.toString() ?? '',
+      body: json['body']?.toString() ?? '',
+      type: NotificationType.values.firstWhere(
+        (e) => e.name == json['type'],
+        orElse: () => NotificationType.systemAlert,
+      ),
+      targetType: json['target_type']?.toString() ?? json['targetType']?.toString() ?? 'all',
+      targetId: json['target_id']?.toString() ?? json['targetId']?.toString(),
+      matchId: json['match_id']?.toString() ?? json['matchId']?.toString(),
+      createdAt: parsedDate,
+      isRead: json['is_read'] == true || json['isRead'] == true,
+      imageUrl: json['image_url']?.toString() ?? json['imageUrl']?.toString(),
+      data: json['data'] != null ? Map<String, dynamic>.from(json['data']) : null,
+    );
+  }
 }

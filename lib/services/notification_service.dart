@@ -54,6 +54,25 @@ class NotificationService {
     return 'granted';
   }
 
+  /// Get current browser permission status
+  Future<String> getPermissionStatus() async {
+    if (kIsWeb) {
+      return await getBrowserNotificationPermissionStatus();
+    }
+    return 'granted';
+  }
+
+  /// Trigger a live test desktop notification popup
+  void triggerTestBrowserNotification() {
+    if (kIsWeb) {
+      showBrowserNotification(
+        '🔥 Booyah Rewards Alert!',
+        'Desktop & Browser Push Notifications are working perfectly! 🎮',
+        imageUrl: 'https://www.swgayanbhumi.in/logo.png',
+      );
+    }
+  }
+
   /// Subscribe device to an FCM / In-App Topic (e.g. 'all_users', 'match_123', 'admin_alerts')
   Future<void> subscribeToTopic(String topic) async {
     _subscribedTopics.add(topic);

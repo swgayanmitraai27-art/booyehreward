@@ -109,6 +109,13 @@
     };
 
     // 4. Web Push Notification Bridge
+    window.getNotificationPermissionStatus = function() {
+      if (!("Notification" in window)) {
+        return "unsupported";
+      }
+      return Notification.permission; // "default", "granted", or "denied"
+    };
+
     window.requestNotificationPermission = async function() {
       if (!("Notification" in window)) {
         console.warn("[WebNotifications] Notifications are not supported in this browser.");

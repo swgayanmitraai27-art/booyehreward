@@ -14,7 +14,7 @@ class NotificationDialog extends StatefulWidget {
 }
 
 class _NotificationDialogState extends State<NotificationDialog> {
-  String _permStatus = 'unknown';
+  String _permStatus = 'default';
 
   @override
   void initState() {
@@ -23,22 +23,47 @@ class _NotificationDialogState extends State<NotificationDialog> {
   }
 
   Future<void> _checkPermission() async {
-    // Initial silent check
+    final status = await widget.appState.notificationService.getPermissionStatus();
+    if (mounted) {
+      setState(() {
+        _permStatus = status;
+      });
+    }
   }
 
   Future<void> _requestNotificationPermission() async {
     final res = await widget.appState.notificationService.requestPermission();
-    setState(() {
-      _permStatus = res;
-    });
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: const Color(0xFF047857),
-          content: Text('🔔 Notification status: $res'),
-        ),
-      );
+      setState(() {
+        _permStatus = res;
+      });
+      if (res == 'granted') {
+        widget.appState.notificationService.triggerTestBrowserNotification();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFF047857),
+            content: Text('🎉 Browser Pop-up Notifications ENABLED! Test notification sent.'),
+          ),
+        );
+      } else if (res == 'denied') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            backgroundColor: Color(0xFFDC2626),
+            content: Text('🔒 Notification is BLOCKED in your browser! See instructions below.'),
+          ),
+        );
+      }
     }
+  }
+
+  void _sendTestPopup() {
+    widget.appState.notificationService.triggerTestBrowserNotification();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        backgroundColor: Color(0xFF047857),
+        content: Text('🔔 Test desktop pop-up notification dispatched!'),
+      ),
+    );
   }
 
   @override
@@ -49,8 +74,8 @@ class _NotificationDialogState extends State<NotificationDialog> {
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: Container(
-        width: 480,
-        constraints: const BoxConstraints(maxHeight: 600),
+        width: 500,
+        constraints: const BoxConstraints(maxHeight: 620),
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -91,47 +116,135 @@ class _NotificationDialogState extends State<NotificationDialog> {
             ),
             const SizedBox(height: 14),
 
-            // Permission Request Banner (Crucial for Web & Android)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
+            // Permission Status & Action Card
+            if (_permStatus == 'denied')
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFECACA)),
                 ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.notifications_outlined, color: Colors.amber, size: 20),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: const [
+                        Icon(Icons.lock_outline, color: Color(0xFFDC2626), size: 18),
+                        SizedBox(width: 8),
                         Text(
-                          'Browser & App Push Alerts',
-                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                        Text(
-                          'Get 15m room alert & password instantly',
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                          'Browser Notifications Are BLOCKED',
+                          style: TextStyle(color: Color(0xFF991B1B), fontWeight: FontWeight.w900, fontSize: 12),
                         ),
                       ],
                     ),
-                  ),
-                  ElevatedButton(
-                    onPressed: _requestNotificationPermission,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
-                      foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Browser ne notification pop-up block kiya hua hai. Ise Allow karne ke 2 aasan steps:',
+                      style: TextStyle(color: Color(0xFF7F1D1D), fontSize: 11),
                     ),
-                    child: const Text('ENABLE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: const Color(0xFFFCA5A5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text('1️⃣ Upar URL bar me 🔒 Lock icon (site settings) par click karein.', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87)),
+                          SizedBox(height: 3),
+                          Text('2️⃣ "Notifications" ko "Allow" karein aur Page Refresh (F5) karein!', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857))),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_permStatus == 'granted')
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Color(0xFF059669), size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Browser Pop-up Alerts ACTIVE',
+                            style: TextStyle(color: Color(0xFF065F46), fontWeight: FontWeight.w900, fontSize: 12),
+                          ),
+                          Text(
+                            'Desktop & Mobile popups enabled',
+                            style: TextStyle(color: Color(0xFF047857), fontSize: 10.5),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: _sendTestPopup,
+                      icon: const Icon(Icons.notifications_active, size: 14),
+                      label: const Text('TEST POPUP', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF047857),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF1E293B), Color(0xFF0F172A)],
                   ),
-                ],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.notifications_outlined, color: Colors.amber, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          Text(
+                            'Browser & App Push Alerts',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          Text(
+                            'Get 15m room alert & password instantly',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: _requestNotificationPermission,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('ENABLE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                    ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 14),
 
             const Divider(height: 1),

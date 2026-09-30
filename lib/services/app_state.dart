@@ -124,14 +124,15 @@ class AppState extends ChangeNotifier {
   void _initNotifications() {
     _notificationService.initialize(userId: user.uid);
     _notificationService.onNotificationReceived.listen((notif) {
-      if (!allGlobalNotifications.any((n) => n.id == notif.id)) {
-        allGlobalNotifications.insert(0, notif);
-      }
+      allGlobalNotifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
+      allGlobalNotifications.insert(0, notif);
+
       final bool isRelevant = notif.targetType == 'all' ||
           (notif.targetType == 'match' && matches.any((m) => m.id == notif.targetId && m.participants.any((p) => p.uid == user.uid))) ||
           (notif.targetType == 'user' && notif.targetId == user.uid) ||
           (notif.targetType == 'admin' && user.role == 'admin');
-      if (isRelevant && !notifications.any((n) => n.id == notif.id)) {
+      if (isRelevant) {
+        notifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
         notifications.insert(0, notif);
       }
       notifyListeners();
@@ -1631,7 +1632,15 @@ class AppState extends ChangeNotifier {
       // 9. Sync Realtime Push Notifications
       final notifDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_notifications');
       if (notifDocs.isNotEmpty) {
-        allGlobalNotifications = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
+        final parsed = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
+        final Map<String, AppNotification> dedupMap = {};
+        for (final item in parsed) {
+          final dedupKey = '${item.title.trim()}||${item.body.trim()}';
+          if (!dedupMap.containsKey(dedupKey) || item.createdAt.isAfter(dedupMap[dedupKey]!.createdAt)) {
+            dedupMap[dedupKey] = item;
+          }
+        }
+        allGlobalNotifications = dedupMap.values.toList();
         allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
         notifications = allGlobalNotifications.where((n) {
           if (n.targetType == 'all') return true;
