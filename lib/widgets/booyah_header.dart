@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../utils/url_launcher_util.dart';
 import 'deposit_dialog.dart';
 import 'withdraw_dialog.dart';
+import 'notification_dialog.dart';
 
 class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
   final AppState appState;
@@ -21,6 +22,7 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final user = appState.user;
+    final unreadCount = appState.notifications.length;
 
     return AppBar(
       backgroundColor: Colors.white,
@@ -190,7 +192,52 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
+
+          // 🔔 4. Notifications Bell Icon
+          InkWell(
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => NotificationDialog(appState: appState),
+              );
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: const Icon(Icons.notifications_outlined, size: 16, color: Color(0xFF334155)),
+                ),
+                if (unreadCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFE50914),
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                      child: Center(
+                        child: Text(
+                          '$unreadCount',
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 6),
 
           // 💬 Dynamic Customer Support (Telegram)
           InkWell(

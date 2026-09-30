@@ -107,6 +107,75 @@
         }
       }
     };
+
+    // 4. Web Push Notification Bridge
+    window.requestNotificationPermission = async function() {
+      if (!("Notification" in window)) {
+        console.warn("[WebNotifications] Notifications are not supported in this browser.");
+        return "unsupported";
+      }
+      if (Notification.permission === "granted") {
+        return "granted";
+      }
+      try {
+        var perm = await Notification.requestPermission();
+        console.log("[WebNotifications] Permission result:", perm);
+        return perm;
+      } catch (e) {
+        console.error("[WebNotifications] Permission request error:", e);
+        return "denied";
+      }
+    };
+
+    window.showWebNotification = function(title, body, iconUrl, clickUrl) {
+      if (!("Notification" in window) || Notification.permission !== "granted") {
+        return false;
+      }
+      try {
+        var options = {
+          body: body || "Tournament alert",
+          icon: iconUrl || "https://www.swgayanbhumi.in/logo.png",
+          badge: "https://www.swgayanbhumi.in/logo.png",
+          vibrate: [200, 100, 200]
+        };
+        var notif = new Notification(title || "Booyah Rewards", options);
+        notif.onclick = function() {
+          window.focus();
+          if (clickUrl) {
+            window.location.href = clickUrl;
+          }
+          notif.close();
+        };
+        return true;
+      } catch (e) {
+        console.error("[WebNotifications] Error showing desktop notification:", e);
+        return false;
+      }
+    };
+
+    // Auto-prompt permission on first user tap / click anywhere if not yet requested
+    function autoPromptNotificationPermission() {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().then(function(p) {
+          console.log("[WebNotifications] Auto permission prompt status:", p);
+        }).catch(function(e) {});
+      }
+      document.removeEventListener('click', autoPromptNotificationPermission);
+      document.removeEventListener('touchstart', autoPromptNotificationPermission);
+    }
+    document.addEventListener('click', autoPromptNotificationPermission);
+    document.addEventListener('touchstart', autoPromptNotificationPermission);
+
+    // Register Service Worker for FCM Background Push if supported
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/firebase-messaging-sw.js').then(function(reg) {
+          console.log('[ServiceWorker] FCM messaging service worker registered:', reg.scope);
+        }).catch(function(err) {
+          console.warn('[ServiceWorker] FCM service worker registration notice:', err);
+        });
+      });
+    }
   </script>
 </head>
 <body>

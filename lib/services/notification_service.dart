@@ -6,6 +6,7 @@ import '../models/match_model.dart';
 import '../models/notification_model.dart';
 import 'firebase_config.dart';
 import 'firestore_rest_service.dart';
+import 'notification_bridge/notification_bridge.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -27,12 +28,30 @@ class NotificationService {
   Future<void> initialize({String? userId}) async {
     debugPrint('🔔 [NotificationService] Initializing Push Notifications & FCM System...');
     
-    // Subscribe to global announcements topic
+    // 1. If Web, request browser desktop notification permission
+    if (kIsWeb) {
+      try {
+        final permStatus = await requestBrowserNotificationPermission();
+        debugPrint('🔔 [NotificationService] Web Notification Permission status: $permStatus');
+      } catch (e) {
+        debugPrint('⚠️ [NotificationService] Web permission request notice: $e');
+      }
+    }
+
+    // 2. Subscribe to global announcements topic
     await subscribeToTopic('all_users');
     
     if (userId != null && userId.isNotEmpty) {
       await subscribeToTopic('user_$userId');
     }
+  }
+
+  /// Explicitly request notification permission (can be called from UI buttons / settings)
+  Future<String> requestPermission() async {
+    if (kIsWeb) {
+      return await requestBrowserNotificationPermission();
+    }
+    return 'granted';
   }
 
   /// Subscribe device to an FCM / In-App Topic (e.g. 'all_users', 'match_123', 'admin_alerts')
@@ -93,11 +112,15 @@ class NotificationService {
       },
     );
 
-    // Broadcast locally to in-app stream
+    // Broadcast locally to in-app stream & web browser notification
     _notificationStreamController.add(playerNotif);
     _notificationStreamController.add(adminNotif);
 
-    // Persist notifications to Firestore
+    if (kIsWeb) {
+      showBrowserNotification(playerNotif.title, playerNotif.body);
+    }
+
+    // Persist notifications to Firestore and dispatch FCM push
     await Future.wait([
       _saveNotificationToFirestore(playerNotif),
       _saveNotificationToFirestore(adminNotif),
@@ -134,6 +157,10 @@ class NotificationService {
     );
 
     _notificationStreamController.add(notif);
+    if (kIsWeb) {
+      showBrowserNotification(title, body, imageUrl: imageUrl);
+    }
+
     await _saveNotificationToFirestore(notif);
     return await _dispatchPushNotification(
       topic: 'all_users',
@@ -162,6 +189,10 @@ class NotificationService {
     );
 
     _notificationStreamController.add(notif);
+    if (kIsWeb) {
+      showBrowserNotification(title, body);
+    }
+
     await _saveNotificationToFirestore(notif);
     return await _dispatchPushNotification(
       topic: 'match_$matchId',
@@ -190,6 +221,10 @@ class NotificationService {
     );
 
     _notificationStreamController.add(notif);
+    if (kIsWeb) {
+      showBrowserNotification(title, body);
+    }
+
     await _saveNotificationToFirestore(notif);
     return await _dispatchPushNotification(
       topic: 'user_$userId',
@@ -212,7 +247,7 @@ class NotificationService {
     }
   }
 
-  /// Dispatch FCM push notification via backend API or Firebase HTTP v1 endpoint
+  /// Dispatch FCM push notification via backend API endpoint (https://www.swgayanbhumi.in/api/push-notification)
   Future<bool> _dispatchPushNotification({
     required String topic,
     required String title,
@@ -236,10 +271,10 @@ class NotificationService {
       };
 
       final response = await http.post(
-        Uri.parse('${FirebaseConfig.apiBaseUrl}/push-notification'),
+        Uri.parse(FirebaseConfig.pushNotificationEndpoint),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 8), onTimeout: () {
+      ).timeout(const Duration(seconds: 10), onTimeout: () {
         return http.Response('{"status":"timeout"}', 408);
       });
 
@@ -247,8 +282,8 @@ class NotificationService {
         debugPrint('✅ FCM Push Notification dispatched successfully to topic: $topic');
         return true;
       } else {
-        debugPrint('ℹ️ FCM Push endpoint responded with status: ${response.statusCode} (Simulated fallback active)');
-        return true;
+        debugPrint('ℹ️ FCM Push endpoint status: ${response.statusCode} (body: ${response.body})');
+        return response.statusCode < 400;
       }
     } catch (e) {
       debugPrint('⚠️ Push notification dispatch caught exception: $e (In-App notifications active)');
