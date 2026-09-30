@@ -199,6 +199,7 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
   @override
   Widget build(BuildContext context) {
     final user = widget.appState.user;
+    user.adTracker.checkAndResetDaily();
     final tracker = user.adTracker;
     final progress = tracker.adsWatchedSinceLastCoin / 3.0;
 

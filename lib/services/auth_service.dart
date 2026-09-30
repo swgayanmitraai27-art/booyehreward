@@ -381,7 +381,7 @@ class AuthService {
 
     // 4. Push to Firestore
     try {
-      FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, userJson);
+      await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, userJson);
     } catch (e) {
       debugPrint('[AuthService] Firestore save error: $e');
     }

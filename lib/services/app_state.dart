@@ -802,11 +802,13 @@ class AppState extends ChangeNotifier {
 
   // --- WATCH REWARDED AD (3 ADS = 1 COIN) ---
   Map<String, dynamic> watchRewardedAd() {
+    user.adTracker.checkAndResetDaily();
+
     if (user.adTracker.dailyLimitRemaining <= 0) {
       return {
         'success': false,
         'coinAwarded': false,
-        'message': 'Daily ad limit reached. Come back tomorrow!'
+        'message': 'Daily ad limit reached (30/30). Come back tomorrow!'
       };
     }
 
@@ -1717,24 +1719,24 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _syncUser() {
-    AuthService.saveUser(user);
-    FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
+  Future<void> _syncUser() async {
+    await AuthService.saveUser(user);
+    await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
   }
 
-  void _syncMatch(MatchModel m) {
-    FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
+  Future<void> _syncMatch(MatchModel m) async {
+    await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
   }
 
-  void _syncTransaction(TransactionModel txn) {
-    FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, txn.id, txn.toJson());
+  Future<void> _syncTransaction(TransactionModel txn) async {
+    await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, txn.id, txn.toJson());
   }
 
-  void _syncWithdrawal(WithdrawalModel w) {
-    FirestoreRestService.setDocument('skillwinner_withdrawals', w.id, w.toJson());
+  Future<void> _syncWithdrawal(WithdrawalModel w) async {
+    await FirestoreRestService.setDocument('skillwinner_withdrawals', w.id, w.toJson());
   }
 
-  void _syncVoucherClaim(VoucherClaim claim) {
-    FirestoreRestService.setDocument('skillwinner_voucher_claims', claim.id, claim.toJson());
+  Future<void> _syncVoucherClaim(VoucherClaim claim) async {
+    await FirestoreRestService.setDocument('skillwinner_voucher_claims', claim.id, claim.toJson());
   }
 }

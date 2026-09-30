@@ -219,15 +219,19 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(50),
-                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.black.withOpacity(0.55),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.amber.withOpacity(0.4), width: 0.8),
                   ),
                   child: Text(
-                    DateFormat('dd MMM, hh:mm a').format(match.matchTime),
+                    match.status == MatchStatus.completed
+                        ? DateFormat('dd MMM, hh:mm a').format(match.completedAt ?? match.matchTime)
+                        : (match.status == MatchStatus.upcoming ? '⚡ AUTO-START ON FULL' : match.status.name.toUpperCase()),
                     style: TextStyle(
+                      fontFamily: 'Rajdhani',
                       fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: isFree ? const Color(0xFF78350F) : Colors.white,
+                      fontWeight: FontWeight.w900,
+                      color: isFree ? const Color(0xFFFBBF24) : Colors.amber,
                     ),
                   ),
                 ),

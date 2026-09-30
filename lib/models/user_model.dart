@@ -47,7 +47,23 @@ class AdTracker {
     required this.adsWatchedSinceLastCoin,
     required this.dailyLimitRemaining,
     this.lastAdTimestamp,
-  });
+  }) {
+    checkAndResetDaily();
+  }
+
+  /// Automatically check if day has changed and reset daily limit to 30
+  void checkAndResetDaily() {
+    if (lastAdTimestamp != null) {
+      final now = DateTime.now();
+      final isSameDay = lastAdTimestamp!.year == now.year &&
+          lastAdTimestamp!.month == now.month &&
+          lastAdTimestamp!.day == now.day;
+      if (!isSameDay) {
+        adsWatchedToday = 0;
+        dailyLimitRemaining = 30;
+      }
+    }
+  }
 
   Map<String, dynamic> toJson() => {
     'adsWatchedToday': adsWatchedToday,
@@ -56,12 +72,30 @@ class AdTracker {
     'lastAdTimestamp': lastAdTimestamp?.toIso8601String(),
   };
 
-  factory AdTracker.fromJson(Map<String, dynamic> json) => AdTracker(
-    adsWatchedToday: (json['adsWatchedToday'] ?? 0) as int,
-    adsWatchedSinceLastCoin: (json['adsWatchedSinceLastCoin'] ?? 0) as int,
-    dailyLimitRemaining: (json['dailyLimitRemaining'] ?? 30) as int,
-    lastAdTimestamp: json['lastAdTimestamp'] != null ? DateTime.tryParse(json['lastAdTimestamp']) : null,
-  );
+  factory AdTracker.fromJson(Map<String, dynamic> json) {
+    final lastTs = json['lastAdTimestamp'] != null ? DateTime.tryParse(json['lastAdTimestamp']) : null;
+    int watchedToday = (json['adsWatchedToday'] ?? 0) as int;
+    int limitRemaining = (json['dailyLimitRemaining'] ?? 30) as int;
+    int sinceLastCoin = (json['adsWatchedSinceLastCoin'] ?? 0) as int;
+
+    if (lastTs != null) {
+      final now = DateTime.now();
+      final isSameDay = lastTs.year == now.year &&
+          lastTs.month == now.month &&
+          lastTs.day == now.day;
+      if (!isSameDay) {
+        watchedToday = 0;
+        limitRemaining = 30;
+      }
+    }
+
+    return AdTracker(
+      adsWatchedToday: watchedToday,
+      adsWatchedSinceLastCoin: sinceLastCoin,
+      dailyLimitRemaining: limitRemaining,
+      lastAdTimestamp: lastTs,
+    );
+  }
 }
 
 class UserStats {
@@ -149,6 +183,17 @@ class UserModel {
     'role': role,
     'avatarUrl': avatarUrl,
     'wallet': wallet.toJson(),
+    'real_balance': wallet.depositCash,
+    'depositCash': wallet.depositCash,
+    'bonusCash': wallet.bonusCash,
+    'bonus_cash': wallet.bonusCash,
+    'winningCash': wallet.winningCash,
+    'total_winnings': wallet.winningCash,
+    'adCoins': wallet.adCoins,
+    'ad_coins': wallet.adCoins,
+    'bonus_balance': wallet.adCoins,
+    'rewardCoins': wallet.rewardCoins,
+    'reward_coins': wallet.rewardCoins,
     'adTracker': adTracker.toJson(),
     'stats': stats.toJson(),
     'createdAt': createdAt.toIso8601String(),

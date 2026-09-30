@@ -732,13 +732,29 @@ class TournamentLobbyScreen extends StatelessWidget {
                         ),
                       ],
                     ),
-                    Text(
-                      DateFormat('hh:mm a').format(match.matchTime),
-                      style: const TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.65),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.amber.withOpacity(0.4), width: 0.8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.bolt, color: Colors.amber, size: 12),
+                          const SizedBox(width: 3),
+                          Text(
+                            match.status == MatchStatus.upcoming ? 'AUTO-START ON FULL' : match.status.name.toUpperCase(),
+                            style: const TextStyle(
+                              fontFamily: 'Rajdhani',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.amber,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
