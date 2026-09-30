@@ -21,8 +21,27 @@ messaging.onBackgroundMessage(function(payload) {
     body: payload.notification?.body || payload.data?.body || 'Match updates and tournament lobby alerts.',
     icon: payload.notification?.image || 'https://booyehreward.vercel.app/booyah_logo.png',
     badge: 'https://booyehreward.vercel.app/booyah_logo.png',
-    data: payload.data
+    vibrate: [200, 100, 200],
+    data: payload.data || {}
   };
 
-  self.registration.showNotification(notificationTitle, notificationOptions);
+  return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// Service Worker Notification Click
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+      for (var i = 0; i < clientList.length; i++) {
+        var client = clientList[i];
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
+  );
 });
