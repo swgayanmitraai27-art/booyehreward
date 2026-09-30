@@ -536,7 +536,11 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                             : isFree
                                 ? 'CONFIRM SLOT #$selectedSlot (1 COIN)'
                                 : 'PAY ₹${fee.toInt()} & LOCK SLOT #$selectedSlot',
-                        style: AppTheme.gamingTitle(fontSize: 14, isItalic: false),
+                        style: AppTheme.gamingTitle(
+                          fontSize: 14,
+                          color: isFree ? Colors.black : Colors.white,
+                          isItalic: false,
+                        ),
                       ),
                     ),
                   ),

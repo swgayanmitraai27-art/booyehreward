@@ -759,9 +759,18 @@ class TournamentLobbyScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
 
-                // Prize Breakdown Boxes
+                // Prize & Entry Fee Breakdown Boxes (4 Columns)
                 Row(
                   children: [
+                    Expanded(
+                      child: _buildPrizeBox(
+                        'Entry Fee',
+                        isFree ? '${match.entryFee.toInt()} 🟡' : '₹${match.entryFee.toInt()}',
+                        isFree ? const Color(0xFFB45309) : const Color(0xFF1D4ED8),
+                        isFree ? const Color(0xFFFEF3C7) : const Color(0xFFEFF6FF),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: _buildPrizeBox(
                         'Total Pool',
@@ -770,7 +779,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                         const Color(0xFFECFDF5),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: _buildPrizeBox(
                         '1st Prize',
@@ -779,7 +788,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                         const Color(0xFFFFFBEB),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: _buildPrizeBox(
                         'Per Kill',
@@ -901,7 +910,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isFree ? AppTheme.primaryAmber : const Color(0xFF0F172A),
                         foregroundColor: isFree ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: const EdgeInsets.symmetric(vertical: 13),
                         elevation: 0,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
@@ -934,7 +943,11 @@ class TournamentLobbyScreen extends StatelessWidget {
                             : (isFree
                                 ? '🟡 JOIN WITH ${match.entryFee.toInt()} AD COINS (PICK SLOT)'
                                 : '💵 PAY ₹${match.entryFee.toInt()} TO JOIN (PICK SLOT)'),
-                        style: AppTheme.gamingTitle(fontSize: 13, isItalic: false),
+                        style: AppTheme.gamingTitle(
+                          fontSize: 13,
+                          color: isFree ? Colors.black : Colors.white,
+                          isItalic: false,
+                        ),
                       ),
                     ),
                   ),
