@@ -9661,11 +9661,9 @@ a8M:function a8M(){},
 a8N:function a8N(a){this.a=a},
 a8K:function a8K(){},
 a8P:function a8P(){},
-aga:function aga(a,b,c){var _=this
-_.b=a
-_.c=b
-_.d=c
-_.e=!1},
+aga:function aga(a,b,c){this.b=a
+this.c=b
+this.d=c},
 agb:function agb(){},
 Lz:function Lz(a){this.a=a},
 a4c:function a4c(){},
@@ -50239,22 +50237,21 @@ var $async$f1=A.K(function(c8,c9){if(c8===1){p.push(c9)
 s=q}for(;;)switch(s){case 0:n.ae()
 q=3
 s=6
-return A.r(A.lD(),$async$f1)
-case 6:m=c9
-if(m!=null){n.a=m
-n.CW=!0}s=7
 return A.r(A.oU(),$async$f1)
-case 7:l=c9
-k=A.bJ(l.a.h(0,"saved_uid"))
-b2=k
-if(b2==null){b2=m
-b2=b2==null?null:b2.a
-b3=b2}else b3=b2
-if(b3==null){b2=n.a
+case 6:m=c9
+l=A.bJ(m.a.h(0,"saved_uid"))
+s=7
+return A.r(A.lD(),$async$f1)
+case 7:k=c9
+if(!n.CW&&k!=null){n.a=k
+n.CW=!0}b2=n.a
 b2===$&&A.a()
-b2=b2.a
-b3=b2.length!==0?b2:null}j=b3
-s=j!=null&&j.length!==0?8:9
+b3=b2.a
+if(!(b3.length!==0&&b3!=="user_guest")){b2=l
+if(b2==null){b2=k
+b2=b2==null?null:b2.a
+b3=b2}else b3=b2}j=b3
+s=j!=null&&j.length!==0&&j!=="user_guest"?8:9
 break
 case 8:q=11
 s=14
@@ -50332,9 +50329,7 @@ case 26:a=c9
 if(a!=null&&a.h(0,"totalAdsWatched")!=null)n.at=B.d.a7(A.bb(a.h(0,"totalAdsWatched")))
 else{b2=n.r
 a0=new A.al(b2,new A.a38(),A.a_(b2).i("al<1>")).f6(0,0,new A.a2W())
-b2=n.a
-b2===$&&A.a()
-n.at=a0*3+b2.Q.a}q=3
+n.at=a0*3+n.a.Q.a}q=3
 s=25
 break
 case 23:q=22
@@ -50764,8 +50759,7 @@ A.aga.prototype={
 pp(a){return this.atL(a)},
 atL(a){var s=0,r=A.J(t.H),q=1,p=[],o=this,n,m,l,k
 var $async$pp=A.K(function(b,c){if(b===1){p.push(c)
-s=q}for(;;)switch(s){case 0:o.e=!0
-A.bW().$1("\ud83d\udd14 [NotificationService] Initializing Push Notifications & FCM System...")
+s=q}for(;;)switch(s){case 0:A.bW().$1("\ud83d\udd14 [NotificationService] Initializing Push Notifications & FCM System...")
 q=3
 s=6
 return A.r(A.a1U(),$async$pp)

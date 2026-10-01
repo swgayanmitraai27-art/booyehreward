@@ -38,13 +38,19 @@ class NotificationService {
     enableVibration: true,
   );
 
+  static const AndroidNotificationChannel _booyahChannel = AndroidNotificationChannel(
+    'booyah_rewards_channel',
+    'Booyah Tournaments & Matches',
+    description: 'Match updates, room credentials, and prize rewards.',
+    importance: Importance.max,
+    playSound: true,
+    enableVibration: true,
+  );
+
   bool _isInitialized = false;
 
   /// Initialize Push Notification Service for Web and Native Android/iOS
   Future<void> initialize({String? userId}) async {
-    if (_isInitialized && userId == null) return;
-    _isInitialized = true;
-
     debugPrint('🔔 [NotificationService] Initializing Push Notifications & FCM System...');
 
     // 1. Web Platform Notification Permission & FCM
@@ -71,11 +77,12 @@ class NotificationService {
           },
         );
 
-        // Create Android High Importance Channel
+        // Create Android High Importance Channels
         final androidImpl = _localNotifications.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
         if (androidImpl != null) {
           await androidImpl.createNotificationChannel(_androidChannel);
+          await androidImpl.createNotificationChannel(_booyahChannel);
           await androidImpl.requestNotificationsPermission();
         }
 

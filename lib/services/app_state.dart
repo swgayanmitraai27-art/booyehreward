@@ -1552,18 +1552,21 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Sync User Profile from AuthService local cache and Firestore
+      // 1. Sync User Profile from Firestore database (real-time balance and winnings)
+      final prefs = await SharedPreferences.getInstance();
+      final savedUid = prefs.getString('saved_uid');
       final activeUser = await AuthService.getActiveUser();
-      if (activeUser != null) {
+      
+      if (!isAuthenticated && activeUser != null) {
         user = activeUser;
         isAuthenticated = true;
       }
 
-      final prefs = await SharedPreferences.getInstance();
-      final savedUid = prefs.getString('saved_uid');
-      final uidToSync = savedUid ?? activeUser?.uid ?? (user.uid.isNotEmpty ? user.uid : null);
+      final uidToSync = (user.uid.isNotEmpty && user.uid != 'user_guest')
+          ? user.uid
+          : (savedUid ?? activeUser?.uid);
 
-      if (uidToSync != null && uidToSync.isNotEmpty) {
+      if (uidToSync != null && uidToSync.isNotEmpty && uidToSync != 'user_guest') {
         try {
           final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uidToSync);
           if (userDoc != null && userDoc.isNotEmpty) {
