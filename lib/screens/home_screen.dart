@@ -81,9 +81,9 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.stars),
             label: 'Earn/Store',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.account_balance_wallet),
-            label: '4-Wallet',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.account_balance_wallet),
+            label: widget.appState.isRealCashModeEnabled ? '4-Wallet' : 'Wallet',
           ),
           if (isAdmin)
             const BottomNavigationBarItem(

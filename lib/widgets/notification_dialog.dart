@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../models/notification_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';

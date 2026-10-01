@@ -7,7 +7,6 @@ import '../widgets/squad_team_dialog.dart';
 import '../widgets/match_banner_image.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/dynamic_banner_carousel.dart';
-import 'package:intl/intl.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
   final AppState appState;
@@ -34,8 +33,8 @@ class TournamentLobbyScreen extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Dynamic Auto-Sliding Promo & Announcement Carousel
-          if (appState.banners.isNotEmpty) ...[
-            DynamicBannerCarousel(banners: appState.banners),
+          if (appState.activeBanners.isNotEmpty) ...[
+            DynamicBannerCarousel(banners: appState.activeBanners),
             const SizedBox(height: 14),
           ],
 
@@ -72,9 +71,9 @@ class TournamentLobbyScreen extends StatelessWidget {
                         children: [
                           Image.asset('imgasest/FF_SHORT_LOGO.PNG.png', width: 14, height: 14),
                           const SizedBox(width: 6),
-                          const Text(
-                            'HYBRID ESPORTS ARENA',
-                            style: TextStyle(
+                          Text(
+                            appState.isRealCashModeEnabled ? 'HYBRID ESPORTS ARENA' : 'COMMUNITY ESPORTS ARENA',
+                            style: const TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 9.5,
                               fontWeight: FontWeight.w900,
@@ -92,19 +91,21 @@ class TournamentLobbyScreen extends StatelessWidget {
                 RichText(
                   text: TextSpan(
                     style: AppTheme.gamingTitle(fontSize: 22, color: Colors.black),
-                    children: const [
-                      TextSpan(text: 'PLAY FREE OR WIN '),
+                    children: [
+                      TextSpan(text: appState.isRealCashModeEnabled ? 'PLAY FREE OR WIN ' : 'PLAY ESPORTS & WIN '),
                       TextSpan(
-                        text: 'REAL CASH',
-                        style: TextStyle(color: AppTheme.primaryAmber),
+                        text: appState.isRealCashModeEnabled ? 'REAL CASH' : 'PRIZES',
+                        style: const TextStyle(color: AppTheme.primaryAmber),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Watch ads for 🟡 Ad Coins in Free Tournaments or deposit cash for Pro 75/25 Matches with Instant UPI withdrawals.',
-                  style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+                Text(
+                  appState.isRealCashModeEnabled
+                      ? 'Watch ads for 🟡 Ad Coins in Free Tournaments or deposit cash for Pro 75/25 Matches with Instant UPI withdrawals.'
+                      : 'Watch ads for 🟡 Ad Coins in Free Tournaments to win Google Play Redeem Codes and Free Fire Diamonds.',
+                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
                 ),
                 const SizedBox(height: 14),
                 Row(
@@ -251,16 +252,18 @@ class TournamentLobbyScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               // Economy Filter Row (All / Free / Paid)
-              Row(
-                children: [
-                  _buildEconomyChip('ALL', 'All Matches', null, selectedFilter == 'ALL'),
-                  const SizedBox(width: 6),
-                  _buildEconomyChip('FREE', 'Free Matches', '🟡', selectedFilter == 'FREE'),
-                  const SizedBox(width: 6),
-                  _buildEconomyChip('PAID', 'Paid Matches', '💵', selectedFilter == 'PAID'),
-                ],
-              ),
-              const SizedBox(height: 10),
+              if (appState.isRealCashModeEnabled) ...[
+                Row(
+                  children: [
+                    _buildEconomyChip('ALL', 'All Matches', null, selectedFilter == 'ALL'),
+                    const SizedBox(width: 6),
+                    _buildEconomyChip('FREE', 'Free Matches', '🟡', selectedFilter == 'FREE'),
+                    const SizedBox(width: 6),
+                    _buildEconomyChip('PAID', 'Paid Matches', '💵', selectedFilter == 'PAID'),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
 
               // Match Status Row (ALL / UPCOMING / ONGOING / RESULTS)
               SingleChildScrollView(

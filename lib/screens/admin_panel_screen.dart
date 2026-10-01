@@ -201,6 +201,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 16),
 
+          // 🛡️ GOOGLE PLAY REVIEW SAFE MODE MASTER SWITCH
+          _buildPlayStoreReviewSafeModeCard(),
+
           // 📊 FINANCIAL CARDS: 75/25 SPLIT & SEPARATED REVENUES
           _buildFinancialAnalyticsContainer(metrics),
           const SizedBox(height: 18),
@@ -247,6 +250,93 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 7) _buildBannersSection(),
           if (activeSection == 8) _buildSettingsSection(),
           if (activeSection == 9) _buildPushNotificationBroadcastSection(),
+        ],
+      ),
+    );
+  }
+
+  // --- 🛡️ GOOGLE PLAY REVIEW SAFE MODE MASTER SWITCH WIDGET ---
+  Widget _buildPlayStoreReviewSafeModeCard() {
+    final isCashEnabled = widget.appState.isRealCashModeEnabled;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isCashEnabled ? const Color(0xFF0F172A) : const Color(0xFF065F46),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCashEnabled ? const Color(0xFF3B82F6) : const Color(0xFF34D399),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: (isCashEnabled ? Colors.blue : Colors.green).withAlpha(40),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    isCashEnabled ? Icons.currency_rupee : Icons.shield_outlined,
+                    color: isCashEnabled ? Colors.amberAccent : Colors.greenAccent,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    isCashEnabled ? 'REAL CASH & PAID MATCHES' : 'GOOGLE PLAY REVIEW SAFE MODE',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                ],
+              ),
+              Switch(
+                value: isCashEnabled,
+                activeThumbColor: Colors.amberAccent,
+                activeTrackColor: const Color(0xFF2563EB),
+                inactiveThumbColor: Colors.white,
+                inactiveTrackColor: const Color(0xFF047857),
+                onChanged: (val) async {
+                  await widget.appState.adminSetRealCashMode(val);
+                  if (!mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      backgroundColor: val ? const Color(0xFF2563EB) : const Color(0xFF047857),
+                      content: Text(
+                        val
+                            ? '🚀 Real Cash & Paid Mode is now ON (4-Wallet & ₹ Matches visible)!'
+                            : '🛡️ Play Store Review Safe Mode is now ON (Only Free Coins & Ads visible)!',
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            isCashEnabled
+                ? '🟢 LIVE MODE ACTIVE: Full 4-Wallet Balance, Add Cash, Instant UPI Withdrawals, and Paid Tournaments are LIVE for all players.'
+                : '🛡️ SAFE MODE ACTIVE: Play Store Review Compliant! Real Cash, Deposit Cash, ₹ Entry Fees, and UPI Withdrawals are completely HIDDEN. Users only see 2 Free Coins and Rewarded Ads.',
+            style: TextStyle(
+              fontSize: 11.5,
+              color: isCashEnabled ? Colors.white70 : Colors.green.shade100,
+              height: 1.35,
+            ),
+          ),
         ],
       ),
     );

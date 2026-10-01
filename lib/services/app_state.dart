@@ -39,6 +39,7 @@ class AppState extends ChangeNotifier {
   int globalTotalAdsWatched = 0;
   List<BannerModel> banners = [];
   String telegramSupportUrl = 'https://t.me/swgayanmitra';
+  bool isRealCashModeEnabled = false; // Google Play Review Safe Mode Toggle (False = Only Coins & Ads visible)
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
   bool isLoadingAuth = true;
@@ -291,6 +292,23 @@ class AppState extends ChangeNotifier {
     ];
   }
 
+  List<BannerModel> get activeBanners {
+    if (!isRealCashModeEnabled) {
+      return banners.map((b) {
+        final sanitizedTitle = b.title.replaceAll(RegExp(r'Real Cash|₹\d+|75/25|Instant UPI', caseSensitive: false), 'Redeem Codes & Diamonds');
+        return BannerModel(
+          id: b.id,
+          title: sanitizedTitle,
+          imageUrl: b.imageUrl,
+          clickUrl: b.clickUrl,
+          isActive: b.isActive,
+          createdAt: b.createdAt,
+        );
+      }).toList();
+    }
+    return banners;
+  }
+
   // --- GETTERS ---
   List<MatchModel> get myMatches {
     return matches.where((m) => m.participants.any((p) => p.uid == user.uid)).toList();
@@ -298,6 +316,9 @@ class AppState extends ChangeNotifier {
 
   List<MatchModel> get filteredMatches {
     final list = matches.where((m) {
+      // If Real Cash mode is disabled (Safe Review Mode), HIDE all paid matches
+      if (!isRealCashModeEnabled && m.matchType != MatchType.free) return false;
+
       // 1. Free / Paid Filter
       if (selectedFilter == 'FREE' && m.matchType != MatchType.free) return false;
       if (selectedFilter == 'PAID' && m.matchType != MatchType.paid) return false;
@@ -1659,8 +1680,14 @@ class AppState extends ChangeNotifier {
             }
 
             // 5. Config
-            if (data['config'] != null && data['config']['telegramSupportUrl'] != null) {
-              telegramSupportUrl = data['config']['telegramSupportUrl'].toString();
+            if (data['config'] != null) {
+              if (data['config']['telegramSupportUrl'] != null) {
+                telegramSupportUrl = data['config']['telegramSupportUrl'].toString();
+              }
+              if (data['config']['isRealCashModeEnabled'] != null) {
+                isRealCashModeEnabled = data['config']['isRealCashModeEnabled'] == true ||
+                    data['config']['isRealCashModeEnabled'].toString() == 'true';
+              }
             }
 
             backendSyncSuccess = true;
@@ -1766,11 +1793,17 @@ class AppState extends ChangeNotifier {
       // 8. Sync Telegram Support & App Config
       try {
         final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
-        if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
-          telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+        if (configDoc != null) {
+          if (configDoc['telegramSupportUrl'] != null) {
+            telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+          }
+          if (configDoc['isRealCashModeEnabled'] != null) {
+            isRealCashModeEnabled = configDoc['isRealCashModeEnabled'] == true ||
+                configDoc['isRealCashModeEnabled'].toString() == 'true';
+          }
         }
       } catch (e) {
-        debugPrint('[AppState] Sync telegram support error: $e');
+        debugPrint('[AppState] Sync telegram support & config error: $e');
       }
 
       // 9. Sync Realtime Push Notifications
@@ -1821,11 +1854,37 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // --- ADMIN: GOOGLE PLAY REVIEW SAFE MODE TOGGLE (REAL CASH ON/OFF) ---
+  Future<void> adminSetRealCashMode(bool enabled) async {
+    isRealCashModeEnabled = enabled;
+    notifyListeners();
+
+    // 1. Sync to high-speed backend proxy
+    try {
+      http.post(
+        Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'set_real_cash_mode',
+          'data': {'isRealCashModeEnabled': enabled},
+        }),
+      ).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('', 500));
+    } catch (_) {}
+
+    // 2. Sync directly to Firestore
+    await FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
+      'isRealCashModeEnabled': enabled,
+      'telegramSupportUrl': telegramSupportUrl,
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
+  }
+
   // --- ADMIN: TELEGRAM CUSTOMER SUPPORT URL CONFIGURATION ---
   void adminUpdateTelegramUrl(String url) {
     telegramSupportUrl = url.trim();
     FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
       'telegramSupportUrl': telegramSupportUrl,
+      'isRealCashModeEnabled': isRealCashModeEnabled,
       'updatedAt': DateTime.now().toIso8601String(),
     });
     notifyListeners();

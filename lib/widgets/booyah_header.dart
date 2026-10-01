@@ -72,7 +72,7 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const Spacer(),
 
-          // 3-Wallet Status Chips (Clean High-Contrast Light Theme)
+          // Wallet Status Chips (Dynamic Review Safe Mode vs Real Cash Mode)
           // 🟡 1. Ad Coins
           InkWell(
             onTap: () => onTabChange?.call(2), // Earn coins tab
@@ -110,88 +110,126 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 6),
 
-          // 💵 2. Deposit Cash
-          InkWell(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => DepositDialog(appState: appState),
-              );
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.blue.withAlpha(20),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.account_balance_wallet, size: 13, color: Color(0xFF2563EB)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '₹${user.wallet.depositCash.toInt()}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1E40AF),
+          if (!appState.isRealCashModeEnabled) ...[
+            // 🎟️ 2. Reward Coins (Safe Mode)
+            InkWell(
+              onTap: () => onTabChange?.call(2), // Go to rewards store tab
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFFEF3C7)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withAlpha(20),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Text('🎟️', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${user.wallet.rewardCoins}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF78350F),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
+          ] else ...[
+            // 💵 2. Deposit Cash (Real Cash Mode)
+            InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => DepositDialog(appState: appState),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.blue.withAlpha(20),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.account_balance_wallet, size: 13, color: Color(0xFF2563EB)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '₹${user.wallet.depositCash.toInt()}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF1E40AF),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 6),
 
-          // 🏆 3. Winning Cash (UPI Withdrawable)
-          InkWell(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => WithdrawDialog(appState: appState),
-              );
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.withAlpha(20),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.emoji_events, size: 13, color: Color(0xFF10B981)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '₹${user.wallet.winningCash.toInt()}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF065F46),
+            // 🏆 3. Winning Cash (Real Cash Mode - UPI Withdrawable)
+            InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => WithdrawDialog(appState: appState),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withAlpha(20),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.emoji_events, size: 13, color: Color(0xFF10B981)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '₹${user.wallet.winningCash.toInt()}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
           const SizedBox(width: 6),
 
           // 🔔 4. Notifications Bell Icon

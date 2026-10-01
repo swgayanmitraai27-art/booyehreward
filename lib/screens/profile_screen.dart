@@ -169,7 +169,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildStatCard('MATCHES PLAYED', '${stats.matchesPlayed}', Icons.sports_esports, Colors.blue),
                   _buildStatCard('BOOYAHS WON', '${stats.matchesWon}', Icons.emoji_events, AppTheme.primaryAmber),
                   _buildStatCard('TOTAL KILLS', '${stats.totalKills}', Icons.crisis_alert, Colors.red),
-                  _buildStatCard('TOTAL WON (₹)', '₹${stats.totalWinningsCash.toInt()}', Icons.currency_rupee, AppTheme.winningGreen),
+                  widget.appState.isRealCashModeEnabled
+                      ? _buildStatCard('TOTAL WON (₹)', '₹${stats.totalWinningsCash.toInt()}', Icons.currency_rupee, AppTheme.winningGreen)
+                      : _buildStatCard('REWARD COINS WON', '${stats.totalRewardCoinsWon} 🎟️', Icons.stars, AppTheme.winningGreen),
                 ],
               ),
               const SizedBox(height: 18),
