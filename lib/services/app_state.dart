@@ -133,7 +133,7 @@ class AppState extends ChangeNotifier {
 
   void _startLiveSyncTimer() {
     _liveSyncTimer?.cancel();
-    _liveSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       _syncWithFirestore();
     });
   }
