@@ -125,8 +125,25 @@ class FirestoreRestService {
     }
   }
 
-  /// 5. Write / Upsert Document (Live Real-time Sync)
+  /// 5. Write / Upsert Document (Live Real-time Sync with Dual Backend Proxy)
   static Future<bool> setDocument(String collection, String docId, Map<String, dynamic> data) async {
+    // 1. Post to high-speed server sync endpoint (updates live memory cache immediately)
+    try {
+      final syncUrl = Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync");
+      http.post(
+        syncUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'collection': collection,
+          'docId': docId,
+          'data': data,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('[FirestoreRest] Backend sync POST notice: $e');
+    }
+
+    // 2. Direct Firestore REST persistence
     try {
       final uri = Uri.parse("$_baseUrl/$collection/$docId?key=${FirebaseConfig.apiKey}");
       final body = jsonEncode({
