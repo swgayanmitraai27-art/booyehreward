@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../models/match_model.dart';
@@ -15,6 +17,7 @@ import 'firebase_config.dart';
 import 'auth_service.dart';
 import 'notification_service.dart';
 import 'notification_bridge/notification_bridge.dart';
+import 'web_storage/web_storage.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
@@ -122,6 +125,7 @@ class AppState extends ChangeNotifier {
 
   AppState() {
     _initData();
+    _loadLocalDataCache();
     _initNotifications();
     _syncWithFirestore();
     _startLiveSyncTimer();
@@ -129,9 +133,57 @@ class AppState extends ChangeNotifier {
 
   void _startLiveSyncTimer() {
     _liveSyncTimer?.cancel();
-    _liveSyncTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+    _liveSyncTimer = Timer.periodic(const Duration(seconds: 12), (_) {
       _syncWithFirestore();
     });
+  }
+
+  Future<void> _loadLocalDataCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedMatchesJson = WebStorageHelper.getItem('booyah_cached_matches') ?? prefs.getString('booyah_cached_matches');
+      if (cachedMatchesJson != null && cachedMatchesJson.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(cachedMatchesJson);
+        if (list.isNotEmpty && matches.isEmpty) {
+          matches = list.map((d) => MatchModel.fromJson(Map<String, dynamic>.from(d))).toList();
+          notifyListeners();
+        }
+      }
+
+      final cachedTxnsJson = WebStorageHelper.getItem('booyah_cached_txns') ?? prefs.getString('booyah_cached_txns');
+      if (cachedTxnsJson != null && cachedTxnsJson.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(cachedTxnsJson);
+        if (list.isNotEmpty && allGlobalTransactions.isEmpty) {
+          allGlobalTransactions = list.map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
+          transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('[AppState] Load local cache error: $e');
+    }
+  }
+
+  void _saveLocalMatchesCache() {
+    try {
+      final list = matches.map((m) => m.toJson()).toList();
+      final jsonStr = jsonEncode(list);
+      WebStorageHelper.setItem('booyah_cached_matches', jsonStr);
+      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_matches', jsonStr));
+    } catch (e) {
+      debugPrint('[AppState] Save local matches cache error: $e');
+    }
+  }
+
+  void _saveLocalTxnCache() {
+    try {
+      final list = allGlobalTransactions.map((t) => t.toJson()).toList();
+      final jsonStr = jsonEncode(list);
+      WebStorageHelper.setItem('booyah_cached_txns', jsonStr);
+      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_txns', jsonStr));
+    } catch (e) {
+      debugPrint('[AppState] Save local txn cache error: $e');
+    }
   }
 
   void _initNotifications() {
@@ -1408,12 +1460,14 @@ class AppState extends ChangeNotifier {
 
   void adminCreateMatch(MatchModel newMatch) {
     matches.insert(0, newMatch);
+    _saveLocalMatchesCache();
     _syncMatch(newMatch);
     notifyListeners();
   }
 
   void adminDeleteMatch(String matchId) {
     matches.removeWhere((m) => m.id == matchId);
+    _saveLocalMatchesCache();
     FirestoreRestService.deleteDocument(FirebaseConfig.matchesCollection, matchId);
     notifyListeners();
   }
@@ -1552,7 +1606,6 @@ class AppState extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Sync User Profile from Firestore database (real-time balance and winnings)
       final prefs = await SharedPreferences.getInstance();
       final savedUid = prefs.getString('saved_uid');
       final activeUser = await AuthService.getActiveUser();
@@ -1566,62 +1619,121 @@ class AppState extends ChangeNotifier {
           ? user.uid
           : (savedUid ?? activeUser?.uid);
 
-      if (uidToSync != null && uidToSync.isNotEmpty && uidToSync != 'user_guest') {
+      // --- ATTEMPT 1: High-Speed Cached Server Proxy Sync (Zero Quota Loss) ---
+      bool backendSyncSuccess = false;
+      try {
+        final syncUrl = Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync?userId=${uidToSync ?? ''}");
+        final res = await http.get(syncUrl).timeout(const Duration(seconds: 4));
+        if (res.statusCode == 200) {
+          final data = jsonDecode(res.body);
+          if (data['success'] == true) {
+            // 1. Matches
+            if (data['matches'] is List && (data['matches'] as List).isNotEmpty) {
+              final list = (data['matches'] as List).map((d) => MatchModel.fromJson(Map<String, dynamic>.from(d))).toList();
+              matches = list;
+              for (var m in matches) {
+                _checkAndTriggerMatchAutoStart(m);
+              }
+              _saveLocalMatchesCache();
+            }
+
+            // 2. Dynamic Banners
+            if (data['banners'] is List && (data['banners'] as List).isNotEmpty) {
+              banners = (data['banners'] as List).map((d) => BannerModel.fromJson(Map<String, dynamic>.from(d))).where((b) => b.isActive).toList();
+            }
+
+            // 3. User Profile
+            if (data['user'] != null && data['user'] is Map && (data['user'] as Map).isNotEmpty) {
+              user = UserModel.fromJson(Map<String, dynamic>.from(data['user']));
+              isAuthenticated = true;
+              await AuthService.saveUser(user);
+            }
+
+            // 4. Transactions
+            if (data['transactions'] is List && (data['transactions'] as List).isNotEmpty) {
+              transactions = (data['transactions'] as List).map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
+              transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              _saveLocalTxnCache();
+            }
+
+            // 5. Config
+            if (data['config'] != null && data['config']['telegramSupportUrl'] != null) {
+              telegramSupportUrl = data['config']['telegramSupportUrl'].toString();
+            }
+
+            backendSyncSuccess = true;
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] Backend sync proxy notice (fallback to Firestore REST): $e');
+      }
+
+      // --- ATTEMPT 2: Fallback to Direct Firestore REST if Backend Proxy was skipped/offline ---
+      if (!backendSyncSuccess) {
+        if (uidToSync != null && uidToSync.isNotEmpty && uidToSync != 'user_guest') {
+          try {
+            final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uidToSync);
+            if (userDoc != null && userDoc.isNotEmpty) {
+              user = UserModel.fromJson(userDoc);
+              isAuthenticated = true;
+              await AuthService.saveUser(user);
+            }
+          } catch (e) {
+            debugPrint('[AppState] Remote user doc sync error: $e');
+          }
+        }
+
+        // 2. Sync Live Matches from Firestore
         try {
-          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uidToSync);
-          if (userDoc != null && userDoc.isNotEmpty) {
-            user = UserModel.fromJson(userDoc);
-            isAuthenticated = true;
-            await AuthService.saveUser(user);
+          final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
+          if (matchDocs.isNotEmpty) {
+            final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
+            matches = firestoreMatches;
+            for (var m in matches) {
+              _checkAndTriggerMatchAutoStart(m);
+            }
+            _saveLocalMatchesCache();
           }
         } catch (e) {
-          debugPrint('[AppState] Remote user doc sync error: $e');
+          debugPrint('[AppState] Sync matches error: $e');
         }
-      }
 
-      // 2. Sync Live Matches from Firestore
-      final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
-      if (matchDocs.isNotEmpty) {
-        final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
-        matches = firestoreMatches;
-        for (var m in matches) {
-          _checkAndTriggerMatchAutoStart(m);
+        // 3. Sync Transactions
+        try {
+          final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
+          if (txnDocs.isNotEmpty) {
+            allGlobalTransactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
+            allGlobalTransactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+            transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
+            _saveLocalTxnCache();
+          }
+        } catch (e) {
+          debugPrint('[AppState] Sync txns error: $e');
         }
-      } else {
-        matches = []; // Real live: empty if admin hasn't created any
-      }
-
-      // 3. Sync Transactions (Global Collection for Admin, Filtered for User)
-      final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
-      if (txnDocs.isNotEmpty) {
-        allGlobalTransactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
-        allGlobalTransactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
-      } else {
-        allGlobalTransactions = [];
-        transactions = [];
       }
 
       // 4. Sync Withdrawals (Global Collection for Admin, Filtered for User)
-      final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
-      if (withDocs.isNotEmpty) {
-        allGlobalWithdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
-        allGlobalWithdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-        withdrawals = allGlobalWithdrawals.where((w) => w.userId == user.uid).toList();
-      } else {
-        allGlobalWithdrawals = [];
-        withdrawals = [];
+      try {
+        final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
+        if (withDocs.isNotEmpty) {
+          allGlobalWithdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
+          allGlobalWithdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+          withdrawals = allGlobalWithdrawals.where((w) => w.userId == user.uid).toList();
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync withdrawals error: $e');
       }
 
       // 5. Sync Voucher Claims (Global Collection for Admin, Filtered for User)
-      final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
-      if (claimDocs.isNotEmpty) {
-        allGlobalVoucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
-        allGlobalVoucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-        voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
-      } else {
-        allGlobalVoucherClaims = [];
-        voucherClaims = [];
+      try {
+        final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
+        if (claimDocs.isNotEmpty) {
+          allGlobalVoucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
+          allGlobalVoucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+          voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync vouchers error: $e');
       }
 
       // 6. Sync Global Ad Stats (skillwinner_stats/ad_stats)
@@ -1640,55 +1752,63 @@ class AppState extends ChangeNotifier {
       }
 
       // 7. Sync Dynamic Banners from Firestore
-      final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
-      if (bannerDocs.isNotEmpty) {
-        banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
+      try {
+        final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
+        if (bannerDocs.isNotEmpty) {
+          banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync banners error: $e');
       }
 
       // 8. Sync Telegram Support & App Config
-      final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
-      if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
-        telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+      try {
+        final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
+        if (configDoc != null && configDoc['telegramSupportUrl'] != null) {
+          telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync telegram support error: $e');
       }
 
       // 9. Sync Realtime Push Notifications
-      final notifDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_notifications');
-      if (notifDocs.isNotEmpty) {
-        final parsed = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
-        final Map<String, AppNotification> dedupMap = {};
-        for (final item in parsed) {
-          final dedupKey = '${item.title.trim()}||${item.body.trim()}';
-          if (!dedupMap.containsKey(dedupKey) || item.createdAt.isAfter(dedupMap[dedupKey]!.createdAt)) {
-            dedupMap[dedupKey] = item;
+      try {
+        final notifDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_notifications');
+        if (notifDocs.isNotEmpty) {
+          final parsed = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
+          final Map<String, AppNotification> dedupMap = {};
+          for (final item in parsed) {
+            final dedupKey = '${item.title.trim()}||${item.body.trim()}';
+            if (!dedupMap.containsKey(dedupKey) || item.createdAt.isAfter(dedupMap[dedupKey]!.createdAt)) {
+              dedupMap[dedupKey] = item;
+            }
           }
-        }
-        allGlobalNotifications = dedupMap.values.toList();
-        allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        final newRelevantNotifs = allGlobalNotifications.where((n) {
-          if (n.targetType == 'all') return true;
-          if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
-          if (n.targetType == 'user' && n.targetId == user.uid) return true;
-          if (n.targetType == 'admin' && user.role == 'admin') return true;
-          return false;
-        }).toList();
+          allGlobalNotifications = dedupMap.values.toList();
+          allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          final newRelevantNotifs = allGlobalNotifications.where((n) {
+            if (n.targetType == 'all') return true;
+            if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
+            if (n.targetType == 'user' && n.targetId == user.uid) return true;
+            if (n.targetType == 'admin' && user.role == 'admin') return true;
+            return false;
+          }).toList();
 
-        // Trigger native desktop notification for any new arrived notification
-        for (final n in newRelevantNotifs) {
-          if (!_alertedNotifIds.contains(n.id)) {
-            _alertedNotifIds.add(n.id);
-            // If created within last 2 minutes, trigger popup
-            if (DateTime.now().difference(n.createdAt).inMinutes.abs() <= 2) {
-              if (kIsWeb) {
-                showBrowserNotification(n.title, n.body, imageUrl: n.imageUrl);
+          // Trigger native desktop notification for any new arrived notification
+          for (final n in newRelevantNotifs) {
+            if (!_alertedNotifIds.contains(n.id)) {
+              _alertedNotifIds.add(n.id);
+              if (DateTime.now().difference(n.createdAt).inMinutes.abs() <= 2) {
+                if (kIsWeb) {
+                  showBrowserNotification(n.title, n.body, imageUrl: n.imageUrl);
+                }
               }
             }
           }
-        }
 
-        notifications = newRelevantNotifs;
-      } else {
-        allGlobalNotifications = [];
-        notifications = [];
+          notifications = newRelevantNotifs;
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync notifications error: $e');
       }
     } catch (e) {
       debugPrint('[AppState] Firestore live sync error: $e');

@@ -2526,9 +2526,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   fifthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : fifthPrize,
                 );
 
+                final enteredTitle = _matchTitleController.text.trim();
+                final finalTitle = enteredTitle.isNotEmpty
+                    ? enteredTitle
+                    : (newMatchMode == MatchMode.cs
+                        ? '⚔️ Clash Squad ${newTeamType == TeamType.squad ? "4v4" : (newTeamType == TeamType.duo ? "2v2" : "1v1")} Showdown'
+                        : (newMatchMode == MatchMode.loneWolf
+                            ? '🐺 Lone Wolf ${newTeamType == TeamType.solo ? "1v1" : "2v2"} Duel'
+                            : '🔥 Free Fire BR ${newTeamType.name.toUpperCase()} Battle'));
+
                 final match = MatchModel(
                   id: 'match_${DateTime.now().millisecondsSinceEpoch}',
-                  title: _matchTitleController.text.trim(),
+                  title: finalTitle,
                   bannerImage: resolvedBanner.isNotEmpty ? resolvedBanner : 'imgasest/cshomescreen.png',
                   gameType: newGameType,
                   mode: newMatchMode,
@@ -2548,11 +2557,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 );
 
                 widget.appState.adminCreateMatch(match);
+                _matchTitleController.clear();
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.winningGreen,
-                    content: Text('Match created! 75% Pool: ₹${distributablePrizePool.toInt()} | 25% Platform Margin: ₹${adminCommission.toInt()}'),
+                    content: Text('Match "$finalTitle" created! 75% Pool: ₹${distributablePrizePool.toInt()} | 25% Platform Margin: ₹${adminCommission.toInt()}'),
                   ),
                 );
               },

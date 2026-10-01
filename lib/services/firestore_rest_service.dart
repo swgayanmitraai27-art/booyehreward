@@ -95,12 +95,12 @@ class FirestoreRestService {
         if (documents == null) return [];
         return documents.map((doc) => decodeFirestoreDocument(doc as Map<String, dynamic>)).toList();
       } else {
-        debugPrint('[FirestoreRest] getCollection ($collection) status: ${response.statusCode}');
-        return [];
+        debugPrint('[FirestoreRest] getCollection ($collection) HTTP ${response.statusCode}: ${response.body}');
+        throw Exception('Firestore HTTP ${response.statusCode}: ${response.body}');
       }
     } catch (e) {
       debugPrint('[FirestoreRest] getCollection ($collection) error: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -113,11 +113,15 @@ class FirestoreRestService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return decodeFirestoreDocument(data);
+      } else if (response.statusCode == 404) {
+        return null;
+      } else {
+        debugPrint('[FirestoreRest] getDocument ($collection/$docId) HTTP ${response.statusCode}');
+        throw Exception('Firestore HTTP ${response.statusCode}: ${response.body}');
       }
-      return null;
     } catch (e) {
       debugPrint('[FirestoreRest] getDocument ($collection/$docId) error: $e');
-      return null;
+      rethrow;
     }
   }
 
