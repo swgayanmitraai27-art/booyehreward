@@ -316,6 +316,8 @@ class AppState extends ChangeNotifier {
       if (selectedStatus == 'UPCOMING' && m.status != MatchStatus.upcoming) return false;
       if (selectedStatus == 'ONGOING' && m.status != MatchStatus.ongoing) return false;
       if (selectedStatus == 'COMPLETED' && m.status != MatchStatus.completed) return false;
+      // In main 'ALL' lobby, only show active joinable matches (Upcoming & Live), completed matches are in Resulted tab
+      if (selectedStatus == 'ALL' && m.status == MatchStatus.completed) return false;
 
       return true;
     }).toList();
@@ -1628,7 +1630,7 @@ class AppState extends ChangeNotifier {
           final data = jsonDecode(res.body);
           if (data['success'] == true) {
             // 1. Matches
-            if (data['matches'] is List && (data['matches'] as List).isNotEmpty) {
+            if (data['matches'] is List) {
               final list = (data['matches'] as List).map((d) => MatchModel.fromJson(Map<String, dynamic>.from(d))).toList();
               matches = list;
               for (var m in matches) {
@@ -1650,7 +1652,7 @@ class AppState extends ChangeNotifier {
             }
 
             // 4. Transactions
-            if (data['transactions'] is List && (data['transactions'] as List).isNotEmpty) {
+            if (data['transactions'] is List) {
               transactions = (data['transactions'] as List).map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
               transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
               _saveLocalTxnCache();
