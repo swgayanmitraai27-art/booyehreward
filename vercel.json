@@ -4,7 +4,19 @@
   "cleanUrls": true,
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/download",
+      "destination": "/download/index.html"
+    },
+    {
+      "source": "/download/",
+      "destination": "/download/index.html"
+    },
+    {
+      "source": "/downloads/:match*",
+      "destination": "/downloads/:match*"
+    },
+    {
+      "source": "/((?!download|downloads|assets|icons|canvaskit|favicon.png|booyah_logo.png|app-ads.txt|manifest.json|flutter.js|flutter_bootstrap.js|flutter_service_worker.js|main.dart.js|version.json).*)",
       "destination": "/index.html"
     }
   ],
@@ -20,3 +32,4 @@
     }
   ]
 }
+
