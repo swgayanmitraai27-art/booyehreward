@@ -1088,11 +1088,13 @@ class AppState extends ChangeNotifier {
     required String userId,
     required String title,
     required String body,
+    String? imageUrl,
   }) async {
     return await _notificationService.sendPersonalNotification(
       userId: userId,
       title: title,
       body: body,
+      imageUrl: imageUrl,
     );
   }
 

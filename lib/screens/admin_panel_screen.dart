@@ -5,7 +5,10 @@ import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
 import '../models/banner_model.dart';
 import '../models/notification_model.dart';
+import '../models/user_model.dart';
 import '../services/app_state.dart';
+import '../services/firestore_rest_service.dart';
+import '../services/firebase_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
 import '../utils/url_launcher_util.dart';
@@ -79,13 +82,41 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _notifBodyController = TextEditingController(text: 'New High Prize Pool Match is LIVE! Join now and win real cash.');
   final TextEditingController _notifImageUrlController = TextEditingController();
   final TextEditingController _notifUserIdController = TextEditingController();
+  final TextEditingController _notifUserSearchController = TextEditingController();
   String _notifTarget = 'all'; // 'all' | 'match' | 'user'
   String? _notifSelectedMatchId;
+  String? _selectedTargetUserUid;
+  List<UserModel> _registeredUsers = [];
+  bool _isLoadingUsers = false;
 
   @override
   void initState() {
     super.initState();
     _telegramUrlController.text = widget.appState.telegramSupportUrl;
+    _fetchRegisteredUsers();
+  }
+
+  Future<void> _fetchRegisteredUsers() async {
+    if (!mounted) return;
+    setState(() => _isLoadingUsers = true);
+    try {
+      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
+      final users = userDocs.map((d) => UserModel.fromJson(d)).toList();
+      users.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
+      if (mounted) {
+        setState(() {
+          _registeredUsers = users;
+          _isLoadingUsers = false;
+          if (_selectedTargetUserUid == null && _registeredUsers.isNotEmpty) {
+            _selectedTargetUserUid = _registeredUsers.first.uid;
+            _notifUserIdController.text = _registeredUsers.first.uid;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('[AdminPanel] Error fetching registered users: $e');
+      if (mounted) setState(() => _isLoadingUsers = false);
+    }
   }
 
   @override
@@ -4283,12 +4314,165 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ],
 
           if (_notifTarget == 'user') ...[
-            TextField(
-              controller: _notifUserIdController,
-              decoration: InputDecoration(
-                labelText: 'Target User UID (e.g. user_123456)',
-                isDense: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'SELECT REGISTERED USER (${_registeredUsers.length}):',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                      ),
+                      InkWell(
+                        onTap: _fetchRegisteredUsers,
+                        child: Row(
+                          children: [
+                            if (_isLoadingUsers)
+                              const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF1D4ED8)),
+                              )
+                            else
+                              const Icon(Icons.refresh, size: 14, color: Color(0xFF1D4ED8)),
+                            const SizedBox(width: 4),
+                            const Text('Refresh Users', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  if (_isLoadingUsers && _registeredUsers.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                    )
+                  else if (_registeredUsers.isEmpty)
+                    const Text('No users loaded. Click Refresh to load from database.', style: TextStyle(fontSize: 11, color: Colors.grey))
+                  else ...[
+                    // Search box for filtering user list
+                    TextField(
+                      controller: _notifUserSearchController,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        prefixIcon: const Icon(Icons.search, size: 18),
+                        hintText: 'Search user by Name, Email, Phone, IGN...',
+                        hintStyle: const TextStyle(fontSize: 11),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      onChanged: (val) => setState(() {}),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // User Dropdown Selector
+                    DropdownButtonFormField<String>(
+                      value: _registeredUsers.any((u) => u.uid == _selectedTargetUserUid)
+                          ? _selectedTargetUserUid
+                          : (_registeredUsers.isNotEmpty ? _registeredUsers.first.uid : null),
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        isDense: true,
+                        labelText: 'Choose Target User',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                      items: _registeredUsers
+                          .where((u) {
+                            final q = _notifUserSearchController.text.trim().toLowerCase();
+                            if (q.isEmpty) return true;
+                            final ign = u.inGameName?.toLowerCase() ?? '';
+                            return u.displayName.toLowerCase().contains(q) ||
+                                u.email.toLowerCase().contains(q) ||
+                                u.phoneNumber.toLowerCase().contains(q) ||
+                                ign.contains(q) ||
+                                u.uid.toLowerCase().contains(q);
+                          })
+                          .map<DropdownMenuItem<String>>((UserModel u) {
+                            final ign = (u.inGameName != null && u.inGameName!.isNotEmpty) ? u.inGameName! : (u.phoneNumber.isNotEmpty ? u.phoneNumber : u.email);
+                            return DropdownMenuItem<String>(
+                              value: u.uid,
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    radius: 12,
+                                    backgroundColor: const Color(0xFF1D4ED8),
+                                    child: Text(
+                                      u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : 'U',
+                                      style: const TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      '${u.displayName} ($ign)',
+                                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          })
+                          .toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedTargetUserUid = val;
+                            _notifUserIdController.text = val;
+                          });
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Highlighted Selected User Card Preview
+                    if (_selectedTargetUserUid != null && _registeredUsers.any((u) => u.uid == _selectedTargetUserUid)) ...[
+                      Builder(builder: (context) {
+                        final selUser = _registeredUsers.firstWhere((u) => u.uid == _selectedTargetUserUid);
+                        final ign = (selUser.inGameName != null && selUser.inGameName!.isNotEmpty) ? selUser.inGameName! : 'N/A';
+                        final phone = selUser.phoneNumber.isNotEmpty ? selUser.phoneNumber : 'N/A';
+                        return Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFEFF6FF),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFBFDBFE)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check_circle, color: Color(0xFF2563EB), size: 18),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Target: ${selUser.displayName} | IGN: $ign',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFF1E3A8A))),
+                                    Text('Email: ${selUser.email} | Phone: $phone',
+                                        style: const TextStyle(fontSize: 9.5, color: Color(0xFF3B82F6))),
+                                    Text('UID: ${selUser.uid}',
+                                        style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Color(0xFF64748B))),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ],
               ),
             ),
             const SizedBox(height: 12),
@@ -4478,21 +4662,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     ),
                   );
                 } else {
-                  final targetUid = _notifUserIdController.text.trim();
+                  final targetUid = _selectedTargetUserUid ?? _notifUserIdController.text.trim();
                   if (targetUid.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter target User UID!')));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a target User!')));
                     return;
                   }
                   await widget.appState.adminSendPersonalNotification(
                     userId: targetUid,
                     title: title,
                     body: body,
+                    imageUrl: img.isNotEmpty ? img : null,
                   );
                   if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      backgroundColor: Color(0xFF047857),
-                      content: Text('👤 Targeted Push Notification sent to user!'),
+                    SnackBar(
+                      backgroundColor: const Color(0xFF047857),
+                      content: Text('👤 Push Notification sent to user: $targetUid!'),
                     ),
                   );
                 }

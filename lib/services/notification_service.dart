@@ -222,33 +222,40 @@ class NotificationService {
     }
   }
 
+  /// Sanitize topic strings to strictly comply with FCM topic naming rules: [a-zA-Z0-9-_.~%]+
+  static String sanitizeTopic(String topic) {
+    return topic.replaceAll(RegExp(r'[^a-zA-Z0-9-_.~%]'), '_');
+  }
+
   /// Subscribe device to an FCM / In-App Topic (e.g. 'all_users', 'match_123', 'admin_alerts')
   Future<void> subscribeToTopic(String topic) async {
-    _subscribedTopics.add(topic);
+    final cleanTopic = sanitizeTopic(topic);
+    _subscribedTopics.add(cleanTopic);
     if (!kIsWeb) {
       try {
-        await FirebaseMessaging.instance.subscribeToTopic(topic);
-        debugPrint('🔔 [NotificationService] Subscribed native Android FCM to topic: $topic');
+        await FirebaseMessaging.instance.subscribeToTopic(cleanTopic);
+        debugPrint('🔔 [NotificationService] Subscribed native Android FCM to topic: $cleanTopic');
       } catch (e) {
         debugPrint('⚠️ [NotificationService] Native FCM topic subscribe error: $e');
       }
     } else {
-      debugPrint('🔔 [NotificationService] Subscribed to topic: $topic');
+      debugPrint('🔔 [NotificationService] Subscribed to topic: $cleanTopic');
     }
   }
 
   /// Unsubscribe from a Topic
   Future<void> unsubscribeFromTopic(String topic) async {
-    _subscribedTopics.remove(topic);
+    final cleanTopic = sanitizeTopic(topic);
+    _subscribedTopics.remove(cleanTopic);
     if (!kIsWeb) {
       try {
-        await FirebaseMessaging.instance.unsubscribeFromTopic(topic);
-        debugPrint('🔔 [NotificationService] Unsubscribed native Android FCM from topic: $topic');
+        await FirebaseMessaging.instance.unsubscribeFromTopic(cleanTopic);
+        debugPrint('🔔 [NotificationService] Unsubscribed native Android FCM from topic: $cleanTopic');
       } catch (e) {
         debugPrint('⚠️ [NotificationService] Native FCM topic unsubscribe error: $e');
       }
     } else {
-      debugPrint('🔔 [NotificationService] Unsubscribed from topic: $topic');
+      debugPrint('🔔 [NotificationService] Unsubscribed from topic: $cleanTopic');
     }
   }
 
@@ -389,29 +396,32 @@ class NotificationService {
     required String userId,
     required String title,
     required String body,
+    String? imageUrl,
     NotificationType type = NotificationType.systemAlert,
   }) async {
     final now = DateTime.now();
     final notif = AppNotification(
-      id: 'user_notif_${userId}_${now.millisecondsSinceEpoch}',
+      id: 'user_notif_${sanitizeTopic(userId)}_${now.millisecondsSinceEpoch}',
       title: title,
       body: body,
       type: type,
       targetType: 'user',
       targetId: userId,
       createdAt: now,
+      imageUrl: imageUrl,
     );
 
     _notificationStreamController.add(notif);
     if (kIsWeb) {
-      showBrowserNotification(title, body);
+      showBrowserNotification(title, body, imageUrl: imageUrl);
     }
 
     await _saveNotificationToFirestore(notif);
     return await _dispatchPushNotification(
-      topic: 'user_$userId',
+      topic: 'user_${sanitizeTopic(userId)}',
       title: title,
       body: body,
+      imageUrl: imageUrl,
       data: {'userId': userId},
     );
   }
