@@ -1,4 +1,4 @@
-package com.swgayanbhumi.app
+package com.booyahrewards.app
 
 import io.flutter.embedding.android.FlutterActivity
 

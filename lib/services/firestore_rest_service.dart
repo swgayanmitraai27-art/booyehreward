@@ -169,8 +169,26 @@ class FirestoreRestService {
     }
   }
 
-  /// 6. Delete Document
+  /// 6. Delete Document (Live Real-time Sync with Dual Backend Proxy)
   static Future<bool> deleteDocument(String collection, String docId) async {
+    // 1. Post delete to backend sync endpoint (updates live memory cache immediately)
+    try {
+      final syncUrl = Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync");
+      http.post(
+        syncUrl,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'action': 'delete',
+          'collection': collection,
+          'docId': docId,
+          'data': {'id': docId, 'isActive': false},
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('[FirestoreRest] Backend sync delete notice: $e');
+    }
+
+    // 2. Direct Firestore REST deletion
     try {
       final uri = Uri.parse("$_baseUrl/$collection/$docId?key=${FirebaseConfig.apiKey}");
       final response = await http.delete(uri).timeout(const Duration(seconds: 8));

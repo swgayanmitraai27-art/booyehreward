@@ -274,22 +274,7 @@ class AppState extends ChangeNotifier {
     transactions = [];
     withdrawals = [];
     voucherClaims = [];
-    banners = [
-      BannerModel(
-        id: 'banner_ff_01',
-        title: '🔥 Free Fire Esports Tournament - Win Real Cash & Diamonds',
-        imageUrl: 'imgasest/brhomescreen .png',
-        clickUrl: telegramSupportUrl,
-        createdAt: DateTime.now(),
-      ),
-      BannerModel(
-        id: 'banner_ff_02',
-        title: '💬 Join Official Telegram Community & 24/7 Support',
-        imageUrl: 'imgasest/cshomescreen.png',
-        clickUrl: telegramSupportUrl,
-        createdAt: DateTime.now(),
-      ),
-    ];
+    banners = [];
   }
 
   List<BannerModel> get activeBanners {
@@ -1661,7 +1646,7 @@ class AppState extends ChangeNotifier {
             }
 
             // 2. Dynamic Banners
-            if (data['banners'] is List && (data['banners'] as List).isNotEmpty) {
+            if (data['banners'] is List) {
               banners = (data['banners'] as List).map((d) => BannerModel.fromJson(Map<String, dynamic>.from(d))).where((b) => b.isActive).toList();
             }
 
@@ -1783,9 +1768,7 @@ class AppState extends ChangeNotifier {
       // 7. Sync Dynamic Banners from Firestore
       try {
         final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
-        if (bannerDocs.isNotEmpty) {
-          banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
-        }
+        banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
       } catch (e) {
         debugPrint('[AppState] Sync banners error: $e');
       }
