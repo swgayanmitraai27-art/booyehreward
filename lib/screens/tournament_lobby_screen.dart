@@ -662,28 +662,51 @@ class TournamentLobbyScreen extends StatelessWidget {
                 ),
               ),
 
-              // Match Type Badge (Free vs Paid)
+              // Match Type Badge & Unique Match ID Badge
               Positioned(
                 top: 10,
                 left: 10,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: isFree ? AppTheme.primaryAmber : AppTheme.winningGreen,
-                    borderRadius: BorderRadius.circular(8),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 4),
-                    ],
-                  ),
-                  child: Text(
-                    isFree ? '🟡 FREE MATCH' : '💵 PAID 75/25 MATCH',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 9.5,
-                      fontWeight: FontWeight.w900,
-                      color: isFree ? Colors.black : Colors.white,
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: isFree ? AppTheme.primaryAmber : AppTheme.winningGreen,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 4),
+                        ],
+                      ),
+                      child: Text(
+                        isFree ? '🟡 FREE' : '💵 PAID 75/25',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: isFree ? Colors.black : Colors.white,
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(200),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withAlpha(180), width: 1),
+                      ),
+                      child: Text(
+                        '#${match.id}',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.amber,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
@@ -766,9 +789,38 @@ class TournamentLobbyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  match.title,
-                  style: AppTheme.gamingTitle(fontSize: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        match.title,
+                        style: AppTheme.gamingTitle(fontSize: 16),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () => _showPrizeBreakdownDialog(context, match),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFDE68A)),
+                        ),
+                        child: const Row(
+                          children: [
+                            Icon(Icons.emoji_events, color: Color(0xFFB45309), size: 13),
+                            SizedBox(width: 4),
+                            Text(
+                              'Rank Prizes',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 10),
 
@@ -985,6 +1037,128 @@ class TournamentLobbyScreen extends StatelessWidget {
           Text(label, style: const TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
           const SizedBox(height: 2),
           Text(value, style: AppTheme.gamingNumber(fontSize: 13, color: textColor)),
+        ],
+      ),
+    );
+  }
+
+  void _showPrizeBreakdownDialog(BuildContext context, MatchModel match) {
+    final isFree = match.matchType == MatchType.free;
+    final pp = match.prizePool;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.emoji_events, color: Colors.amber, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Prize Pool Breakdown',
+                style: AppTheme.gamingTitle(fontSize: 16),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.black12,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '#${match.id}',
+                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                match.title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 12),
+              // Dynamic Ranks 1 to 10 Display
+              ...List.generate(10, (idx) {
+                final rank = idx + 1;
+                final prize = match.getTeamRankPrize(rank);
+                if (prize <= 0) return const SizedBox.shrink();
+
+                String rankBadge;
+                Color rankColor;
+                if (rank == 1) {
+                  rankBadge = '🥇 1st Place (Rank 1)';
+                  rankColor = Colors.amber.shade900;
+                } else if (rank == 2) {
+                  rankBadge = '🥈 2nd Place (Rank 2)';
+                  rankColor = const Color(0xFF475569);
+                } else if (rank == 3) {
+                  rankBadge = '🥉 3rd Place (Rank 3)';
+                  rankColor = const Color(0xFFB45309);
+                } else {
+                  rankBadge = '🎖️ Rank $rank';
+                  rankColor = const Color(0xFF64748B);
+                }
+
+                return _buildPrizeRow(
+                  rankBadge,
+                  isFree ? '${prize.toInt()} 🎟️' : '₹${prize.toInt()}',
+                  rankColor,
+                );
+              }),
+              if (pp.perKill > 0)
+                _buildPrizeRow('🎯 Per Kill Bounty', isFree ? '${pp.perKill.toInt()} 🎟️' : '₹${pp.perKill.toInt()}', Colors.red),
+              const Divider(height: 20),
+              _buildPrizeRow('📊 Total Prize Pool', isFree ? '${pp.totalPool.toInt()} 🎟️' : '₹${pp.totalPool.toInt()}', AppTheme.winningGreen, isBold: true),
+              _buildPrizeRow('🎟️ Entry Fee', isFree ? '${match.entryFee.toInt()} 🟡 Ad Coins' : '₹${match.entryFee.toInt()}', const Color(0xFF0F172A)),
+              if (match.roomPublishedByAdminName != null && match.roomPublishedByAdminName!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  '👤 Room Published by: ${match.roomPublishedByAdminName}',
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontStyle: FontStyle.italic),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPrizeRow(String label, String value, Color textColor, {bool isBold = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11.5,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.w600,
+              color: const Color(0xFF334155),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 12,
+              fontWeight: isBold ? FontWeight.w900 : FontWeight.w800,
+              color: textColor,
+            ),
+          ),
         ],
       ),
     );

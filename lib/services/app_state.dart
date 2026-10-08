@@ -305,9 +305,9 @@ class AppState extends ChangeNotifier {
   ];
 
   List<MatchModel> _getDefaultMatches() => [
-    // 1. FREE TOURNAMENTS
+    // 1. FREE TOURNAMENTS (Ad Coins)
     MatchModel(
-      id: 'match_free_br_01',
+      id: 'FREE-BR-01',
       title: '🆓 Free Fire BR Solo (Ad Coins)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -320,14 +320,14 @@ class AppState extends ChangeNotifier {
       entryFee: 5,
       prizePool: PrizePool(totalPool: 50, firstPlace: 25, secondPlace: 15, thirdPlace: 10, perKill: 2),
       maxSlots: 48,
-      filledSlots: 14,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 60)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_free_cs_01',
+      id: 'FREE-CS-01',
       title: '🆓 Free Fire CS 4v4 Squad (Ad Coins)',
       bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
       gameType: GameType.freeFire,
@@ -340,14 +340,14 @@ class AppState extends ChangeNotifier {
       entryFee: 2,
       prizePool: PrizePool(totalPool: 20, firstPlace: 20, perKill: 0),
       maxSlots: 8,
-      filledSlots: 4,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 90)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_free_lw_01',
+      id: 'FREE-LW-01',
       title: '🆓 Lone Wolf 1v1 Battle (Ad Coins)',
       bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
       gameType: GameType.freeFire,
@@ -360,16 +360,17 @@ class AppState extends ChangeNotifier {
       entryFee: 2,
       prizePool: PrizePool(totalPool: 10, firstPlace: 10, perKill: 0),
       maxSlots: 2,
-      filledSlots: 1,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 45)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
 
-    // 2. PAID TOURNAMENTS
+    // 2. 12 PAID DAILY TOURNAMENTS
+    // A. Battle Royale (4 Matches)
     MatchModel(
-      id: 'match_br_10_01',
+      id: 'FF-BR-101',
       title: 'BR Solo Quick Cup (₹10 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -382,14 +383,14 @@ class AppState extends ChangeNotifier {
       entryFee: 10,
       prizePool: PrizePool(totalPool: 360, firstPlace: 180, secondPlace: 100, thirdPlace: 80, perKill: 5),
       maxSlots: 48,
-      filledSlots: 22,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 30)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_br_20_01',
+      id: 'FF-BR-102',
       title: 'BR Solo Pro Championship (₹20 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -402,14 +403,14 @@ class AppState extends ChangeNotifier {
       entryFee: 20,
       prizePool: PrizePool(totalPool: 720, firstPlace: 360, secondPlace: 220, thirdPlace: 140, perKill: 10),
       maxSlots: 48,
-      filledSlots: 31,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 75)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_br_50_01',
+      id: 'FF-BR-103',
       title: 'BR Elite Masters (₹50 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -422,14 +423,14 @@ class AppState extends ChangeNotifier {
       entryFee: 50,
       prizePool: PrizePool(totalPool: 1800, firstPlace: 900, secondPlace: 540, thirdPlace: 360, perKill: 25),
       maxSlots: 48,
-      filledSlots: 18,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 120)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_br_100_01',
+      id: 'FF-BR-104',
       title: 'BR High Roller Grand Slam (₹100 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -442,14 +443,16 @@ class AppState extends ChangeNotifier {
       entryFee: 100,
       prizePool: PrizePool(totalPool: 3600, firstPlace: 1800, secondPlace: 1100, thirdPlace: 700, perKill: 50),
       maxSlots: 48,
-      filledSlots: 15,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(hours: 3)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
+
+    // B. Clash Squad (4 Matches)
     MatchModel(
-      id: 'match_cs_10_01',
+      id: 'FF-CS-201',
       title: 'CS 4v4 Squad Clash (₹10 Entry)',
       bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
       gameType: GameType.freeFire,
@@ -462,14 +465,14 @@ class AppState extends ChangeNotifier {
       entryFee: 10,
       prizePool: PrizePool(totalPool: 60, firstPlace: 60, perKill: 0),
       maxSlots: 8,
-      filledSlots: 6,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 40)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_cs_20_01',
+      id: 'FF-CS-202',
       title: 'CS 4v4 Squad Showdown (₹20 Entry)',
       bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
       gameType: GameType.freeFire,
@@ -482,14 +485,14 @@ class AppState extends ChangeNotifier {
       entryFee: 20,
       prizePool: PrizePool(totalPool: 120, firstPlace: 120, perKill: 0),
       maxSlots: 8,
-      filledSlots: 4,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 80)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_cs_50_01',
+      id: 'FF-CS-203',
       title: 'CS 4v4 Squad Masters (₹50 Entry)',
       bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
       gameType: GameType.freeFire,
@@ -502,14 +505,36 @@ class AppState extends ChangeNotifier {
       entryFee: 50,
       prizePool: PrizePool(totalPool: 300, firstPlace: 300, perKill: 0),
       maxSlots: 8,
-      filledSlots: 2,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(hours: 2)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_lw_10_01',
+      id: 'FF-CS-204',
+      title: 'CS 4v4 Champions League (₹100 Entry)',
+      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.cs,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.cs4v4,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 100,
+      prizePool: PrizePool(totalPool: 600, firstPlace: 600, perKill: 0),
+      maxSlots: 8,
+      filledSlots: 0,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(hours: 4)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+
+    // C. Lone Wolf 1v1 (4 Matches)
+    MatchModel(
+      id: 'FF-LW-301',
       title: 'Lone Wolf 1v1 Dual (₹10 Entry)',
       bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
       gameType: GameType.freeFire,
@@ -522,14 +547,14 @@ class AppState extends ChangeNotifier {
       entryFee: 10,
       prizePool: PrizePool(totalPool: 15, firstPlace: 15, perKill: 0),
       maxSlots: 2,
-      filledSlots: 1,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 25)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_lw_20_01',
+      id: 'FF-LW-302',
       title: 'Lone Wolf 1v1 Battle (₹20 Entry)',
       bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
       gameType: GameType.freeFire,
@@ -542,14 +567,56 @@ class AppState extends ChangeNotifier {
       entryFee: 20,
       prizePool: PrizePool(totalPool: 30, firstPlace: 30, perKill: 0),
       maxSlots: 2,
-      filledSlots: 1,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 50)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_mega_sunday_500',
+      id: 'FF-LW-303',
+      title: 'Lone Wolf 1v1 Masters (₹50 Entry)',
+      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.loneWolf,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.loneWolf1v1,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 50,
+      prizePool: PrizePool(totalPool: 75, firstPlace: 75, perKill: 0),
+      maxSlots: 2,
+      filledSlots: 0,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 90)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'FF-LW-304',
+      title: 'Lone Wolf 1v1 Grand Slam (₹100 Entry)',
+      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.loneWolf,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.loneWolf1v1,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 100,
+      prizePool: PrizePool(totalPool: 150, firstPlace: 150, perKill: 0),
+      maxSlots: 2,
+      filledSlots: 0,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(hours: 3)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+
+    // 3. SPECIAL TOURNAMENTS
+    MatchModel(
+      id: 'MEGA-SUN-500',
       title: '👑 Sunday Mega Championship (₹500 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -562,14 +629,14 @@ class AppState extends ChangeNotifier {
       entryFee: 500,
       prizePool: PrizePool(totalPool: 18000, firstPlace: 9000, secondPlace: 5400, thirdPlace: 3600, perKill: 150),
       maxSlots: 48,
-      filledSlots: 42,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(days: 1)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
     MatchModel(
-      id: 'match_monthly_jackpot_1000',
+      id: 'JACKPOT-1000',
       title: '🏆 Monthly Grand Jackpot (₹1000 Entry)',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
@@ -582,7 +649,7 @@ class AppState extends ChangeNotifier {
       entryFee: 1000,
       prizePool: PrizePool(totalPool: 36000, firstPlace: 18000, secondPlace: 10800, thirdPlace: 7200, perKill: 300),
       maxSlots: 48,
-      filledSlots: 36,
+      filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(days: 2)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
@@ -1364,6 +1431,11 @@ class AppState extends ChangeNotifier {
     match.credentials.roomId = roomId;
     match.credentials.roomPassword = roomPass;
     match.credentials.isRevealed = true;
+    match.roomPublishedByAdminName = user.displayName.isNotEmpty ? user.displayName : 'Admin';
+    match.roomPublishedByAdminUid = user.uid;
+    match.roomPublishedAt = DateTime.now();
+    match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+
     if (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling) {
       match.status = MatchStatus.ongoing;
     }
@@ -1371,9 +1443,81 @@ class AppState extends ChangeNotifier {
     _notificationService.sendMatchAlert(
       matchId: matchId,
       title: '🔑 ROOM ID & PASSWORD LIVE! (${match.title})',
-      body: 'Room ID: $roomId | Password: $roomPass. Join custom room immediately!',
+      body: 'Room ID: $roomId | Password: $roomPass. Join custom room immediately! Hosted by ${match.roomPublishedByAdminName}.',
     );
     notifyListeners();
+  }
+
+  // Helper to credit 25% host commission to the admin who published room credentials
+  Future<void> _creditHostCommission({
+    required MatchModel match,
+    required double commissionAmount,
+  }) async {
+    if (commissionAmount <= 0) return;
+    final hostUid = (match.roomPublishedByAdminUid != null && match.roomPublishedByAdminUid!.isNotEmpty)
+        ? match.roomPublishedByAdminUid!
+        : user.uid;
+    final hostName = (match.roomPublishedByAdminName != null && match.roomPublishedByAdminName!.isNotEmpty)
+        ? match.roomPublishedByAdminName!
+        : (user.displayName.isNotEmpty ? user.displayName : 'Host Admin');
+
+    match.hostCommissionPaid = true;
+    match.hostCommissionAmount = commissionAmount;
+
+    if (hostUid == user.uid) {
+      final double balBefore = user.wallet.winningCash;
+      user.wallet.winningCash += commissionAmount;
+      user.stats.totalWinningsCash += commissionAmount;
+
+      final hostTxn = TransactionModel(
+        id: 'txn_host_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.hostCommission,
+        walletAffected: WalletType.winningCash,
+        amount: commissionAmount,
+        currency: 'INR',
+        balanceBefore: balBefore,
+        balanceAfter: user.wallet.winningCash,
+        status: 'SUCCESS',
+        description: '💰 25% Host Profit Commission for Match #${match.id} ("${match.title}")',
+        createdAt: DateTime.now(),
+      );
+      transactions.insert(0, hostTxn);
+      allGlobalTransactions.insert(0, hostTxn);
+      _syncTransaction(hostTxn);
+      _syncUser();
+    } else {
+      try {
+        final hostDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, hostUid);
+        if (hostDoc != null && hostDoc.isNotEmpty) {
+          final hostUser = UserModel.fromJson(hostDoc);
+          final double balBefore = hostUser.wallet.winningCash;
+          hostUser.wallet.winningCash += commissionAmount;
+          hostUser.stats.totalWinningsCash += commissionAmount;
+          await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, hostUid, hostUser.toJson());
+
+          final hostTxn = TransactionModel(
+            id: 'txn_host_${DateTime.now().millisecondsSinceEpoch}_$hostUid',
+            userId: hostUid,
+            userName: hostUser.displayName.isNotEmpty ? hostUser.displayName : hostName,
+            type: TransactionType.hostCommission,
+            walletAffected: WalletType.winningCash,
+            amount: commissionAmount,
+            currency: 'INR',
+            balanceBefore: balBefore,
+            balanceAfter: hostUser.wallet.winningCash,
+            status: 'SUCCESS',
+            description: '💰 25% Host Profit Commission for Match #${match.id} ("${match.title}")',
+            createdAt: DateTime.now(),
+          );
+          allGlobalTransactions.insert(0, hostTxn);
+          await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, hostTxn.id, hostTxn.toJson());
+        }
+      } catch (e) {
+        debugPrint('[AppState] Failed to credit host commission to $hostUid: $e');
+      }
+    }
   }
 
   // --- ADMIN: PUSH NOTIFICATION BROADCAST & TARGETED DISPATCH ---
@@ -1473,7 +1617,9 @@ class AppState extends ChangeNotifier {
     final match = matches.firstWhere((m) => m.id == matchId);
     match.status = MatchStatus.completed;
     match.completedAt = DateTime.now();
-    match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+    if (match.hostName == null || match.hostName!.isEmpty) {
+      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+    }
     final bool isPaid = match.matchType == MatchType.paid;
 
     // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
@@ -1564,6 +1710,12 @@ class AppState extends ChangeNotifier {
       p.prizeAwarded = 0;
     }
 
+    // 💰 Credit 25% Host Profit Commission
+    if (isPaid && match.financialBreakdown != null) {
+      final hostShare = match.financialBreakdown!.shares.host25;
+      _creditHostCommission(match: match, commissionAmount: hostShare);
+    }
+
     _syncUser();
     _syncMatch(match);
     notifyListeners();
@@ -1577,7 +1729,9 @@ class AppState extends ChangeNotifier {
     final match = matches.firstWhere((m) => m.id == matchId);
     match.status = MatchStatus.completed;
     match.completedAt = DateTime.now();
-    match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+    if (match.hostName == null || match.hostName!.isEmpty) {
+      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+    }
     final bool isPaid = match.matchType == MatchType.paid;
 
     // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
@@ -1664,7 +1818,52 @@ class AppState extends ChangeNotifier {
       }
     }
 
+    // 💰 Credit 25% Host Profit Commission
+    if (isPaid && match.financialBreakdown != null) {
+      final hostShare = match.financialBreakdown!.shares.host25;
+      _creditHostCommission(match: match, commissionAmount: hostShare);
+    }
+
     _syncUser();
+    _syncMatch(match);
+    notifyListeners();
+  }
+
+  // --- ADMIN: RESPAWN / RESTART MATCH (FOR NEXT ROUND WITH 0 SLOTS) ---
+  void adminRespawnMatch(String matchId) {
+    final matchIndex = matches.indexWhere((m) => m.id == matchId);
+    if (matchIndex == -1) return;
+
+    final match = matches[matchIndex];
+    match.status = MatchStatus.upcoming;
+    match.filledSlots = 0;
+    match.participants = [];
+    match.registeredTeams = [];
+    match.credentials = MatchCredentials(roomId: '', roomPassword: '');
+    match.roomFillingStartedAt = null;
+    match.completedAt = null;
+    match.hostCommissionPaid = false;
+    match.hostCommissionAmount = 0.0;
+    match.matchTime = DateTime.now().add(const Duration(minutes: 45));
+
+    _saveLocalMatchesCache();
+    _syncMatch(match);
+    notifyListeners();
+  }
+
+  // --- ADMIN: RESET SLOTS TO 0 (CLEAN PLAYERS) ---
+  void adminResetMatchSlots(String matchId) {
+    final matchIndex = matches.indexWhere((m) => m.id == matchId);
+    if (matchIndex == -1) return;
+
+    final match = matches[matchIndex];
+    match.filledSlots = 0;
+    match.participants = [];
+    match.registeredTeams = [];
+    match.status = MatchStatus.upcoming;
+    match.roomFillingStartedAt = null;
+
+    _saveLocalMatchesCache();
     _syncMatch(match);
     notifyListeners();
   }
@@ -1679,6 +1878,11 @@ class AppState extends ChangeNotifier {
         return completedTime.year == now.year &&
             completedTime.month == now.month &&
             completedTime.day == now.day;
+      } else if (dateFilter == 'Yesterday') {
+        final yesterday = now.subtract(const Duration(days: 1));
+        return completedTime.year == yesterday.year &&
+            completedTime.month == yesterday.month &&
+            completedTime.day == yesterday.day;
       } else if (dateFilter == 'Last 7 Days') {
         return completedTime.isAfter(now.subtract(const Duration(days: 7)));
       } else if (dateFilter == 'This Month') {
@@ -1721,6 +1925,91 @@ class AppState extends ChangeNotifier {
       'gatewayFees': gatewayFees,
       'completedCount': completedList.length.toDouble(),
     };
+  }
+
+  // Multi-Admin / Host Earnings Aggregator
+  List<Map<String, dynamic>> getAdminHostLeaderboard() {
+    final Map<String, Map<String, dynamic>> hostMap = {};
+
+    for (var m in matches) {
+      final hostUid = (m.roomPublishedByAdminUid != null && m.roomPublishedByAdminUid!.isNotEmpty)
+          ? m.roomPublishedByAdminUid!
+          : (m.createdByAdminUid ?? 'admin_default');
+      final hostName = (m.roomPublishedByAdminName != null && m.roomPublishedByAdminName!.isNotEmpty)
+          ? m.roomPublishedByAdminName!
+          : (m.hostName ?? 'Official Admin');
+
+      if (!hostMap.containsKey(hostUid)) {
+        hostMap[hostUid] = {
+          'hostUid': hostUid,
+          'hostName': hostName,
+          'totalMatchesCreated': 0,
+          'totalMatchesPublished': 0,
+          'totalMatchesCompleted': 0,
+          'totalRevenueGenerated': 0.0,
+          'totalHostCommissionEarned': 0.0,
+        };
+      }
+
+      hostMap[hostUid]!['totalMatchesCreated'] = (hostMap[hostUid]!['totalMatchesCreated'] as int) + 1;
+
+      if (m.credentials.roomId.isNotEmpty) {
+        hostMap[hostUid]!['totalMatchesPublished'] = (hostMap[hostUid]!['totalMatchesPublished'] as int) + 1;
+      }
+
+      if (m.status == MatchStatus.completed) {
+        hostMap[hostUid]!['totalMatchesCompleted'] = (hostMap[hostUid]!['totalMatchesCompleted'] as int) + 1;
+        final fb = m.financialBreakdown ?? FinancialBreakdown.calculate(totalCollection: m.totalCollection);
+        hostMap[hostUid]!['totalRevenueGenerated'] = (hostMap[hostUid]!['totalRevenueGenerated'] as double) + fb.totalEntryCollection;
+        hostMap[hostUid]!['totalHostCommissionEarned'] = (hostMap[hostUid]!['totalHostCommissionEarned'] as double) + fb.shares.host25;
+      }
+    }
+
+    final list = hostMap.values.toList();
+    list.sort((a, b) => (b['totalHostCommissionEarned'] as double).compareTo(a['totalHostCommissionEarned'] as double));
+    return list;
+  }
+
+  // Date-wise ledger breakdown
+  List<Map<String, dynamic>> getDateWiseFinancialLedger(String dateFilter) {
+    final completed = getCompletedMatchesByFilter(dateFilter);
+    final Map<String, Map<String, dynamic>> dayMap = {};
+
+    for (var m in completed) {
+      final time = m.completedAt ?? m.matchTime;
+      final dayKey = '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')}';
+
+      final fb = m.financialBreakdown ?? FinancialBreakdown.calculate(totalCollection: m.totalCollection);
+
+      if (!dayMap.containsKey(dayKey)) {
+        dayMap[dayKey] = {
+          'date': dayKey,
+          'matchCount': 0,
+          'totalCollection': 0.0,
+          'grossCommission': 0.0,
+          'gatewayFees': 0.0,
+          'netProfit': 0.0,
+          'founder60': 0.0,
+          'host25': 0.0,
+          'investor15': 0.0,
+          'matches': <MatchModel>[],
+        };
+      }
+
+      dayMap[dayKey]!['matchCount'] = (dayMap[dayKey]!['matchCount'] as int) + 1;
+      dayMap[dayKey]!['totalCollection'] = (dayMap[dayKey]!['totalCollection'] as double) + fb.totalEntryCollection;
+      dayMap[dayKey]!['grossCommission'] = (dayMap[dayKey]!['grossCommission'] as double) + fb.platformCommissionGross;
+      dayMap[dayKey]!['gatewayFees'] = (dayMap[dayKey]!['gatewayFees'] as double) + fb.gatewayFeeDeduction;
+      dayMap[dayKey]!['netProfit'] = (dayMap[dayKey]!['netProfit'] as double) + fb.netProfit;
+      dayMap[dayKey]!['founder60'] = (dayMap[dayKey]!['founder60'] as double) + fb.shares.founder60;
+      dayMap[dayKey]!['host25'] = (dayMap[dayKey]!['host25'] as double) + fb.shares.host25;
+      dayMap[dayKey]!['investor15'] = (dayMap[dayKey]!['investor15'] as double) + fb.shares.investor15;
+      (dayMap[dayKey]!['matches'] as List<MatchModel>).add(m);
+    }
+
+    final list = dayMap.values.toList();
+    list.sort((a, b) => (b['date'] as String).compareTo(a['date'] as String));
+    return list;
   }
 
   // Legacy fallback

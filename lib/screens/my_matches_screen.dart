@@ -209,6 +209,24 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(180),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.amber.withAlpha(180), width: 0.8),
+                      ),
+                      child: Text(
+                        '#${match.id}',
+                        style: const TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 10,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.amber,
+                        ),
+                      ),
+                    ),
                     const SizedBox(width: 8),
                     FreeFireLogoInline(
                       gameType: match.gameType,

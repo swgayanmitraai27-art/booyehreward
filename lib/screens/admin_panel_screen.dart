@@ -2854,6 +2854,237 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               label: Text('CREATE TOURNAMENT MATCH', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white, isItalic: false)),
             ),
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 14),
+
+          // 🎮 LIVE TOURNAMENTS & MATCHES MANAGER
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.sports_esports, color: Color(0xFF7C3AED), size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'ACTIVE & CREATED MATCHES (${widget.appState.matches.length})',
+                    style: const TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              Text(
+                'Full Admin Control & Delete',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.bold, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (widget.appState.matches.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(24),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text('No tournaments found in system.', style: TextStyle(color: Colors.grey)),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: widget.appState.matches.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                final match = widget.appState.matches[index];
+                final isFree = match.matchType == MatchType.free;
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '#${match.id}',
+                                  style: const TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: isFree ? Colors.amber.shade100 : const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  isFree ? 'FREE' : 'PAID',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: isFree ? Colors.amber.shade900 : const Color(0xFF065F46),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: match.status == MatchStatus.upcoming
+                                      ? const Color(0xFFEFF6FF)
+                                      : (match.status == MatchStatus.completed ? const Color(0xFFF3E8FF) : const Color(0xFFFEF2F2)),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  match.status.name.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: match.status == MatchStatus.upcoming
+                                        ? const Color(0xFF1D4ED8)
+                                        : (match.status == MatchStatus.completed ? const Color(0xFF7C3AED) : Colors.red),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'Slots: ${match.filledSlots}/${match.maxSlots}',
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, color: Color(0xFF334155)),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        match.title,
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: Color(0xFF0F172A)),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            'Fee: ${isFree ? "${match.entryFee.toInt()} 🟡" : "₹${match.entryFee.toInt()}"} • Pool: ${isFree ? "${match.prizePool.totalPool.toInt()} 🎟️" : "₹${match.prizePool.totalPool.toInt()}"}',
+                            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                          ),
+                          if (match.roomPublishedByAdminName != null && match.roomPublishedByAdminName!.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              '• Host: ${match.roomPublishedByAdminName}',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF7C3AED), fontStyle: FontStyle.italic),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+
+                      // Quick Action Buttons
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            // Delete Button
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFFF1F2),
+                                foregroundColor: Colors.red,
+                                elevation: 0,
+                                side: const BorderSide(color: Color(0xFFFECDD3)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () => _confirmDeleteMatch(context, match),
+                              icon: const Icon(Icons.delete_outline, size: 14),
+                              label: const Text('Delete Match', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Respawn Button
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFEFF6FF),
+                                foregroundColor: const Color(0xFF2563EB),
+                                elevation: 0,
+                                side: const BorderSide(color: Color(0xFFBFDBFE)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                widget.appState.adminRespawnMatch(match.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.winningGreen,
+                                    content: Text('Match #${match.id} respawned with 0 slots for next round!'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.refresh, size: 14),
+                              label: const Text('Respawn (0 Slots)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Reset Slots Button
+                            OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: const Color(0xFF475569),
+                                side: const BorderSide(color: Color(0xFFCBD5E1)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                widget.appState.adminResetMatchSlots(match.id);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Match #${match.id} slots reset to 0.'),
+                                  ),
+                                );
+                              },
+                              icon: const Icon(Icons.clear_all, size: 14),
+                              label: const Text('Reset Slots (0)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // Publish Room ID
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF0F172A),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  selectedMatchIdForRoom = match.id;
+                                  activeSection = 3; // Jump to Room Publisher tab
+                                });
+                              },
+                              icon: const Icon(Icons.key, size: 14, color: Colors.amber),
+                              label: const Text('Publish Room ID', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
         ],
       ),
     );
@@ -3211,7 +3442,297 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
+
+        // 👥 MULTI-ADMIN & HOST PROFIT COMMISSION LEADERBOARD (25% PROFIT SHARE)
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF312E81),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.people_alt, color: Color(0xFFA5B4FC), size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'ADMIN & HOST COMMISSION ATTRIBUTION',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          Text(
+                            'Host Admin Profit Earnings (25%)',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFECFDF5),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
+                    ),
+                    child: const Text(
+                      '⚡ Auto Wallet Credited',
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Builder(
+                builder: (context) {
+                  final hostList = widget.appState.getAdminHostLeaderboard();
+                  if (hostList.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: Text('No admin host match activity yet.', style: TextStyle(color: Colors.grey))),
+                    );
+                  }
+                  return Column(
+                    children: hostList.map((host) {
+                      final name = host['hostName'] as String;
+                      final uid = host['hostUid'] as String;
+                      final published = host['totalMatchesPublished'] as int;
+                      final completed = host['totalMatchesCompleted'] as int;
+                      final revenue = (host['totalRevenueGenerated'] as num).toDouble();
+                      final commission = (host['totalHostCommissionEarned'] as num).toDouble();
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              radius: 20,
+                              backgroundColor: const Color(0xFF4F46E5),
+                              child: Text(
+                                name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    name,
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
+                                  ),
+                                  Text(
+                                    'UID: $uid • $published Published • $completed Completed',
+                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '+₹${commission.toStringAsFixed(2)}',
+                                  style: AppTheme.gamingNumber(fontSize: 16, color: AppTheme.winningGreen),
+                                ),
+                                Text(
+                                  'Rev: ₹${revenue.toInt()} (25% share)',
+                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.w700),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 📅 DATE-WISE & DAILY FINANCIAL BREAKDOWN
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(6), blurRadius: 10, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.date_range, color: Colors.amber, size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'DAY-BY-DAY ACCOUNTING LEDGER',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF64748B),
+                              letterSpacing: 1,
+                            ),
+                          ),
+                          Text(
+                            'Daily Financial Ledger ($selectedLedgerDateFilter)',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Builder(
+                builder: (context) {
+                  final dailyList = widget.appState.getDateWiseFinancialLedger(selectedLedgerDateFilter);
+                  if (dailyList.isEmpty) {
+                    return Container(
+                      padding: const EdgeInsets.all(24),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text('No daily entries found in "$selectedLedgerDateFilter".', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    );
+                  }
+                  return Column(
+                    children: dailyList.map((day) {
+                      final date = day['date'] as String;
+                      final count = day['matchCount'] as int;
+                      final collection = (day['totalCollection'] as num).toDouble();
+                      final net = (day['netProfit'] as num).toDouble();
+                      final founder = (day['founder60'] as num).toDouble();
+                      final host = (day['host25'] as num).toDouble();
+                      final investor = (day['investor15'] as num).toDouble();
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.event_note, color: Colors.blueAccent, size: 16),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      date,
+                                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE2E8F0),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        '$count Matches',
+                                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Text(
+                                  'Net Profit: ₹${net.toStringAsFixed(2)}',
+                                  style: AppTheme.gamingNumber(fontSize: 14, color: AppTheme.winningGreen),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Expanded(child: _buildLedgerStatItem(label: 'Collection', value: '₹${collection.toInt()}', valueColor: const Color(0xFF0F172A))),
+                                Expanded(child: _buildLedgerStatItem(label: 'Founder (60%)', value: '₹${founder.toStringAsFixed(1)}', valueColor: const Color(0xFF4338CA))),
+                                Expanded(child: _buildLedgerStatItem(label: 'Host (25%)', value: '₹${host.toStringAsFixed(1)}', valueColor: const Color(0xFF0284C7))),
+                                Expanded(child: _buildLedgerStatItem(label: 'Investor (15%)', value: '₹${investor.toStringAsFixed(1)}', valueColor: const Color(0xFFD97706))),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
 
         // MATCH LEDGER (DATA TABLE & CHRONOLOGICAL HISTORY)
         Container(

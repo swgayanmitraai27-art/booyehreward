@@ -4,9 +4,9 @@ const serverFile = '/home/ubuntu/booyah-backend/server.js';
 let content = fs.readFileSync(serverFile, 'utf8');
 
 const matches = [
-  // 1. FREE TOURNAMENTS (Ad Coins)
+  // 1. FREE TOURNAMENTS (Ad Coins) - Clean 0 slots
   {
-    id: 'match_free_br_01',
+    id: 'FREE-BR-01',
     title: '🆓 Free Fire BR Solo (Ad Coins)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -27,16 +27,17 @@ const matches = [
       perKill: 2
     },
     maxSlots: 48,
-    filledSlots: 14,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 3600000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_free_cs_01',
+    id: 'FREE-CS-01',
     title: '🆓 Free Fire CS 4v4 Squad (Ad Coins)',
     bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     gameType: 'freeFire',
@@ -57,16 +58,17 @@ const matches = [
       perKill: 0
     },
     maxSlots: 8,
-    filledSlots: 4,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 7200000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_free_lw_01',
+    id: 'FREE-LW-01',
     title: '🆓 Lone Wolf 1v1 Battle (Ad Coins)',
     bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
     gameType: 'freeFire',
@@ -87,18 +89,20 @@ const matches = [
       perKill: 0
     },
     maxSlots: 2,
-    filledSlots: 1,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 5400000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
 
-  // 2. PAID TOURNAMENTS (Battle Royale)
+  // 2. 12 PAID DAILY TOURNAMENTS (Clean 0 slots, Unique Match IDs)
+  // A. Battle Royale (4 Matches)
   {
-    id: 'match_br_10_01',
+    id: 'FF-BR-101',
     title: 'BR Solo Quick Cup (₹10 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -119,16 +123,17 @@ const matches = [
       perKill: 5
     },
     maxSlots: 48,
-    filledSlots: 22,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 1800000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_br_20_01',
+    id: 'FF-BR-102',
     title: 'BR Solo Pro Championship (₹20 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -149,16 +154,17 @@ const matches = [
       perKill: 10
     },
     maxSlots: 48,
-    filledSlots: 31,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 4500000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_br_50_01',
+    id: 'FF-BR-103',
     title: 'BR Elite Masters (₹50 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -179,16 +185,17 @@ const matches = [
       perKill: 25
     },
     maxSlots: 48,
-    filledSlots: 18,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 9000000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_br_100_01',
+    id: 'FF-BR-104',
     title: 'BR High Roller Grand Slam (₹100 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -209,18 +216,19 @@ const matches = [
       perKill: 50
     },
     maxSlots: 48,
-    filledSlots: 15,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 14400000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
 
-  // 3. CLASH SQUAD (4v4)
+  // B. Clash Squad (4 Matches)
   {
-    id: 'match_cs_10_01',
+    id: 'FF-CS-201',
     title: 'CS 4v4 Squad Clash (₹10 Entry)',
     bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     gameType: 'freeFire',
@@ -241,16 +249,17 @@ const matches = [
       perKill: 0
     },
     maxSlots: 8,
-    filledSlots: 6,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 2700000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_cs_20_01',
+    id: 'FF-CS-202',
     title: 'CS 4v4 Squad Showdown (₹20 Entry)',
     bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     gameType: 'freeFire',
@@ -271,16 +280,17 @@ const matches = [
       perKill: 0
     },
     maxSlots: 8,
-    filledSlots: 4,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 6300000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_cs_50_01',
+    id: 'FF-CS-203',
     title: 'CS 4v4 Squad Masters (₹50 Entry)',
     bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     gameType: 'freeFire',
@@ -301,18 +311,50 @@ const matches = [
       perKill: 0
     },
     maxSlots: 8,
-    filledSlots: 2,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 10800000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
+  },
+  {
+    id: 'FF-CS-204',
+    title: 'CS 4v4 Champions League (₹100 Entry)',
+    bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+    gameType: 'freeFire',
+    matchType: 'paid',
+    mode: 'cs',
+    teamType: 'squad',
+    matchFormat: 'cs4v4',
+    map: 'bermuda',
+    entryFeeType: 'cash',
+    entryFee: 100,
+    prizePool: {
+      totalPool: 600,
+      firstPlace: 600,
+      secondPlace: 0,
+      thirdPlace: 0,
+      fourthPlace: 0,
+      fifthPlace: 0,
+      perKill: 0
+    },
+    maxSlots: 8,
+    filledSlots: 0,
+    status: 'upcoming',
+    matchTime: new Date(Date.now() + 15000000).toISOString(),
+    credentials: { roomId: '', roomPassword: '', isRevealed: false },
+    participants: [],
+    registeredTeams: [],
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
 
-  // 4. LONE WOLF (1v1)
+  // C. Lone Wolf 1v1 (4 Matches)
   {
-    id: 'match_lw_10_01',
+    id: 'FF-LW-301',
     title: 'Lone Wolf 1v1 Dual (₹10 Entry)',
     bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
     gameType: 'freeFire',
@@ -333,16 +375,17 @@ const matches = [
       perKill: 0
     },
     maxSlots: 2,
-    filledSlots: 1,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 1200000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_lw_20_01',
+    id: 'FF-LW-302',
     title: 'Lone Wolf 1v1 Battle (₹20 Entry)',
     bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
     gameType: 'freeFire',
@@ -363,18 +406,81 @@ const matches = [
       perKill: 0
     },
     maxSlots: 2,
-    filledSlots: 1,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 3000000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
+  },
+  {
+    id: 'FF-LW-303',
+    title: 'Lone Wolf 1v1 Masters (₹50 Entry)',
+    bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+    gameType: 'freeFire',
+    matchType: 'paid',
+    mode: 'loneWolf',
+    teamType: 'solo',
+    matchFormat: 'loneWolf1v1',
+    map: 'ironCage',
+    entryFeeType: 'cash',
+    entryFee: 50,
+    prizePool: {
+      totalPool: 75,
+      firstPlace: 75,
+      secondPlace: 0,
+      thirdPlace: 0,
+      fourthPlace: 0,
+      fifthPlace: 0,
+      perKill: 0
+    },
+    maxSlots: 2,
+    filledSlots: 0,
+    status: 'upcoming',
+    matchTime: new Date(Date.now() + 6000000).toISOString(),
+    credentials: { roomId: '', roomPassword: '', isRevealed: false },
+    participants: [],
+    registeredTeams: [],
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
+  },
+  {
+    id: 'FF-LW-304',
+    title: 'Lone Wolf 1v1 Grand Slam (₹100 Entry)',
+    bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+    gameType: 'freeFire',
+    matchType: 'paid',
+    mode: 'loneWolf',
+    teamType: 'solo',
+    matchFormat: 'loneWolf1v1',
+    map: 'ironCage',
+    entryFeeType: 'cash',
+    entryFee: 100,
+    prizePool: {
+      totalPool: 150,
+      firstPlace: 150,
+      secondPlace: 0,
+      thirdPlace: 0,
+      fourthPlace: 0,
+      fifthPlace: 0,
+      perKill: 0
+    },
+    maxSlots: 2,
+    filledSlots: 0,
+    status: 'upcoming',
+    matchTime: new Date(Date.now() + 12000000).toISOString(),
+    credentials: { roomId: '', roomPassword: '', isRevealed: false },
+    participants: [],
+    registeredTeams: [],
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
 
-  // 5. MEGA SPECIALS
+  // 3. SPECIAL TOURNAMENTS (Mega Sunday & Jackpot)
   {
-    id: 'match_mega_sunday_500',
+    id: 'MEGA-SUN-500',
     title: '👑 Sunday Mega Championship (₹500 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -395,16 +501,17 @@ const matches = [
       perKill: 150
     },
     maxSlots: 48,
-    filledSlots: 42,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 86400000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   },
   {
-    id: 'match_monthly_jackpot_1000',
+    id: 'JACKPOT-1000',
     title: '🏆 Monthly Grand Jackpot (₹1000 Entry)',
     bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     gameType: 'freeFire',
@@ -425,22 +532,34 @@ const matches = [
       perKill: 300
     },
     maxSlots: 48,
-    filledSlots: 36,
+    filledSlots: 0,
     status: 'upcoming',
     matchTime: new Date(Date.now() + 172800000).toISOString(),
     credentials: { roomId: '', roomPassword: '', isRevealed: false },
     participants: [],
     registeredTeams: [],
-    hasUserWatchedAdToUnlockRoom: false
+    hasUserWatchedAdToUnlockRoom: false,
+    hostName: 'Booyah Esports Official'
   }
 ];
 
-// Update matches array in db
+// Update matches array in server.js
 const dbMatchesRegex = /matches:\s*\[([\s\S]*?)\],\s*users:/;
 if (dbMatchesRegex.test(content)) {
   content = content.replace(dbMatchesRegex, `matches: ${JSON.stringify(matches, null, 2)},\n  users:`);
   fs.writeFileSync(serverFile, content, 'utf8');
-  console.log('Matches successfully reseeded in server.js with full PrizePool schema');
-} else {
-  console.log('Could not find matches block');
+  console.log('Successfully reseeded server.js default matches!');
+}
+
+// Also update data/db.json if it exists
+const dbJsonPath = '/home/ubuntu/booyah-backend/data/db.json';
+if (fs.existsSync(dbJsonPath)) {
+  try {
+    const dbData = JSON.parse(fs.readFileSync(dbJsonPath, 'utf8'));
+    dbData.matches = matches;
+    fs.writeFileSync(dbJsonPath, JSON.stringify(dbData, null, 2), 'utf8');
+    console.log('Successfully updated data/db.json matches directly!');
+  } catch (err) {
+    console.error('Error updating db.json:', err);
+  }
 }

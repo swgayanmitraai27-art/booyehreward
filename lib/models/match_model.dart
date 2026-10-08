@@ -342,6 +342,13 @@ class MatchModel {
   DateTime? completedAt;
   DateTime? roomFillingStartedAt; // Timestamp when match reached 100% capacity (15-min countdown)
   String? hostName;
+  String? createdByAdminName;
+  String? createdByAdminUid;
+  String? roomPublishedByAdminName;
+  String? roomPublishedByAdminUid;
+  DateTime? roomPublishedAt;
+  bool hostCommissionPaid;
+  double hostCommissionAmount;
   FinancialBreakdown? financialBreakdown;
 
   MatchModel({
@@ -368,6 +375,13 @@ class MatchModel {
     this.completedAt,
     this.roomFillingStartedAt,
     this.hostName,
+    this.createdByAdminName,
+    this.createdByAdminUid,
+    this.roomPublishedByAdminName,
+    this.roomPublishedByAdminUid,
+    this.roomPublishedAt,
+    this.hostCommissionPaid = false,
+    this.hostCommissionAmount = 0.0,
     this.financialBreakdown,
   })  : mode = mode ?? _inferMode(matchFormat),
         teamType = teamType ?? _inferTeamType(matchFormat),
@@ -534,6 +548,13 @@ class MatchModel {
     'room_filling_started_at': roomFillingStartedAt?.toIso8601String(),
     'completed_at': completedAt?.toIso8601String(),
     'host_name': hostName,
+    'created_by_admin_name': createdByAdminName,
+    'created_by_admin_uid': createdByAdminUid,
+    'room_published_by_admin_name': roomPublishedByAdminName,
+    'room_published_by_admin_uid': roomPublishedByAdminUid,
+    'room_published_at': roomPublishedAt?.toIso8601String(),
+    'host_commission_paid': hostCommissionPaid,
+    'host_commission_amount': hostCommissionAmount,
     'financial_breakdown': financialBreakdown?.toJson(),
     'matchTime': matchTime.toIso8601String(),
     'participants': participants.map((p) => p.toJson()).toList(),
@@ -639,6 +660,15 @@ class MatchModel {
           ? DateTime.tryParse(json['room_filling_started_at'].toString())
           : (json['roomFillingStartedAt'] != null ? DateTime.tryParse(json['roomFillingStartedAt'].toString()) : null),
       hostName: (json['host_name'] ?? json['hostName'])?.toString(),
+      createdByAdminName: (json['created_by_admin_name'] ?? json['createdByAdminName'])?.toString(),
+      createdByAdminUid: (json['created_by_admin_uid'] ?? json['createdByAdminUid'])?.toString(),
+      roomPublishedByAdminName: (json['room_published_by_admin_name'] ?? json['roomPublishedByAdminName'])?.toString(),
+      roomPublishedByAdminUid: (json['room_published_by_admin_uid'] ?? json['roomPublishedByAdminUid'])?.toString(),
+      roomPublishedAt: json['room_published_at'] != null
+          ? DateTime.tryParse(json['room_published_at'].toString())
+          : (json['roomPublishedAt'] != null ? DateTime.tryParse(json['roomPublishedAt'].toString()) : null),
+      hostCommissionPaid: json['host_commission_paid'] == true || json['hostCommissionPaid'] == true,
+      hostCommissionAmount: ((json['host_commission_amount'] ?? json['hostCommissionAmount'] ?? 0) as num).toDouble(),
       financialBreakdown: json['financial_breakdown'] != null && json['financial_breakdown'] is Map
           ? FinancialBreakdown.fromJson(Map<String, dynamic>.from(json['financial_breakdown']))
           : (json['financialBreakdown'] != null && json['financialBreakdown'] is Map

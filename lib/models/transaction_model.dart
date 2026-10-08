@@ -9,6 +9,7 @@ enum TransactionType {
   withdrawalRequest,
   withdrawalRefund,
   adminAdjustment,
+  hostCommission,
 }
 
 enum WalletType {
