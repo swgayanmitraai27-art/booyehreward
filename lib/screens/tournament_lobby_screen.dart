@@ -125,12 +125,12 @@ class TournamentLobbyScreen extends StatelessWidget {
                         style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 11.5),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: 8),
                     OutlinedButton(
                       style: OutlinedButton.styleFrom(
                         foregroundColor: const Color(0xFF0F172A),
                         side: const BorderSide(color: Color(0xFFCBD5E1)),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: () => onTabChange(1),
@@ -139,12 +139,113 @@ class TournamentLobbyScreen extends StatelessWidget {
                         style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w800),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => onTabChange(2),
+                      icon: const Text('🏆', style: TextStyle(fontSize: 12)),
+                      label: const Text(
+                        '₹100 Ranks',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900),
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
+
+          // 🏆 WEEKLY CHAMPIONSHIP CALLOUT BANNER (₹100 PRIZE POOL)
+          InkWell(
+            onTap: () => onTabChange(2), // Leaderboard Tab
+            borderRadius: BorderRadius.circular(16),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFDE68A).withAlpha(150), width: 1.2),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withAlpha(30),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('🏆', style: TextStyle(fontSize: 22)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                '₹100 WEEKLY CASH POOL',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 8.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              '• Ends Sunday',
+                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        const Text(
+                          'Weekly Esports Championship',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Text(
+                          'Top 3 Players win ₹50, ₹30, ₹20 Cash! Check your live rank.',
+                          style: TextStyle(fontSize: 10.5, color: Color(0xFFCBD5E1)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.amber),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
 
           // 2. MATCH CATEGORY BANNERS (Home Screen Banners with 12px border radius & soft drop shadows)
           Row(

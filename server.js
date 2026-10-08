@@ -45,6 +45,7 @@ let db = {
   transactions: [],
   withdrawals: [],
   voucherClaims: [],
+  weeklyDistributions: [],
   banners: [],
   notifications: [],
   tournamentModes: [
@@ -665,6 +666,20 @@ app.delete('/api/banners/:id', (req, res) => {
   saveDB();
   broadcast('BANNER_DELETED', { id });
   res.json({ success: true, id });
+});
+
+// 9b. Weekly Leaderboard & Prize Distribution API
+app.get('/api/leaderboard/distributions', (req, res) => {
+  res.json({ success: true, distributions: db.weeklyDistributions || [] });
+});
+
+app.post('/api/leaderboard/distribute', (req, res) => {
+  const record = req.body;
+  if (!db.weeklyDistributions) db.weeklyDistributions = [];
+  db.weeklyDistributions.unshift(record);
+  saveDB();
+  broadcast('WEEKLY_PRIZES_DISTRIBUTED', record);
+  res.json({ success: true, record });
 });
 
 // 10. User Management

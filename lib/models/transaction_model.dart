@@ -10,6 +10,7 @@ enum TransactionType {
   withdrawalRefund,
   adminAdjustment,
   hostCommission,
+  weeklyLeaderboardReward,
 }
 
 enum WalletType {

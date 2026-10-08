@@ -75,7 +75,7 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           // Wallet Status Chips (Dynamic Review Safe Mode vs Real Cash Mode)
           // 🟡 1. Ad Coins
           InkWell(
-            onTap: () => onTabChange?.call(2), // Earn coins tab
+            onTap: () => onTabChange?.call(3), // Earn coins tab
             borderRadius: BorderRadius.circular(10),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -113,7 +113,7 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           if (!appState.isRealCashModeEnabled) ...[
             // 🎟️ 2. Reward Coins (Safe Mode)
             InkWell(
-              onTap: () => onTabChange?.call(2), // Go to rewards store tab
+              onTap: () => onTabChange?.call(3), // Go to rewards store tab
               borderRadius: BorderRadius.circular(10),
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
@@ -232,7 +232,30 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ],
           const SizedBox(width: 6),
 
-          // 🔔 4. Notifications Bell Icon
+          // 🏆 4. Weekly Leaderboard Quick Button
+          InkWell(
+            onTap: () => onTabChange?.call(2), // Leaderboard Tab
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.all(7),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFFBEB),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withAlpha(30),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.emoji_events, size: 16, color: Color(0xFFD97706)),
+            ),
+          ),
+          const SizedBox(width: 6),
+
+          // 🔔 5. Notifications Bell Icon
           InkWell(
             onTap: () {
               showDialog(

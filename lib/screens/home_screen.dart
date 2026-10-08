@@ -4,6 +4,7 @@ import '../widgets/booyah_header.dart';
 import '../widgets/booyah_footer.dart';
 import 'tournament_lobby_screen.dart';
 import 'my_matches_screen.dart';
+import 'weekly_leaderboard_screen.dart';
 import 'earn_coins_screen.dart';
 import 'wallet_screen.dart';
 import 'admin_panel_screen.dart';
@@ -28,17 +29,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       TournamentLobbyScreen(
         appState: widget.appState,
-        onEarnCoinsClick: () => setState(() => _currentIndex = 2),
+        onEarnCoinsClick: () => setState(() => _currentIndex = 3),
         onTabChange: (tab) => setState(() => _currentIndex = tab),
       ),
       MyMatchesScreen(
         appState: widget.appState,
         onBrowseMatches: () => setState(() => _currentIndex = 0),
       ),
+      WeeklyLeaderboardScreen(
+        appState: widget.appState,
+        onBrowseTournaments: () => setState(() => _currentIndex = 0),
+      ),
       EarnCoinsScreen(appState: widget.appState),
       WalletScreen(
         appState: widget.appState,
-        onGoToStore: () => setState(() => _currentIndex = 2),
+        onGoToStore: () => setState(() => _currentIndex = 3),
       ),
       if (isAdmin) AdminPanelScreen(appState: widget.appState),
       ProfileScreen(appState: widget.appState),
@@ -66,8 +71,8 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF0F172A),
         unselectedItemColor: const Color(0xFF94A3B8),
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 10),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 10.5),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 9.5),
         items: [
           const BottomNavigationBarItem(
             icon: Icon(Icons.sports_esports),
@@ -78,12 +83,16 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'My Matches',
           ),
           const BottomNavigationBarItem(
+            icon: Icon(Icons.emoji_events),
+            label: '🏆 Ranks',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.stars),
             label: 'Earn/Store',
           ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.account_balance_wallet),
-            label: widget.appState.isRealCashModeEnabled ? '4-Wallet' : 'Wallet',
+            label: widget.appState.isRealCashModeEnabled ? 'Wallet' : 'Wallet',
           ),
           if (isAdmin)
             const BottomNavigationBarItem(

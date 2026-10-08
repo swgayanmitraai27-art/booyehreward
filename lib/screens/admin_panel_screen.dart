@@ -287,6 +287,125 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
+  void _showDistributeWeeklyPrizesDialog() {
+    final top3 = widget.appState.getWeeklyLeaderboard(filter: 'WEEKLY').take(3).toList();
+    final seasonLabel = widget.appState.getWeeklySeasonLabel();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.emoji_events, color: Color(0xFFD97706), size: 24),
+            ),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'Distribute ₹100 Weekly Cash',
+                style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Season: $seasonLabel',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'The following Top 3 players will receive real money credited directly to their Winning Wallet:',
+              style: TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
+            ),
+            const SizedBox(height: 10),
+            ...top3.map((winner) {
+              final prize = winner.rank == 1 ? '₹50.00' : (winner.rank == 2 ? '₹30.00' : '₹20.00');
+              final badge = winner.rank == 1 ? '🥇' : (winner.rank == 2 ? '🥈' : '🥉');
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Text(badge, style: const TextStyle(fontSize: 16)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            winner.inGameName ?? winner.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Color(0xFF0F172A)),
+                          ),
+                          Text(
+                            'UID: ${winner.uid} • ${winner.points} pts',
+                            style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      prize,
+                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF059669)),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            const SizedBox(height: 6),
+            const Text(
+              'Total Pool: ₹100.00 Real Cash (Auto-deposited to Winning Cash balance)',
+              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final res = await widget.appState.adminDistributeWeeklyLeaderboardPrizes();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: Color(0xFF065F46),
+                    content: Text('🎉 ₹100 Weekly Championship Prizes successfully distributed to Top 3 players!'),
+                  ),
+                );
+                setState(() {});
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF059669),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Distribute ₹100 Now', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _autoCalculateBRPrizes() {
     final entryFee = double.tryParse(_entryFeeController.text) ?? 50;
     final totalPlayers = int.tryParse(_maxSlotsController.text) ?? 48;
@@ -3515,7 +3634,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const SizedBox(height: 14),
               Builder(
                 builder: (context) {
-                  final hostList = widget.appState.getAdminHostLeaderboard();
+                  final hostList = widget.appState.getAdminHostLeaderboard(registeredUsers: _registeredUsers);
                   if (hostList.isEmpty) {
                     return const Padding(
                       padding: EdgeInsets.all(16),
@@ -3526,59 +3645,231 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     children: hostList.map((host) {
                       final name = host['hostName'] as String;
                       final uid = host['hostUid'] as String;
+                      final phone = (host['phoneNumber'] ?? '') as String;
+                      final email = (host['email'] ?? '') as String;
                       final published = host['totalMatchesPublished'] as int;
                       final completed = host['totalMatchesCompleted'] as int;
                       final revenue = (host['totalRevenueGenerated'] as num).toDouble();
                       final commission = (host['totalHostCommissionEarned'] as num).toDouble();
 
                       return Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF8FAFC),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(14),
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
-                        child: Row(
+                        child: Column(
                           children: [
-                            CircleAvatar(
-                              radius: 20,
-                              backgroundColor: const Color(0xFF4F46E5),
-                              child: Text(
-                                name.isNotEmpty ? name[0].toUpperCase() : 'A',
-                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    name,
-                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
+                            Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor: const Color(0xFF0F172A),
+                                  child: Text(
+                                    name.isNotEmpty ? name[0].toUpperCase() : 'A',
+                                    style: const TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 16),
                                   ),
-                                  Text(
-                                    'UID: $uid • $published Published • $completed Completed',
-                                    style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Flexible(
+                                            child: Text(
+                                              name,
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: Color(0xFF0F172A)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF4F46E5).withAlpha(30),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFF4F46E5).withAlpha(100)),
+                                            ),
+                                            child: const Text(
+                                              'HOST ADMIN',
+                                              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF4F46E5)),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 3),
+                                      InkWell(
+                                        onTap: () => _copy(uid, 'Admin UID'),
+                                        child: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'UID: $uid',
+                                              style: const TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w700, color: Color(0xFF64748B)),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            const Icon(Icons.copy, size: 11, color: Color(0xFF94A3B8)),
+                                          ],
+                                        ),
+                                      ),
+                                      if (phone.isNotEmpty || email.isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          [if (phone.isNotEmpty) phone, if (email.isNotEmpty) email].join(' • '),
+                                          style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                                        ),
+                                      ],
+                                    ],
                                   ),
-                                ],
-                              ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      '+₹${commission.toStringAsFixed(2)}',
+                                      style: AppTheme.gamingNumber(fontSize: 16.5, color: AppTheme.winningGreen),
+                                    ),
+                                    const Text(
+                                      '25% Host Profit',
+                                      style: TextStyle(fontSize: 9.5, color: Color(0xFF059669), fontWeight: FontWeight.w800),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            const Divider(height: 18, color: Color(0xFFE2E8F0)),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 Text(
-                                  '+₹${commission.toStringAsFixed(2)}',
-                                  style: AppTheme.gamingNumber(fontSize: 16, color: AppTheme.winningGreen),
+                                  '🚀 Published: $published  •  🏁 Completed: $completed',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF475569)),
                                 ),
                                 Text(
-                                  'Rev: ₹${revenue.toInt()} (25% share)',
-                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B), fontWeight: FontWeight.w700),
+                                  'Revenue: ₹${revenue.toInt()}',
+                                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF0F172A)),
                                 ),
                               ],
                             ),
                           ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // 🏆 WEEKLY LEADERBOARD & ₹100 PRIZE DISTRIBUTION MANAGER
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 10, offset: const Offset(0, 3)),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF59E0B),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.emoji_events, color: Colors.black, size: 18),
+                      ),
+                      const SizedBox(width: 8),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'WEEKLY CHAMPIONSHIP (₹100 POOL)',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11.5, letterSpacing: 0.8),
+                          ),
+                          Text(
+                            'Top 3 Players: 🥇 ₹50 | 🥈 ₹30 | 🥉 ₹20',
+                            style: TextStyle(color: Color(0xFF94A3B8), fontSize: 9.5),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: _showDistributeWeeklyPrizesDialog,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFF59E0B),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Text('Distribute ₹100', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Builder(
+                builder: (context) {
+                  final top3 = widget.appState.getWeeklyLeaderboard(filter: 'WEEKLY').take(3).toList();
+                  return Row(
+                    children: top3.map((winner) {
+                      final prize = winner.rank == 1 ? '₹50' : (winner.rank == 2 ? '₹30' : '₹20');
+                      final crown = winner.rank == 1 ? '🥇' : (winner.rank == 2 ? '🥈' : '🥉');
+                      return Expanded(
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 3),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white.withAlpha(25)),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(crown, style: const TextStyle(fontSize: 18)),
+                              const SizedBox(height: 2),
+                              Text(
+                                winner.inGameName ?? winner.displayName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11),
+                              ),
+                              Text(
+                                '${winner.points} pts',
+                                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 9.5),
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '$prize CASH',
+                                  style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Colors.black),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     }).toList(),
