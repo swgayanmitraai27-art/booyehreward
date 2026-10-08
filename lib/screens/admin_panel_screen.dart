@@ -3965,11 +3965,45 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             controller: _bannerImgUrlController,
             decoration: InputDecoration(
               labelText: 'Image Path or Online Image URL',
-              hintText: 'e.g. imgasest/brhomescreen .png or https://images.unsplash.com/...',
+              hintText: 'e.g. imgasest/brhomescreen.png or https://images.unsplash.com/...',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
           const SizedBox(height: 6),
+
+          // Upload & Gallery Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.amberAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _pickAndUploadImage(_bannerImgUrlController),
+                  icon: const Icon(Icons.cloud_upload_rounded, size: 16),
+                  label: const Text('UPLOAD BANNER TO VPS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _openVpsGalleryDialog(_bannerImgUrlController),
+                  icon: const Icon(Icons.photo_library_outlined, size: 16),
+                  label: const Text('VPS GALLERY PICKER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
 
           // Quick Presets for Image
           SingleChildScrollView(
@@ -4224,6 +4258,118 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 onPressed: () => UrlLauncherUtil.openUrl(_telegramUrlController.text.trim()),
                 icon: const Icon(Icons.open_in_new, size: 16),
                 label: const Text('TEST LINK', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 14),
+
+          // --- 🎮 CATEGORY COVER BANNERS MANAGEMENT (BR, CS, LONE WOLF) ---
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('CATEGORY MODE BANNERS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF0284C7), letterSpacing: 1.2)),
+              Text('DIRECT VPS STORAGE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF059669))),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text('Configure or Upload custom banners for BR, Clash Squad, and Lone Wolf mode cards displayed in the lobby.', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
+          const SizedBox(height: 14),
+
+          // 1. BR Full Map Banner
+          _buildCategoryBannerEditor(title: '🔥 Full Map (BR) Banner', controller: _brCategoryBannerController, modeKey: 'BR'),
+          const SizedBox(height: 12),
+
+          // 2. CS Clash Squad Banner
+          _buildCategoryBannerEditor(title: '⚔️ Clash Squad (CS) Banner', controller: _csCategoryBannerController, modeKey: 'CS'),
+          const SizedBox(height: 12),
+
+          // 3. Lone Wolf Banner
+          _buildCategoryBannerEditor(title: '🐺 Lone Wolf 1v1 Banner', controller: _lwCategoryBannerController, modeKey: 'LONE_WOLF'),
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.amberAccent,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final br = _brCategoryBannerController.text.trim();
+                final cs = _csCategoryBannerController.text.trim();
+                final lw = _lwCategoryBannerController.text.trim();
+                await widget.appState.adminUpdateCategoryBanners(br: br, cs: cs, lw: lw);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    backgroundColor: AppTheme.winningGreen,
+                    content: Text('All Category Banners updated & synced in real-time!'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.save_rounded, size: 18),
+              label: const Text('SAVE ALL CATEGORY BANNERS', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryBannerEditor({required String title, required TextEditingController controller, required String modeKey}) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFCBD5E1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF0F172A))),
+          const SizedBox(height: 6),
+          TextField(
+            controller: controller,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              isDense: true,
+              labelText: 'Image Path or VPS URL',
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.amberAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  onPressed: () => _pickAndUploadImage(controller),
+                  icon: const Icon(Icons.cloud_upload_rounded, size: 14),
+                  label: const Text('UPLOAD', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  onPressed: () => _openVpsGalleryDialog(controller),
+                  icon: const Icon(Icons.photo_library_outlined, size: 14),
+                  label: const Text('GALLERY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
               ),
             ],
           ),

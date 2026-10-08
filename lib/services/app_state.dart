@@ -37,7 +37,7 @@ class AppState extends ChangeNotifier {
   List<AppNotification> notifications = [];
   List<AppNotification> allGlobalNotifications = [];
   List<BannerModel> banners = [];
-  static const String vpsBaseUrl = 'http://vps.swgayanbhumi.in';
+  static const String vpsBaseUrl = 'https://vps.swgayanbhumi.in';
   static const String vpsApiUrl = '$vpsBaseUrl/api';
   String brBannerUrl = 'https://i.ibb.co/PvV4vz0X/brhomescreen.png';
   String csBannerUrl = 'https://i.ibb.co/S4qX9RW5/cshomescreen.png';
