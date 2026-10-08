@@ -182,31 +182,25 @@ class TournamentLobbyScreen extends StatelessWidget {
             height: 110,
             child: ListView(
               scrollDirection: Axis.horizontal,
-              children: [
-                _buildCategoryBannerCard(
-                  title: 'Full Map (BR)',
-                  modeKey: 'BR',
-                  assetPath: 'imgasest/brhomescreen .png',
-                  isSelected: selectedMode == 'BR',
-                  matchCount: appState.matches.where((m) => m.mode == MatchMode.br).length,
-                ),
-                const SizedBox(width: 12),
-                _buildCategoryBannerCard(
-                  title: 'Clash Squad (CS)',
-                  modeKey: 'CS',
-                  assetPath: 'imgasest/cshomescreen.png',
-                  isSelected: selectedMode == 'CS',
-                  matchCount: appState.matches.where((m) => m.mode == MatchMode.cs).length,
-                ),
-                const SizedBox(width: 12),
-                _buildCategoryBannerCard(
-                  title: 'Lone Wolf',
-                  modeKey: 'LONE_WOLF',
-                  assetPath: 'imgasest/lonewolfhomescreen.png',
-                  isSelected: selectedMode == 'LONE_WOLF',
-                  matchCount: appState.matches.where((m) => m.mode == MatchMode.loneWolf).length,
-                ),
-              ],
+              children: appState.activeTournamentModes.map((modeItem) {
+                final matchCount = appState.matches.where((m) {
+                  if (modeItem.mode == 'cs') return m.mode == MatchMode.cs;
+                  if (modeItem.mode == 'loneWolf') return m.mode == MatchMode.loneWolf;
+                  return m.mode == MatchMode.br;
+                }).length;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: _buildCategoryBannerCard(
+                    title: modeItem.title,
+                    modeKey: modeItem.key,
+                    assetPath: modeItem.bannerUrl,
+                    isSelected: selectedMode == modeItem.key,
+                    matchCount: matchCount,
+                  ),
+                );
+              }).toList(),
+
+
             ),
           ),
           const SizedBox(height: 18),
@@ -410,12 +404,12 @@ class TournamentLobbyScreen extends StatelessWidget {
         child: Stack(
           children: [
             Positioned.fill(
-              child: Image.asset(
-                assetPath,
+              child: MatchBannerImage(
+                bannerImage: assetPath,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(color: const Color(0xFF1E293B)),
               ),
             ),
+
             Positioned.fill(
               child: Container(
                 decoration: BoxDecoration(

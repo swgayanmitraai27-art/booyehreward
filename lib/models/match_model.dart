@@ -9,6 +9,43 @@ enum MatchFormat { solo, duo, squad, cs4v4, loneWolf1v1, loneWolf2v2 }
 enum MapType { bermuda, purgatory, kalahari, alpine, nexterra }
 enum MatchStatus { upcoming, roomFilling, ongoing, completed, cancelled }
 
+class TournamentModeItem {
+  final String key;
+  final String title;
+  final String bannerUrl;
+  final int defaultSlots;
+  final String mode; // 'br', 'cs', 'loneWolf'
+  final bool enabled;
+
+  TournamentModeItem({
+    required this.key,
+    required this.title,
+    required this.bannerUrl,
+    required this.defaultSlots,
+    required this.mode,
+    this.enabled = true,
+  });
+
+  factory TournamentModeItem.fromJson(Map<String, dynamic> json) => TournamentModeItem(
+    key: (json['key'] ?? '').toString().toUpperCase(),
+    title: (json['title'] ?? '').toString(),
+    bannerUrl: (json['bannerUrl'] ?? '').toString(),
+    defaultSlots: (json['defaultSlots'] ?? 48) as int,
+    mode: (json['mode'] ?? 'br').toString(),
+    enabled: json['enabled'] != false,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'key': key,
+    'title': title,
+    'bannerUrl': bannerUrl,
+    'defaultSlots': defaultSlots,
+    'mode': mode,
+    'enabled': enabled,
+  };
+}
+
+
 class MatchCredentials {
   String roomId;
   String roomPassword;

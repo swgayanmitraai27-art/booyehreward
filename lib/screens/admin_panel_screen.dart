@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
@@ -49,12 +50,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _storeRewardValController = TextEditingController(text: '₹50 Code');
 
   // Dynamic Banners state
-  final TextEditingController _bannerTitleController = TextEditingController(text: '🔥 Free Fire Esports Championship - Win ₹500');
-  final TextEditingController _bannerImgUrlController = TextEditingController(text: 'imgasest/brhomescreen .png');
-  final TextEditingController _bannerClickUrlController = TextEditingController(text: 'https://t.me/swgayanmitra');
+  final TextEditingController _bannerTitleController = TextEditingController(text: '🔥 Official Telegram Support & Daily Updates');
+  final TextEditingController _bannerImgUrlController = TextEditingController(text: 'https://i.ibb.co/W43nNfnY/Chat-GPT-Image-Oct-7-2026-10-03-53-AM-1.png');
+  final TextEditingController _bannerClickUrlController = TextEditingController(text: 'http://t.me/booyahrewardofficial');
+
+  // Category Banners state
+  final TextEditingController _brCategoryBannerController = TextEditingController(text: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png');
+  final TextEditingController _csCategoryBannerController = TextEditingController(text: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png');
+  final TextEditingController _lwCategoryBannerController = TextEditingController(text: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png');
 
   // Telegram Support & Settings state
   final TextEditingController _telegramUrlController = TextEditingController();
+
 
   // Create Match state (100% Dynamic with 75/25 Financial Engine)
   final TextEditingController _matchTitleController = TextEditingController(text: '⚡ Free Fire Clash Squad Championship');
@@ -93,8 +100,124 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   void initState() {
     super.initState();
     _telegramUrlController.text = widget.appState.telegramSupportUrl;
+    _brCategoryBannerController.text = widget.appState.brCategoryBanner;
+    _csCategoryBannerController.text = widget.appState.csCategoryBanner;
+    _lwCategoryBannerController.text = widget.appState.lwCategoryBanner;
     _fetchRegisteredUsers();
   }
+
+  Future<void> _pickAndUploadImage(TextEditingController controller) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? picked = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      if (picked != null) {
+        final bytes = await picked.readAsBytes();
+        final filename = picked.name.isNotEmpty ? picked.name : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('⏳ Uploading image directly to VPS...')),
+        );
+        final uploadedUrl = await widget.appState.uploadBannerImageFile(bytes, filename);
+        if (uploadedUrl != null) {
+          setState(() {
+            controller.text = uploadedUrl;
+          });
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: AppTheme.winningGreen,
+              content: const Text('✅ Image uploaded successfully to VPS!'),
+            ),
+          );
+        } else {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('❌ Upload failed. Please check VPS connection.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error picking image: $e')),
+      );
+    }
+  }
+
+  Future<void> _openVpsGalleryDialog(TextEditingController controller) async {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return FutureBuilder<List<Map<String, dynamic>>>(
+          future: widget.appState.getUploadedGallery(),
+          builder: (context, snapshot) {
+            return AlertDialog(
+              title: const Text('VPS Uploaded Gallery', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 380,
+                child: snapshot.connectionState == ConnectionState.waiting
+                    ? const Center(child: CircularProgressIndicator())
+                    : (snapshot.data == null || snapshot.data!.isEmpty)
+                        ? const Center(child: Text('No uploaded images found on VPS yet.\nUpload one first!'))
+                        : GridView.builder(
+                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              crossAxisSpacing: 8,
+                              mainAxisSpacing: 8,
+                              childAspectRatio: 1.4,
+                            ),
+                            itemCount: snapshot.data!.length,
+                            itemBuilder: (context, i) {
+                              final item = snapshot.data![i];
+                              final url = item['url'].toString();
+                              return InkWell(
+                                onTap: () {
+                                  setState(() {
+                                    controller.text = url;
+                                  });
+                                  Navigator.pop(ctx);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      backgroundColor: AppTheme.winningGreen,
+                                      content: Text('Selected: ${item['filename']}'),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.amber, width: 1.5),
+                                  ),
+                                  clipBehavior: Clip.antiAlias,
+                                  child: Image.network(
+                                    url,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, err, stack) => const Center(child: Icon(Icons.broken_image)),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('Close'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
 
   Future<void> _fetchRegisteredUsers() async {
     if (!mounted) return;
@@ -2538,6 +2661,41 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
           ),
           const SizedBox(height: 6),
+
+          // Upload & Gallery Action Buttons
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.amberAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _pickAndUploadImage(_matchBannerUrlController),
+                  icon: const Icon(Icons.cloud_upload_rounded, size: 15),
+                  label: const Text('UPLOAD TO VPS', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _openVpsGalleryDialog(_matchBannerUrlController),
+                  icon: const Icon(Icons.photo_library_outlined, size: 15),
+                  label: const Text('VPS GALLERY', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+
 
           // Quick Presets
           SingleChildScrollView(

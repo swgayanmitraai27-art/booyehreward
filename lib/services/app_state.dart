@@ -36,13 +36,30 @@ class AppState extends ChangeNotifier {
   List<VoucherClaim> allGlobalVoucherClaims = [];
   List<AppNotification> notifications = [];
   List<AppNotification> allGlobalNotifications = [];
-  int globalTotalAdsWatched = 0;
   List<BannerModel> banners = [];
-  String telegramSupportUrl = 'https://t.me/swgayanmitra';
-  bool isRealCashModeEnabled = false; // Google Play Review Safe Mode Toggle (False = Only Coins & Ads visible)
+  static const String vpsBaseUrl = 'http://vps.swgayanbhumi.in';
+  static const String vpsApiUrl = '$vpsBaseUrl/api';
+  String brBannerUrl = 'https://i.ibb.co/PvV4vz0X/brhomescreen.png';
+  String csBannerUrl = 'https://i.ibb.co/S4qX9RW5/cshomescreen.png';
+  String lwBannerUrl = 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png';
+  String get brCategoryBanner => brBannerUrl.isNotEmpty ? brBannerUrl : 'https://i.ibb.co/PvV4vz0X/brhomescreen.png';
+  String get csCategoryBanner => csBannerUrl.isNotEmpty ? csBannerUrl : 'https://i.ibb.co/S4qX9RW5/cshomescreen.png';
+  String get lwCategoryBanner => lwBannerUrl.isNotEmpty ? lwBannerUrl : 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png';
+  
+  List<TournamentModeItem> tournamentModes = [
+    TournamentModeItem(key: 'BR', title: 'Full Map (BR)', bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png', defaultSlots: 48, mode: 'br', enabled: true),
+    TournamentModeItem(key: 'CS', title: 'Clash Squad (CS)', bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png', defaultSlots: 8, mode: 'cs', enabled: true),
+    TournamentModeItem(key: 'LONE_WOLF', title: 'Lone Wolf', bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png', defaultSlots: 2, mode: 'loneWolf', enabled: true),
+  ];
+  List<TournamentModeItem> get activeTournamentModes => tournamentModes.where((m) => m.enabled).toList();
+  
+  String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
+  bool isRealCashModeEnabled = true; // Synced with VPS config
+
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
   bool isLoadingAuth = true;
+  int globalTotalAdsWatched = 0;
 
   // Rewards Store with exact rates (10 Reward Coins = ₹1 Value, Min ₹10 Play Code = 100 Coins)
   List<StoreItem> storeItems = [
@@ -1629,10 +1646,10 @@ class AppState extends ChangeNotifier {
           ? user.uid
           : (savedUid ?? activeUser?.uid);
 
-      // --- ATTEMPT 1: High-Speed Cached Server Proxy Sync (Zero Quota Loss) ---
+      // --- ATTEMPT 1: High-Speed VPS Dedicated Server Sync (Zero Limit & Instant) ---
       bool backendSyncSuccess = false;
       try {
-        final syncUrl = Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync?userId=${uidToSync ?? ''}");
+        final syncUrl = Uri.parse("$vpsApiUrl/sync?uid=${uidToSync ?? ''}");
         final res = await http.get(syncUrl).timeout(const Duration(seconds: 4));
         if (res.statusCode == 200) {
           final data = jsonDecode(res.body);
@@ -1659,30 +1676,56 @@ class AppState extends ChangeNotifier {
               await AuthService.saveUser(user);
             }
 
-            // 4. Transactions
-            if (data['transactions'] is List) {
-              transactions = (data['transactions'] as List).map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
-              transactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-              _saveLocalTxnCache();
+            // 4. Dynamic Tournament Modes
+            if (data['modes'] is List) {
+              final modeList = (data['modes'] as List).map((d) => TournamentModeItem.fromJson(Map<String, dynamic>.from(d))).toList();
+              if (modeList.isNotEmpty) {
+                tournamentModes = modeList;
+              }
             }
 
             // 5. Config
             if (data['config'] != null) {
-              if (data['config']['telegramSupportUrl'] != null) {
-                telegramSupportUrl = data['config']['telegramSupportUrl'].toString();
+              final cfg = data['config'];
+              if (cfg['telegramSupportUrl'] != null) {
+                telegramSupportUrl = cfg['telegramSupportUrl'].toString();
               }
-              if (data['config']['isRealCashModeEnabled'] != null) {
-                isRealCashModeEnabled = data['config']['isRealCashModeEnabled'] == true ||
-                    data['config']['isRealCashModeEnabled'].toString() == 'true';
+              if (cfg['isRealCashModeEnabled'] != null) {
+                isRealCashModeEnabled = cfg['isRealCashModeEnabled'] == true ||
+                    cfg['isRealCashModeEnabled'].toString() == 'true';
+              }
+              if (cfg['brBannerUrl'] != null && cfg['brBannerUrl'].toString().isNotEmpty) {
+                brBannerUrl = cfg['brBannerUrl'].toString();
+              }
+              if (cfg['csBannerUrl'] != null && cfg['csBannerUrl'].toString().isNotEmpty) {
+                csBannerUrl = cfg['csBannerUrl'].toString();
+              }
+              if (cfg['lwBannerUrl'] != null && cfg['lwBannerUrl'].toString().isNotEmpty) {
+                lwBannerUrl = cfg['lwBannerUrl'].toString();
               }
             }
+
+            // 6. Notifications
+            if (data['notifications'] is List) {
+              final parsed = (data['notifications'] as List).map((d) => AppNotification.fromJson(Map<String, dynamic>.from(d))).toList();
+              allGlobalNotifications = parsed;
+              notifications = allGlobalNotifications.where((n) {
+                if (n.targetType == 'all') return true;
+                if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
+                if (n.targetType == 'user' && n.targetId == user.uid) return true;
+                if (n.targetType == 'admin' && user.role == 'admin') return true;
+                return false;
+              }).toList();
+            }
+
 
             backendSyncSuccess = true;
           }
         }
       } catch (e) {
-        debugPrint('[AppState] Backend sync proxy notice (fallback to Firestore REST): $e');
+        debugPrint('[AppState] VPS backend sync notice: $e');
       }
+
 
       // --- ATTEMPT 2: Fallback to Direct Firestore REST if Backend Proxy was skipped/offline ---
       if (!backendSyncSuccess) {
@@ -1844,49 +1887,157 @@ class AppState extends ChangeNotifier {
     isRealCashModeEnabled = enabled;
     notifyListeners();
 
-    // 1. Sync to high-speed backend proxy
+    // 1. Sync to VPS Backend
     try {
-      http.post(
-        Uri.parse("https://www.swgayanbhumi.in/api/skillwinner/sync"),
+      await http.post(
+        Uri.parse("$vpsApiUrl/config"),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'action': 'set_real_cash_mode',
-          'data': {'isRealCashModeEnabled': enabled},
+          'isRealCashModeEnabled': enabled,
+          'telegramSupportUrl': telegramSupportUrl,
+          'brBannerUrl': brBannerUrl,
+          'csBannerUrl': csBannerUrl,
+          'lwBannerUrl': lwBannerUrl,
         }),
-      ).timeout(const Duration(seconds: 4)).catchError((_) => http.Response('', 500));
+      ).timeout(const Duration(seconds: 4));
     } catch (_) {}
 
-    // 2. Sync directly to Firestore
-    await FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
-      'isRealCashModeEnabled': enabled,
-      'telegramSupportUrl': telegramSupportUrl,
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+    // 2. Sync to Firestore as fallback
+    try {
+      await FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
+        'isRealCashModeEnabled': enabled,
+        'telegramSupportUrl': telegramSupportUrl,
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
+    } catch (_) {}
+  }
+
+  // --- ADMIN: CATEGORY BANNERS URL CONFIGURATION ---
+  Future<void> adminUpdateCategoryBanners({String? br, String? cs, String? lw}) async {
+    if (br != null && br.isNotEmpty) brBannerUrl = br.trim();
+    if (cs != null && cs.isNotEmpty) csBannerUrl = cs.trim();
+    if (lw != null && lw.isNotEmpty) lwBannerUrl = lw.trim();
+    notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/config"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'brBannerUrl': brBannerUrl,
+          'csBannerUrl': csBannerUrl,
+          'lwBannerUrl': lwBannerUrl,
+          'telegramSupportUrl': telegramSupportUrl,
+          'isRealCashModeEnabled': isRealCashModeEnabled,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
+  // --- ADMIN: DYNAMIC TOURNAMENT MODES MANAGEMENT ---
+  Future<void> adminSaveTournamentMode(TournamentModeItem modeItem) async {
+    final index = tournamentModes.indexWhere((m) => m.key == modeItem.key);
+    if (index >= 0) {
+      tournamentModes[index] = modeItem;
+    } else {
+      tournamentModes.add(modeItem);
+    }
+    if (modeItem.key == 'BR') brBannerUrl = modeItem.bannerUrl;
+    if (modeItem.key == 'CS') csBannerUrl = modeItem.bannerUrl;
+    if (modeItem.key == 'LONE_WOLF') lwBannerUrl = modeItem.bannerUrl;
+    notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/modes"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(modeItem.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
+  Future<void> adminDeleteTournamentMode(String modeKey) async {
+    tournamentModes.removeWhere((m) => m.key == modeKey);
+    notifyListeners();
+
+    try {
+      await http.delete(
+        Uri.parse("$vpsApiUrl/modes/$modeKey"),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
+
+  // --- ADMIN: DIRECT IMAGE UPLOAD TO VPS ---
+  Future<String?> uploadBannerImageFile(Uint8List fileBytes, String filename) async {
+    try {
+      final uri = Uri.parse('$vpsApiUrl/upload');
+      final request = http.MultipartRequest('POST', uri);
+      request.files.add(http.MultipartFile.fromBytes(
+        'image',
+        fileBytes,
+        filename: filename,
+      ));
+      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
+      final response = await http.Response.fromStream(streamedResponse);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['fileUrl'] != null) {
+          return data['fileUrl'].toString();
+        }
+      }
+    } catch (e) {
+      debugPrint('[AppState] Upload image to VPS error: $e');
+    }
+    return null;
+  }
+
+  // --- ADMIN: FETCH UPLOADED GALLERY FROM VPS ---
+  Future<List<Map<String, dynamic>>> getUploadedGallery() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsApiUrl/uploads')).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['files'] is List) {
+          return List<Map<String, dynamic>>.from(data['files']);
+        }
+      }
+    } catch (e) {
+      debugPrint('[AppState] Get gallery error: $e');
+    }
+    return [];
   }
 
   // --- ADMIN: TELEGRAM CUSTOMER SUPPORT URL CONFIGURATION ---
   void adminUpdateTelegramUrl(String url) {
     telegramSupportUrl = url.trim();
-    FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
-      'telegramSupportUrl': telegramSupportUrl,
-      'isRealCashModeEnabled': isRealCashModeEnabled,
-      'updatedAt': DateTime.now().toIso8601String(),
-    });
+    http.post(
+      Uri.parse("$vpsApiUrl/config"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'telegramSupportUrl': telegramSupportUrl}),
+    ).catchError((_) => http.Response('', 500));
     notifyListeners();
   }
 
   // --- ADMIN: DYNAMIC PROMO BANNERS ---
   void adminAddBanner(BannerModel newBanner) {
     banners.insert(0, newBanner);
+    http.post(
+      Uri.parse("$vpsApiUrl/banners"),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(newBanner.toJson()),
+    ).catchError((_) => http.Response('', 500));
     FirestoreRestService.setDocument('skillwinner_banners', newBanner.id, newBanner.toJson());
     notifyListeners();
   }
 
   void adminDeleteBanner(String bannerId) {
     banners.removeWhere((b) => b.id == bannerId);
+    http.delete(Uri.parse("$vpsApiUrl/banners/$bannerId")).catchError((_) => http.Response('', 500));
     FirestoreRestService.deleteDocument('skillwinner_banners', bannerId);
     notifyListeners();
   }
+
 
   Future<void> _syncUser() async {
     await AuthService.saveUser(user);
