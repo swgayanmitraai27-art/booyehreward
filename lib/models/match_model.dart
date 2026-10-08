@@ -208,15 +208,54 @@ class PrizePool {
     'fifthPlace': fifthPlace,
   };
 
-  factory PrizePool.fromJson(Map<String, dynamic> json) => PrizePool(
-    totalPool: ((json['totalPool'] ?? 0) as num).toDouble(),
-    perKill: ((json['perKill'] ?? 0) as num).toDouble(),
-    firstPlace: ((json['firstPlace'] ?? 0) as num).toDouble(),
-    secondPlace: json['secondPlace'] != null ? ((json['secondPlace']) as num).toDouble() : null,
-    thirdPlace: json['thirdPlace'] != null ? ((json['thirdPlace']) as num).toDouble() : null,
-    fourthPlace: json['fourthPlace'] != null ? ((json['fourthPlace']) as num).toDouble() : null,
-    fifthPlace: json['fifthPlace'] != null ? ((json['fifthPlace']) as num).toDouble() : null,
-  );
+  factory PrizePool.fromJson(dynamic json, {
+    double? fallbackFirst,
+    double? fallbackSecond,
+    double? fallbackThird,
+    double? fallbackFourth,
+    double? fallbackFifth,
+    double? fallbackPerKill,
+  }) {
+    if (json is num) {
+      return PrizePool(
+        totalPool: json.toDouble(),
+        perKill: fallbackPerKill ?? 0,
+        firstPlace: fallbackFirst ?? json.toDouble(),
+        secondPlace: fallbackSecond,
+        thirdPlace: fallbackThird,
+        fourthPlace: fallbackFourth,
+        fifthPlace: fallbackFifth,
+      );
+    }
+    if (json is! Map) {
+      return PrizePool(
+        totalPool: 0,
+        perKill: fallbackPerKill ?? 0,
+        firstPlace: fallbackFirst ?? 0,
+        secondPlace: fallbackSecond,
+        thirdPlace: fallbackThird,
+        fourthPlace: fallbackFourth,
+        fifthPlace: fallbackFifth,
+      );
+    }
+    return PrizePool(
+      totalPool: ((json['totalPool'] ?? json['total_pool'] ?? 0) as num).toDouble(),
+      perKill: ((json['perKill'] ?? json['per_kill'] ?? fallbackPerKill ?? 0) as num).toDouble(),
+      firstPlace: ((json['firstPlace'] ?? json['first_place'] ?? fallbackFirst ?? 0) as num).toDouble(),
+      secondPlace: json['secondPlace'] != null
+          ? ((json['secondPlace']) as num).toDouble()
+          : (json['second_place'] != null ? ((json['second_place']) as num).toDouble() : fallbackSecond),
+      thirdPlace: json['thirdPlace'] != null
+          ? ((json['thirdPlace']) as num).toDouble()
+          : (json['third_place'] != null ? ((json['third_place']) as num).toDouble() : fallbackThird),
+      fourthPlace: json['fourthPlace'] != null
+          ? ((json['fourthPlace']) as num).toDouble()
+          : (json['fourth_place'] != null ? ((json['fourth_place']) as num).toDouble() : fallbackFourth),
+      fifthPlace: json['fifthPlace'] != null
+          ? ((json['fifthPlace']) as num).toDouble()
+          : (json['fifth_place'] != null ? ((json['fifth_place']) as num).toDouble() : fallbackFifth),
+    );
+  }
 }
 
 class MatchParticipant {
@@ -503,59 +542,108 @@ class MatchModel {
   };
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
-    final format = MatchFormat.values.firstWhere((e) => e.name == json['matchFormat'], orElse: () => MatchFormat.solo);
-    final mode = json['mode'] != null
-        ? MatchMode.values.firstWhere((e) => e.name == json['mode'], orElse: () => _inferMode(format))
+    final formatStr = (json['matchFormat'] ?? json['format'] ?? 'solo').toString();
+    final format = MatchFormat.values.firstWhere((e) => e.name == formatStr, orElse: () => MatchFormat.solo);
+
+    final modeStr = (json['mode'] ?? '').toString();
+    final mode = modeStr.isNotEmpty
+        ? MatchMode.values.firstWhere((e) => e.name == modeStr, orElse: () => _inferMode(format))
         : _inferMode(format);
-    final teamType = json['teamType'] != null
-        ? TeamType.values.firstWhere((e) => e.name == json['teamType'], orElse: () => _inferTeamType(format))
+
+    final teamTypeStr = (json['teamType'] ?? '').toString();
+    final teamType = teamTypeStr.isNotEmpty
+        ? TeamType.values.firstWhere((e) => e.name == teamTypeStr, orElse: () => _inferTeamType(format))
         : _inferTeamType(format);
 
     MatchStatus parseStatus(dynamic st) {
-      if (st == 'COMPLETED' || st == 'completed') return MatchStatus.completed;
-      if (st == 'ONGOING' || st == 'ongoing') return MatchStatus.ongoing;
-      if (st == 'CANCELLED' || st == 'cancelled') return MatchStatus.cancelled;
-      if (st == 'FILLING_ROOM' || st == 'roomFilling' || st == 'filling_room') return MatchStatus.roomFilling;
+      final s = (st ?? 'upcoming').toString().toLowerCase();
+      if (s == 'completed') return MatchStatus.completed;
+      if (s == 'ongoing') return MatchStatus.ongoing;
+      if (s == 'cancelled') return MatchStatus.cancelled;
+      if (s == 'filling_room' || s == 'roomfilling') return MatchStatus.roomFilling;
       return MatchStatus.upcoming;
     }
 
+    final matchTypeStr = (json['matchType'] ?? 'free').toString();
+    final matchType = MatchType.values.firstWhere(
+      (e) => e.name == matchTypeStr,
+      orElse: () => MatchType.free,
+    );
+
+    final entryFeeTypeStr = (json['entryFeeType'] ?? (matchType == MatchType.paid ? 'cash' : 'adCoins')).toString();
+    final entryFeeType = EntryFeeType.values.firstWhere(
+      (e) => e.name == entryFeeTypeStr,
+      orElse: () => matchType == MatchType.paid ? EntryFeeType.cash : EntryFeeType.adCoins,
+    );
+
+    final firstPrize = json['firstPrize'] != null ? ((json['firstPrize']) as num).toDouble() : null;
+    final secondPrize = json['secondPrize'] != null ? ((json['secondPrize']) as num).toDouble() : null;
+    final thirdPrize = json['thirdPrize'] != null ? ((json['thirdPrize']) as num).toDouble() : null;
+    final fourthPrize = json['fourthPrize'] != null ? ((json['fourthPrize']) as num).toDouble() : null;
+    final fifthPrize = json['fifthPrize'] != null ? ((json['fifthPrize']) as num).toDouble() : null;
+    final perKill = json['perKill'] != null ? ((json['perKill']) as num).toDouble() : null;
+
+    final gameTypeStr = (json['gameType'] ?? 'freeFire').toString();
+    final gameType = GameType.values.firstWhere((e) => e.name == gameTypeStr, orElse: () => GameType.freeFire);
+
+    final mapStr = (json['map'] ?? 'bermuda').toString();
+    final map = MapType.values.firstWhere((e) => e.name == mapStr, orElse: () => MapType.bermuda);
+
     return MatchModel(
-      id: json['id'] ?? '',
-      title: json['title'] ?? '',
-      bannerImage: json['bannerImage'],
-      gameType: GameType.values.firstWhere((e) => e.name == json['gameType'], orElse: () => GameType.freeFire),
+      id: (json['id'] ?? '').toString(),
+      title: (json['title'] ?? '').toString(),
+      bannerImage: json['bannerImage'] ?? json['bannerUrl'],
+      gameType: gameType,
       mode: mode,
       teamType: teamType,
       matchFormat: format,
-      map: MapType.values.firstWhere((e) => e.name == json['map'], orElse: () => MapType.bermuda),
-      matchType: MatchType.values.firstWhere((e) => e.name == json['matchType'], orElse: () => MatchType.free),
-      entryFeeType: EntryFeeType.values.firstWhere((e) => e.name == json['entryFeeType'], orElse: () => EntryFeeType.adCoins),
+      map: map,
+      matchType: matchType,
+      entryFeeType: entryFeeType,
       entryFee: ((json['entryFee'] ?? 0) as num).toDouble(),
-      prizePool: PrizePool.fromJson(json['prizePool'] ?? {}),
+      prizePool: PrizePool.fromJson(
+        json['prizePool'],
+        fallbackFirst: firstPrize,
+        fallbackSecond: secondPrize,
+        fallbackThird: thirdPrize,
+        fallbackFourth: fourthPrize,
+        fallbackFifth: fifthPrize,
+        fallbackPerKill: perKill,
+      ),
       maxSlots: (json['maxSlots'] ?? 48) as int,
       filledSlots: (json['filledSlots'] ?? 0) as int,
-      credentials: MatchCredentials.fromJson(json['credentials'] ?? {}),
+      credentials: json['credentials'] is Map
+          ? MatchCredentials.fromJson(Map<String, dynamic>.from(json['credentials']))
+          : MatchCredentials(roomId: '', roomPassword: ''),
       status: parseStatus(json['status']),
       completedAt: json['completed_at'] != null
-          ? DateTime.parse(json['completed_at'])
-          : (json['completedAt'] != null ? DateTime.parse(json['completedAt']) : null),
+          ? DateTime.tryParse(json['completed_at'].toString())
+          : (json['completedAt'] != null ? DateTime.tryParse(json['completedAt'].toString()) : null),
       roomFillingStartedAt: json['room_filling_started_at'] != null
-          ? DateTime.parse(json['room_filling_started_at'])
-          : (json['roomFillingStartedAt'] != null ? DateTime.parse(json['roomFillingStartedAt']) : null),
-      hostName: json['host_name'] ?? json['hostName'],
-      financialBreakdown: json['financial_breakdown'] != null
+          ? DateTime.tryParse(json['room_filling_started_at'].toString())
+          : (json['roomFillingStartedAt'] != null ? DateTime.tryParse(json['roomFillingStartedAt'].toString()) : null),
+      hostName: (json['host_name'] ?? json['hostName'])?.toString(),
+      financialBreakdown: json['financial_breakdown'] != null && json['financial_breakdown'] is Map
           ? FinancialBreakdown.fromJson(Map<String, dynamic>.from(json['financial_breakdown']))
-          : (json['financialBreakdown'] != null ? FinancialBreakdown.fromJson(Map<String, dynamic>.from(json['financialBreakdown'])) : null),
-      matchTime: json['matchTime'] != null ? DateTime.parse(json['matchTime']) : DateTime.now().add(const Duration(minutes: 30)),
+          : (json['financialBreakdown'] != null && json['financialBreakdown'] is Map
+              ? FinancialBreakdown.fromJson(Map<String, dynamic>.from(json['financialBreakdown']))
+              : null),
+      matchTime: json['matchTime'] != null
+          ? (DateTime.tryParse(json['matchTime'].toString()) ?? DateTime.now().add(const Duration(minutes: 30)))
+          : (json['scheduleTime'] != null
+              ? (DateTime.tryParse(json['scheduleTime'].toString()) ?? DateTime.now().add(const Duration(minutes: 30)))
+              : DateTime.now().add(const Duration(minutes: 30))),
       participants: (json['participants'] as List<dynamic>?)
-              ?.map((p) => MatchParticipant.fromJson(p))
+              ?.map((p) => p is Map ? MatchParticipant.fromJson(Map<String, dynamic>.from(p)) : null)
+              .whereType<MatchParticipant>()
               .toList() ??
           [],
       registeredTeams: (json['registeredTeams'] as List<dynamic>?)
-              ?.map((t) => RegisteredTeam.fromJson(t))
+              ?.map((t) => t is Map ? RegisteredTeam.fromJson(Map<String, dynamic>.from(t)) : null)
+              .whereType<RegisteredTeam>()
               .toList() ??
           [],
-      hasUserWatchedAdToUnlockRoom: json['hasUserWatchedAdToUnlockRoom'] ?? false,
+      hasUserWatchedAdToUnlockRoom: json['hasUserWatchedAdToUnlockRoom'] == true,
     );
   }
 }
