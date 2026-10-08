@@ -240,6 +240,11 @@ function seedInitialData() {
   const lwBanner = db.config.lwBannerUrl;
 
   db.matches = [
+    // 0. Free Tournaments (0 ₹ / Free Entry - Play for Ad Coins & Redeem Codes)
+    createScheduledMatch({ key: 'BR_FREE', titlePrefix: 'Free BR Solo (0 ₹ Entry)', entryFee: 0, maxSlots: 48, mode: 'br', teamType: 'solo', matchFormat: 'solo', mapType: 'bermuda', bannerUrl: brBanner, scheduleOffsetMinutes: 15 }),
+    createScheduledMatch({ key: 'CS_FREE', titlePrefix: 'Free CS 4v4 Squad (0 ₹ Entry)', entryFee: 0, maxSlots: 8, mode: 'cs', teamType: 'squad', matchFormat: 'cs4v4', mapType: 'bermuda', bannerUrl: csBanner, scheduleOffsetMinutes: 20 }),
+    createScheduledMatch({ key: 'LW_FREE', titlePrefix: 'Free Lone Wolf 1v1 (0 ₹ Entry)', entryFee: 0, maxSlots: 2, mode: 'loneWolf', teamType: 'solo', matchFormat: 'loneWolf1v1', mapType: 'bermuda', bannerUrl: lwBanner, scheduleOffsetMinutes: 10 }),
+
     // 1. BR Full Map (4 Matches)
     createScheduledMatch({ key: 'BR_10', titlePrefix: 'BR Solo (₹10 Entry)', entryFee: 10, maxSlots: 48, mode: 'br', teamType: 'solo', matchFormat: 'solo', mapType: 'bermuda', bannerUrl: brBanner, scheduleOffsetMinutes: 30 }),
     createScheduledMatch({ key: 'BR_20', titlePrefix: 'BR Solo (₹20 Entry)', entryFee: 20, maxSlots: 48, mode: 'br', teamType: 'solo', matchFormat: 'solo', mapType: 'purgatory', bannerUrl: brBanner, scheduleOffsetMinutes: 60 }),
