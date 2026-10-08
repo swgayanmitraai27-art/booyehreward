@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
@@ -95,6 +96,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   String? _selectedTargetUserUid;
   List<UserModel> _registeredUsers = [];
   bool _isLoadingUsers = false;
+  // Dynamic Tournament Modes Manager state
+  final TextEditingController _modeKeyController = TextEditingController(text: 'CUSTOM_MODE');
+  final TextEditingController _modeTitleController = TextEditingController(text: 'Custom Championship');
+  final TextEditingController _modeBannerController = TextEditingController(text: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png');
+  final TextEditingController _modeSlotsController = TextEditingController(text: '48');
+  String _modeSelectedBaseMode = 'br'; // 'br', 'cs', 'loneWolf'
 
   @override
   void initState() {
@@ -108,16 +115,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Future<void> _pickAndUploadImage(TextEditingController controller) async {
     try {
-      final picker = ImagePicker();
-      final XFile? picked = await picker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1080,
-        imageQuality: 85,
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.image,
+        withData: true,
       );
-      if (picked != null) {
-        final bytes = await picked.readAsBytes();
-        final filename = picked.name.isNotEmpty ? picked.name : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
+      if (result != null && result.files.isNotEmpty) {
+        final file = result.files.first;
+        final bytes = file.bytes;
+        final filename = file.name.isNotEmpty ? file.name : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
+
+        if (bytes == null || bytes.isEmpty) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not read image data. Please choose another file.')),
+          );
+          return;
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('⏳ Uploading image directly to VPS...')),
@@ -389,6 +403,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(8, '⚙️ Telegram & App Settings'),
                 const SizedBox(width: 8),
                 _buildTabBtn(9, '🔔 Push Notifications & FCM Broadcast'),
+                const SizedBox(width: 8),
+                _buildTabBtn(10, '🎮 Tournament Modes & Covers (${widget.appState.tournamentModes.length})'),
               ],
             ),
           ),
@@ -404,6 +420,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 7) _buildBannersSection(),
           if (activeSection == 8) _buildSettingsSection(),
           if (activeSection == 9) _buildPushNotificationBroadcastSection(),
+          if (activeSection == 10) _buildTournamentModesManagementSection(),
         ],
       ),
     );
@@ -5052,6 +5069,324 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  // ==========================================
+  // --- 10. DYNAMIC TOURNAMENT MODES & COVERS ---
+  // ==========================================
+  Widget _buildTournamentModesManagementSection() {
+    final modes = widget.appState.tournamentModes;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'DYNAMIC GAME MODES & FILTERS',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED), letterSpacing: 1.2),
+                  ),
+                  Text(
+                    'Tournament Modes & Cover Banners',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3E8FF),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${modes.length} MODES',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Create new custom game modes (e.g. Gun Game, Custom Squad) with custom banners. Any mode created here automatically appears as a category banner and filter in the Home Lobby!',
+            style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B), height: 1.4),
+          ),
+          const SizedBox(height: 16),
+
+          // 1. ACTIVE MODES LIST
+          const Text('ACTIVE TOURNAMENT MODES:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 10),
+
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: modes.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final modeItem = modes[index];
+
+              return Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: modeItem.enabled ? const Color(0xFFCBD5E1) : Colors.red.shade200),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        // Mode Banner Thumbnail
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            width: 80,
+                            height: 48,
+                            color: const Color(0xFF0F172A),
+                            child: MatchBannerImage(bannerImage: modeItem.bannerUrl, height: 48),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Title & Info
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Text(
+                                    modeItem.title,
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFEDE9FE),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(modeItem.key, style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED))),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                'Slots: ${modeItem.defaultSlots} Players | Base: ${modeItem.mode.toUpperCase()}',
+                                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        // Enable / Disable Switch
+                        Switch(
+                          value: modeItem.enabled,
+                          activeColor: AppTheme.primaryAmber,
+                          onChanged: (val) async {
+                            final updated = modeItem.copyWith(enabled: val);
+                            await widget.appState.adminSaveTournamentMode(updated);
+                            if (!mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Mode "${modeItem.title}" ${val ? "Enabled" : "Disabled"}!')),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 14),
+
+          // 2. CREATE NEW MODE FORM
+          const Text('➕ CREATE NEW TOURNAMENT MODE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _modeTitleController,
+                  decoration: InputDecoration(
+                    labelText: 'Mode Display Title',
+                    hintText: 'e.g. Gun Game (1v1) or Squad War',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _modeKeyController,
+                  decoration: InputDecoration(
+                    labelText: 'Mode Unique Key',
+                    hintText: 'e.g. GUN_GAME or CS_CUSTOM',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: _modeSelectedBaseMode,
+                  decoration: InputDecoration(
+                    labelText: 'Base Game Type',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'br', child: Text('Full Map Battle Royale (BR)')),
+                    DropdownMenuItem(value: 'cs', child: Text('Clash Squad (CS 4v4)')),
+                    DropdownMenuItem(value: 'loneWolf', child: Text('Lone Wolf (1v1 / 2v2)')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) setState(() => _modeSelectedBaseMode = val);
+                  },
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextField(
+                  controller: _modeSlotsController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Default Player Slots',
+                    hintText: 'e.g. 48, 8, 2',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
+            controller: _modeBannerController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              labelText: 'Mode Cover Banner Image URL',
+              hintText: 'e.g. https://i.ibb.co/... or VPS Upload',
+              prefixIcon: const Icon(Icons.image, color: Color(0xFF7C3AED)),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+          const SizedBox(height: 6),
+
+          // Upload & Gallery Buttons for New Mode
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.amberAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _pickAndUploadImage(_modeBannerController),
+                  icon: const Icon(Icons.cloud_upload_rounded, size: 16),
+                  label: const Text('UPLOAD BANNER TO VPS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF0F172A),
+                    side: const BorderSide(color: Color(0xFFCBD5E1)),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => _openVpsGalleryDialog(_modeBannerController),
+                  icon: const Icon(Icons.photo_library_outlined, size: 16),
+                  label: const Text('VPS GALLERY PICKER', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          // Live Preview Box
+          Container(
+            height: 90,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: MatchBannerImage(bannerImage: _modeBannerController.text.trim(), height: 90),
+          ),
+          const SizedBox(height: 16),
+
+          // Save Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                final key = _modeKeyController.text.trim().toUpperCase();
+                final title = _modeTitleController.text.trim();
+                final banner = _modeBannerController.text.trim();
+                final slots = int.tryParse(_modeSlotsController.text.trim()) ?? 48;
+
+                if (key.isEmpty || title.isEmpty || banner.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill all mode details and banner URL!')),
+                  );
+                  return;
+                }
+
+                final newMode = TournamentModeItem(
+                  key: key,
+                  title: title,
+                  bannerUrl: banner,
+                  defaultSlots: slots,
+                  mode: _modeSelectedBaseMode,
+                  enabled: true,
+                );
+
+                await widget.appState.adminSaveTournamentMode(newMode);
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: AppTheme.winningGreen,
+                    content: Text('Tournament Mode "$title" created & published to Lobby!'),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.add_circle_outline, size: 18),
+              label: const Text('SAVE & PUBLISH MODE TO LOBBY', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+            ),
+          ),
         ],
       ),
     );

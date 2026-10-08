@@ -43,6 +43,24 @@ class TournamentModeItem {
     'mode': mode,
     'enabled': enabled,
   };
+
+  TournamentModeItem copyWith({
+    String? key,
+    String? title,
+    String? bannerUrl,
+    int? defaultSlots,
+    String? mode,
+    bool? enabled,
+  }) {
+    return TournamentModeItem(
+      key: key ?? this.key,
+      title: title ?? this.title,
+      bannerUrl: bannerUrl ?? this.bannerUrl,
+      defaultSlots: defaultSlots ?? this.defaultSlots,
+      mode: mode ?? this.mode,
+      enabled: enabled ?? this.enabled,
+    );
+  }
 }
 
 
