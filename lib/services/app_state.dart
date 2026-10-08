@@ -13,6 +13,7 @@ import '../models/voucher_model.dart';
 import '../models/banner_model.dart';
 import '../models/notification_model.dart';
 import '../models/leaderboard_model.dart';
+import '../models/referral_record.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
@@ -38,6 +39,8 @@ class AppState extends ChangeNotifier {
   List<AppNotification> notifications = [];
   List<AppNotification> allGlobalNotifications = [];
   List<WeeklyDistributionRecord> weeklyDistributions = [];
+  List<ReferralRecord> referralRecords = [];
+  List<ReferralRecord> allGlobalReferralRecords = [];
   List<BannerModel> banners = [];
   static const String vpsBaseUrl = 'https://vps.swgayanbhumi.in';
   static const String vpsApiUrl = '$vpsBaseUrl/api';
@@ -2093,7 +2096,7 @@ class AppState extends ChangeNotifier {
   }
 
   /// Compute weekly leaderboard with dynamic top 3 ₹100 prize pool (₹50, ₹30, ₹20)
-  List<LeaderboardEntry> getWeeklyLeaderboard({String filter = 'WEEKLY'}) {
+  List<LeaderboardEntry> getWeeklyLeaderboard({String filter = 'WEEKLY', List<UserModel>? registeredUsers}) {
     final now = DateTime.now();
     final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1), 0, 0, 0);
 
@@ -2125,6 +2128,7 @@ class AppState extends ChangeNotifier {
             'matchesPlayed': 0,
             'winningsCash': 0.0,
             'rewardCoins': 0,
+            'totalReferrals': 0,
           };
         }
 
@@ -2137,7 +2141,29 @@ class AppState extends ChangeNotifier {
       }
     }
 
-    // 2. Ensure current logged-in user is registered in the pool
+    // 2. Include registered users if supplied
+    if (registeredUsers != null) {
+      for (var u in registeredUsers) {
+        if (!playerStats.containsKey(u.uid) && u.uid != 'user_guest') {
+          playerStats[u.uid] = {
+            'uid': u.uid,
+            'displayName': u.displayName,
+            'inGameName': u.inGameName ?? u.displayName,
+            'inGameUid': u.inGameUid ?? '897654321',
+            'inGameLevel': u.inGameLevel,
+            'avatarUrl': u.avatarUrl,
+            'kills': filter == 'WEEKLY' ? (u.stats.totalKills > 0 ? (u.stats.totalKills % 15) : 0) : u.stats.totalKills,
+            'matchesWon': filter == 'WEEKLY' ? (u.stats.matchesWon > 0 ? (u.stats.matchesWon % 5) : 0) : u.stats.matchesWon,
+            'matchesPlayed': filter == 'WEEKLY' ? (u.stats.matchesPlayed > 0 ? (u.stats.matchesPlayed % 8) : 0) : u.stats.matchesPlayed,
+            'winningsCash': filter == 'WEEKLY' ? (u.stats.totalWinningsCash > 0 ? (u.stats.totalWinningsCash % 200) : 0.0) : u.stats.totalWinningsCash,
+            'rewardCoins': u.wallet.rewardCoins,
+            'totalReferrals': u.totalReferrals,
+          };
+        }
+      }
+    }
+
+    // 3. Ensure current logged-in user is registered in the pool
     if (user.uid.isNotEmpty && user.uid != 'user_guest') {
       if (!playerStats.containsKey(user.uid)) {
         playerStats[user.uid] = {
@@ -2152,6 +2178,7 @@ class AppState extends ChangeNotifier {
           'matchesPlayed': filter == 'WEEKLY' ? (user.stats.matchesPlayed > 0 ? (user.stats.matchesPlayed % 8) : 0) : user.stats.matchesPlayed,
           'winningsCash': filter == 'WEEKLY' ? (user.stats.totalWinningsCash > 0 ? (user.stats.totalWinningsCash % 200) : 0.0) : user.stats.totalWinningsCash,
           'rewardCoins': user.wallet.rewardCoins,
+          'totalReferrals': user.totalReferrals,
         };
       } else {
         // Enhance with user model details
@@ -2160,105 +2187,11 @@ class AppState extends ChangeNotifier {
         playerStats[user.uid]!['inGameUid'] = user.inGameUid ?? playerStats[user.uid]!['inGameUid'];
         playerStats[user.uid]!['inGameLevel'] = user.inGameLevel;
         playerStats[user.uid]!['avatarUrl'] = user.avatarUrl;
+        playerStats[user.uid]!['totalReferrals'] = user.totalReferrals;
       }
     }
 
-    // 3. Fallback active community esports competitors for full leaderboard vitality
-    final List<Map<String, dynamic>> fallbackPlayers = [
-      {
-        'uid': 'esports_pro_01',
-        'displayName': '⚡ RAISTAR_OP',
-        'inGameName': 'RAISTAR_OP',
-        'inGameUid': '109283746',
-        'inGameLevel': 78,
-        'kills': 42,
-        'matchesWon': 7,
-        'matchesPlayed': 12,
-        'winningsCash': 320.0,
-        'rewardCoins': 450,
-      },
-      {
-        'uid': 'esports_pro_02',
-        'displayName': '👑 TOTAL_GAMING_FAN',
-        'inGameName': 'AJJU_BHAI_99',
-        'inGameUid': '203948571',
-        'inGameLevel': 72,
-        'kills': 35,
-        'matchesWon': 5,
-        'matchesPlayed': 10,
-        'winningsCash': 240.0,
-        'rewardCoins': 320,
-      },
-      {
-        'uid': 'esports_pro_03',
-        'displayName': '🔥 BADGE_99_KILLER',
-        'inGameName': 'BADGE_99_PRO',
-        'inGameUid': '394857201',
-        'inGameLevel': 69,
-        'kills': 28,
-        'matchesWon': 4,
-        'matchesPlayed': 9,
-        'winningsCash': 180.0,
-        'rewardCoins': 260,
-      },
-      {
-        'uid': 'esports_pro_04',
-        'displayName': '🎯 DESI_GAMER_YT',
-        'inGameName': 'AMIT_BHAI_YT',
-        'inGameUid': '485720193',
-        'inGameLevel': 66,
-        'kills': 22,
-        'matchesWon': 3,
-        'matchesPlayed': 8,
-        'winningsCash': 120.0,
-        'rewardCoins': 180,
-      },
-      {
-        'uid': 'esports_pro_05',
-        'displayName': '🦁 TONY_STARK_FF',
-        'inGameName': 'TONY_ESPORTS',
-        'inGameUid': '594837261',
-        'inGameLevel': 64,
-        'kills': 18,
-        'matchesWon': 2,
-        'matchesPlayed': 7,
-        'winningsCash': 90.0,
-        'rewardCoins': 140,
-      },
-      {
-        'uid': 'esports_pro_06',
-        'displayName': '⚔️ SKY_LORD_LEGEND',
-        'inGameName': 'SKYLORD_PRO',
-        'inGameUid': '609483721',
-        'inGameLevel': 61,
-        'kills': 14,
-        'matchesWon': 2,
-        'matchesPlayed': 6,
-        'winningsCash': 70.0,
-        'rewardCoins': 100,
-      },
-      {
-        'uid': 'esports_pro_07',
-        'displayName': '🚀 GYANGAMING_ARMY',
-        'inGameName': 'GYAN_SUJAN_99',
-        'inGameUid': '719283405',
-        'inGameLevel': 59,
-        'kills': 11,
-        'matchesWon': 1,
-        'matchesPlayed': 5,
-        'winningsCash': 50.0,
-        'rewardCoins': 80,
-      },
-    ];
-
-    for (var fb in fallbackPlayers) {
-      if (!playerStats.containsKey(fb['uid'])) {
-        playerStats[fb['uid'] as String] = fb;
-      }
-    }
-
-    // 4. Calculate Leaderboard Points:
-    // Formula: (Kills * 10) + (Wins * 50) + (WinningsCash * 2)
+    // 4. Calculate Leaderboard Points for REAL users only (Formula: (Kills * 10) + (Wins * 50) + (WinningsCash * 2) + (Referrals * 20))
     final List<LeaderboardEntry> rawList = [];
     playerStats.forEach((uid, data) {
       final kills = (data['kills'] ?? 0) as int;
@@ -2266,7 +2199,8 @@ class AppState extends ChangeNotifier {
       final played = (data['matchesPlayed'] ?? 0) as int;
       final cash = ((data['winningsCash'] ?? 0) as num).toDouble();
       final coins = (data['rewardCoins'] ?? 0) as int;
-      final totalPoints = (kills * 10) + (wins * 50) + (cash * 2).toInt();
+      final referrals = (data['totalReferrals'] ?? 0) as int;
+      final totalPoints = (kills * 10) + (wins * 50) + (cash * 2).toInt() + (referrals * 20);
 
       rawList.add(
         LeaderboardEntry(
@@ -2302,9 +2236,13 @@ class AppState extends ChangeNotifier {
       final item = rawList[i];
       final rank = i + 1;
       double prize = 0.0;
-      if (rank == 1) prize = 50.0;
-      else if (rank == 2) prize = 30.0;
-      else if (rank == 3) prize = 20.0;
+      if (rank == 1) {
+        prize = 50.0;
+      } else if (rank == 2) {
+        prize = 30.0;
+      } else if (rank == 3) {
+        prize = 20.0;
+      }
 
       rankedList.add(
         LeaderboardEntry(
@@ -2328,6 +2266,153 @@ class AppState extends ChangeNotifier {
     }
 
     return rankedList;
+  }
+
+  /// Apply referral code: credits 10 Bonus Cash + 10 Ad Coins to BOTH users
+  Future<Map<String, dynamic>> applyReferralCode(String rawCode) async {
+    final code = rawCode.trim().toUpperCase();
+    if (code.isEmpty) {
+      return {'success': false, 'message': 'Please enter a valid referral code'};
+    }
+
+    if (user.uid.isEmpty || user.uid == 'user_guest') {
+      return {'success': false, 'message': 'Please login to apply a referral code'};
+    }
+
+    if (user.referredBy != null && user.referredBy!.isNotEmpty) {
+      return {'success': false, 'message': 'You have already applied a referral code!'};
+    }
+
+    if (code == user.referralCode.toUpperCase()) {
+      return {'success': false, 'message': 'You cannot use your own referral code!'};
+    }
+
+    UserModel? referrer;
+    try {
+      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
+      for (var d in userDocs) {
+        final u = UserModel.fromJson(d);
+        if (u.referralCode.toUpperCase() == code && u.uid != user.uid) {
+          referrer = u;
+          break;
+        }
+      }
+    } catch (_) {}
+
+    // Fallback: Check standard 6-digit numeric or standard format
+    if (referrer == null && (code.length < 5)) {
+      return {'success': false, 'message': 'Invalid referral code. Please verify and try again.'};
+    }
+
+    // Reward: 10 Bonus Cash & 10 Ad Coins to BOTH users
+    const rewardBonusCash = 10.0;
+    const rewardAdCoins = 10;
+
+    user.wallet.bonusCash += rewardBonusCash;
+    user.wallet.adCoins += rewardAdCoins;
+    user.referredBy = code;
+    _syncUser();
+
+    // Create persistent ReferralRecord
+    final refRecord = ReferralRecord(
+      id: 'ref_${DateTime.now().millisecondsSinceEpoch}',
+      referrerUid: referrer?.uid ?? 'referrer_$code',
+      referrerName: referrer?.displayName ?? (referrer?.inGameName ?? 'Inviter ($code)'),
+      referrerCode: code,
+      referredUid: user.uid,
+      referredName: user.displayName.isNotEmpty ? user.displayName : (user.inGameName ?? 'New Player'),
+      createdAt: DateTime.now(),
+      bonusCashAwarded: rewardBonusCash,
+      adCoinsAwarded: rewardAdCoins,
+    );
+    allGlobalReferralRecords.insert(0, refRecord);
+    referralRecords.insert(0, refRecord);
+    _syncReferralRecord(refRecord);
+
+    // Transaction for current user
+    final userTxn = TransactionModel(
+      id: 'txn_ref_welcome_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.referralReward,
+      walletAffected: WalletType.bonusCash,
+      amount: rewardBonusCash,
+      currency: 'INR',
+      balanceBefore: user.wallet.bonusCash - rewardBonusCash,
+      balanceAfter: user.wallet.bonusCash,
+      status: 'SUCCESS',
+      description: '🎁 Referral Welcome Bonus (Code: $code) - ₹10 Bonus + 10 Ad Coins',
+      createdAt: DateTime.now(),
+    );
+    transactions.insert(0, userTxn);
+    allGlobalTransactions.insert(0, userTxn);
+    _syncTransaction(userTxn);
+
+    // Notification for current user
+    final userNotif = AppNotification(
+      id: 'notif_ref_user_${DateTime.now().millisecondsSinceEpoch}',
+      title: '🎁 10 Bonus Coins Credited!',
+      body: 'Welcome! You received 10 Bonus Cash + 10 Ad Coins for applying referral code $code.',
+      createdAt: DateTime.now(),
+      type: NotificationType.matchResult,
+      targetType: 'user',
+      targetId: user.uid,
+    );
+    notifications.insert(0, userNotif);
+    allGlobalNotifications.insert(0, userNotif);
+
+    // Credit referrer if located
+    if (referrer != null) {
+      referrer.wallet.bonusCash += rewardBonusCash;
+      referrer.wallet.adCoins += rewardAdCoins;
+      referrer.totalReferrals += 1;
+      referrer.totalReferralCoins += 10;
+
+      try {
+        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, referrer.uid, referrer.toJson());
+        await http.post(
+          Uri.parse("$vpsApiUrl/users"),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(referrer.toJson()),
+        ).timeout(const Duration(seconds: 4));
+      } catch (_) {}
+
+      final refTxn = TransactionModel(
+        id: 'txn_ref_bonus_${referrer.uid}_${DateTime.now().millisecondsSinceEpoch}',
+        userId: referrer.uid,
+        userName: referrer.displayName,
+        type: TransactionType.referralReward,
+        walletAffected: WalletType.bonusCash,
+        amount: rewardBonusCash,
+        currency: 'INR',
+        balanceBefore: referrer.wallet.bonusCash - rewardBonusCash,
+        balanceAfter: referrer.wallet.bonusCash,
+        status: 'SUCCESS',
+        description: '👥 Referral Reward from ${user.displayName} - ₹10 Bonus + 10 Ad Coins',
+        createdAt: DateTime.now(),
+      );
+      allGlobalTransactions.insert(0, refTxn);
+      _syncTransaction(refTxn);
+
+      final refNotif = AppNotification(
+        id: 'notif_ref_referrer_${DateTime.now().millisecondsSinceEpoch}',
+        title: '👥 New Friend Joined via Your Referral!',
+        body: '${user.displayName} joined using your referral code. ₹10 Bonus Cash + 10 Ad Coins credited to your wallet!',
+        createdAt: DateTime.now(),
+        type: NotificationType.matchResult,
+        targetType: 'user',
+        targetId: referrer.uid,
+      );
+      allGlobalNotifications.insert(0, refNotif);
+    }
+
+    notifyListeners();
+    return {
+      'success': true,
+      'message': 'Success! 10 Bonus Coins & 10 Ad Coins credited to your wallet.',
+      'bonusCash': rewardBonusCash,
+      'adCoins': rewardAdCoins,
+    };
   }
 
   /// Admin 1-Click Distribute ₹100 Weekly Championship Prizes (Rank 1: ₹50, Rank 2: ₹30, Rank 3: ₹20)
@@ -2905,6 +2990,20 @@ class AppState extends ChangeNotifier {
       } catch (e) {
         debugPrint('[AppState] Sync notifications error: $e');
       }
+
+      // 10. Sync Referral Records
+      try {
+        final refDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_referrals');
+        if (refDocs.isNotEmpty) {
+          final parsed = refDocs.map((d) => ReferralRecord.fromJson(d)).toList();
+          parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          allGlobalReferralRecords = parsed;
+          referralRecords = allGlobalReferralRecords.where((r) => r.referrerUid == user.uid || r.referrerCode == user.referralCode).toList();
+          _saveLocalReferralsCache();
+        }
+      } catch (e) {
+        debugPrint('[AppState] Sync referrals error: $e');
+      }
     } catch (e) {
       debugPrint('[AppState] Firestore live sync error: $e');
     } finally {
@@ -3104,5 +3203,28 @@ class AppState extends ChangeNotifier {
 
   Future<void> _syncVoucherClaim(VoucherClaim claim) async {
     await FirestoreRestService.setDocument('skillwinner_voucher_claims', claim.id, claim.toJson());
+  }
+
+  void _saveLocalReferralsCache() {
+    try {
+      final list = allGlobalReferralRecords.map((r) => r.toJson()).toList();
+      final jsonStr = jsonEncode(list);
+      WebStorageHelper.setItem('booyah_cached_referrals', jsonStr);
+      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_referrals', jsonStr));
+    } catch (e) {
+      debugPrint('[AppState] Save local referrals cache error: $e');
+    }
+  }
+
+  Future<void> _syncReferralRecord(ReferralRecord rec) async {
+    _saveLocalReferralsCache();
+    await FirestoreRestService.setDocument('skillwinner_referrals', rec.id, rec.toJson());
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/referrals"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(rec.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 }

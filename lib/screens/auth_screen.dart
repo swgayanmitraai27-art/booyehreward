@@ -32,6 +32,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   final _ignController = TextEditingController();
   final _uidController = TextEditingController();
   final _levelController = TextEditingController(text: '45');
+  final _referralCodeController = TextEditingController();
   bool _signupPassObscure = true;
   bool _isSignupLoading = false;
   String? _signupError;
@@ -54,6 +55,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     _ignController.dispose();
     _uidController.dispose();
     _levelController.dispose();
+    _referralCodeController.dispose();
     super.dispose();
   }
 
@@ -154,10 +156,18 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       if (authResult.success && authResult.user != null) {
         widget.appState.setUser(authResult.user!);
 
+        // Apply referral code if provided
+        final refCode = _referralCodeController.text.trim();
+        if (refCode.isNotEmpty) {
+          await widget.appState.applyReferralCode(refCode);
+        }
+
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('🎉 Account Created! Welcome bonus 5 🟡 Ad Coins credited!'),
+          SnackBar(
+            content: Text(refCode.isNotEmpty
+                ? '🎉 Account Created! 5 🟡 Signup + 10 🎁 Referral Bonus Coins Credited!'
+                : '🎉 Account Created! Welcome bonus 5 🟡 Ad Coins credited!'),
             backgroundColor: AppTheme.winningGreen,
           ),
         );

@@ -1,0 +1,10 @@
+{
+  "name": "booyah-rewards",
+  "version": "2.3.0",
+  "description": "Booyah Rewards Free Fire Esports Tournament Platform",
+  "scripts": {
+    "deploy": "deploy_update.bat",
+    "deploy:ps": "powershell -ExecutionPolicy Bypass -File ./deploy_update.ps1",
+    "build:web": "flutter build web --release"
+  }
+}

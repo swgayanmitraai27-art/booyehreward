@@ -151,6 +151,10 @@ class UserModel {
   DateTime createdAt;
   bool isBanned;
   bool isVip;
+  String referralCode;
+  String? referredBy;
+  int totalReferrals;
+  int totalReferralCoins;
 
   UserModel({
     required this.uid,
@@ -169,7 +173,13 @@ class UserModel {
     DateTime? createdAt,
     this.isBanned = false,
     this.isVip = false,
-  }) : createdAt = createdAt ?? DateTime.now();
+    String? referralCode,
+    this.referredBy,
+    this.totalReferrals = 0,
+    this.totalReferralCoins = 0,
+  })  : createdAt = createdAt ?? DateTime.now(),
+        referralCode = referralCode ??
+            '${(100000 + (uid.hashCode.abs() % 900000))}';
 
   Map<String, dynamic> toJson() => {
     'uid': uid,
@@ -199,45 +209,58 @@ class UserModel {
     'createdAt': createdAt.toIso8601String(),
     'isBanned': isBanned,
     'isVip': isVip,
+    'referralCode': referralCode,
+    'referredBy': referredBy,
+    'totalReferrals': totalReferrals,
+    'totalReferralCoins': totalReferralCoins,
   };
 
-  factory UserModel.fromJson(Map<String, dynamic> json) => UserModel(
-    uid: (json['uid'] ?? 'guest_${DateTime.now().millisecondsSinceEpoch}') as String,
-    displayName: (json['displayName'] ?? json['name'] ?? 'FreeFire Player') as String,
-    email: (json['email'] ?? 'player@booyahrewards.app') as String,
-    phoneNumber: (json['phoneNumber'] ?? json['phone'] ?? '+91 9876543210') as String,
-    inGameName: json['inGameName'] as String?,
-    inGameUid: json['inGameUid'] as String?,
-    inGameLevel: (json['inGameLevel'] ?? json['level'] ?? 45) as int,
-    password: json['password'] as String?,
-    role: (json['role'] ?? 'user') as String,
-    avatarUrl: json['avatarUrl'] as String?,
-    wallet: json['wallet'] != null
-        ? UserWallet.fromJson(json['wallet'] as Map<String, dynamic>)
-        : UserWallet(
-            adCoins: ((json['bonus_balance'] ?? json['ad_coins'] ?? 0) as num).toInt(),
-            rewardCoins: ((json['reward_coins'] ?? 0) as num).toInt(),
-            bonusCash: ((json['bonus_cash'] ?? 0) as num).toDouble(),
-            depositCash: ((json['real_balance'] ?? json['depositCash'] ?? 0) as num).toDouble(),
-            winningCash: ((json['total_winnings'] ?? json['winningCash'] ?? 0) as num).toDouble(),
-          ),
-    adTracker: json['adTracker'] != null
-        ? AdTracker.fromJson(json['adTracker'] as Map<String, dynamic>)
-        : AdTracker(adsWatchedToday: 0, adsWatchedSinceLastCoin: 0, dailyLimitRemaining: 30),
-    stats: json['stats'] != null
-        ? UserStats.fromJson(json['stats'] as Map<String, dynamic>)
-        : UserStats(
-            matchesPlayed: 0,
-            matchesWon: 0,
-            totalKills: 0,
-            totalWinningsCash: 0,
-            totalRewardCoinsWon: 0,
-            totalCoinsEarned: 0,
-          ),
-    createdAt: json['createdAt'] != null
-        ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
-        : DateTime.now(),
-    isBanned: (json['isBanned'] ?? false) as bool,
-    isVip: (json['isVip'] ?? false) as bool,
-  );
+  factory UserModel.fromJson(Map<String, dynamic> json) {
+    final uid = (json['uid'] ?? 'guest_${DateTime.now().millisecondsSinceEpoch}') as String;
+    final defaultRefCode = '${(100000 + (uid.hashCode.abs() % 900000))}';
+
+    return UserModel(
+      uid: uid,
+      displayName: (json['displayName'] ?? json['name'] ?? 'FreeFire Player') as String,
+      email: (json['email'] ?? 'player@booyahrewards.app') as String,
+      phoneNumber: (json['phoneNumber'] ?? json['phone'] ?? '+91 9876543210') as String,
+      inGameName: json['inGameName'] as String?,
+      inGameUid: json['inGameUid'] as String?,
+      inGameLevel: (json['inGameLevel'] ?? json['level'] ?? 45) as int,
+      password: json['password'] as String?,
+      role: (json['role'] ?? 'user') as String,
+      avatarUrl: json['avatarUrl'] as String?,
+      wallet: json['wallet'] != null
+          ? UserWallet.fromJson(json['wallet'] as Map<String, dynamic>)
+          : UserWallet(
+              adCoins: ((json['bonus_balance'] ?? json['ad_coins'] ?? 0) as num).toInt(),
+              rewardCoins: ((json['reward_coins'] ?? 0) as num).toInt(),
+              bonusCash: ((json['bonus_cash'] ?? 0) as num).toDouble(),
+              depositCash: ((json['real_balance'] ?? json['depositCash'] ?? 0) as num).toDouble(),
+              winningCash: ((json['total_winnings'] ?? json['winningCash'] ?? 0) as num).toDouble(),
+            ),
+      adTracker: json['adTracker'] != null
+          ? AdTracker.fromJson(json['adTracker'] as Map<String, dynamic>)
+          : AdTracker(adsWatchedToday: 0, adsWatchedSinceLastCoin: 0, dailyLimitRemaining: 30),
+      stats: json['stats'] != null
+          ? UserStats.fromJson(json['stats'] as Map<String, dynamic>)
+          : UserStats(
+              matchesPlayed: 0,
+              matchesWon: 0,
+              totalKills: 0,
+              totalWinningsCash: 0,
+              totalRewardCoinsWon: 0,
+              totalCoinsEarned: 0,
+            ),
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      isBanned: (json['isBanned'] ?? false) as bool,
+      isVip: (json['isVip'] ?? false) as bool,
+      referralCode: (json['referralCode'] ?? json['referral_code'] ?? defaultRefCode) as String,
+      referredBy: json['referredBy'] as String?,
+      totalReferrals: (json['totalReferrals'] ?? json['total_referrals'] ?? 0) as int,
+      totalReferralCoins: (json['totalReferralCoins'] ?? json['total_referral_coins'] ?? 0) as int,
+    );
+  }
 }

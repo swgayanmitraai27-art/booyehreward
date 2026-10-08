@@ -3,7 +3,7 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/match_rules_card.dart';
-import 'auth_screen.dart';
+import '../widgets/refer_and_earn_widget.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AppState appState;
@@ -144,6 +144,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 18),
+
+              // 🎁 REFER & EARN BONUS CARD
+              ReferAndEarnCard(appState: widget.appState),
               const SizedBox(height: 18),
 
               const Text(
@@ -332,29 +336,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               const SizedBox(height: 18),
 
-              // Logout Button
-              SizedBox(
+              // 🔒 1 Device = 1 Account Security Protection Card (No Logout Policy)
+              Container(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    await widget.appState.logout();
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushAndRemoveUntil(
-                      MaterialPageRoute(builder: (_) => AuthScreen(appState: widget.appState)),
-                      (route) => false,
-                    );
-                  },
-                  icon: const Icon(Icons.logout, color: Colors.redAccent, size: 18),
-                  label: const Text(
-                    'LOGOUT ACCOUNT',
-                    style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w800, color: Colors.redAccent),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: Color(0xFFFECDD3)),
-                    backgroundColor: const Color(0xFFFFF1F2),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(Icons.phonelink_lock, color: Colors.amber, size: 20),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Text(
+                                'DEVICE BOUND ACCOUNT',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF0F172A),
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFECFDF5),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                                ),
+                                child: const Text(
+                                  'ACTIVE ✓',
+                                  style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Anti-Fraud Protection: 1 Device = 1 Account. Your Free Fire UID, wallet balance, and tournament records are permanently locked to this device.',
+                            style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600, height: 1.3),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 24),

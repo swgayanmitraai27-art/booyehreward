@@ -20,6 +20,8 @@ class AuthService {
   static const String _currentUserKey = 'booyah_current_active_user_email';
   static const String _activeUserJsonKey = 'booyah_active_user_json';
   static const String _savedUidKey = 'saved_uid';
+  static const String _boundDeviceEmailKey = 'booyah_bound_device_email';
+  static const String _boundDeviceUidKey = 'booyah_bound_device_uid';
 
   /// 1. Sign Up New User (Instant Web Cache + SharedPreferences + Firestore + Firebase Auth)
   static Future<AuthResult> signUp({
@@ -32,6 +34,18 @@ class AuthService {
     required int inGameLevel,
   }) async {
     final cleanEmail = email.trim().toLowerCase();
+
+    // 0. Single-device account restriction (1 Device = 1 Account Policy)
+    final boundEmail = WebStorageHelper.getItem(_boundDeviceEmailKey);
+    final prefs = await SharedPreferences.getInstance();
+    final prefBoundEmail = prefs.getString(_boundDeviceEmailKey) ?? boundEmail;
+    if (prefBoundEmail != null && prefBoundEmail.isNotEmpty && prefBoundEmail != cleanEmail &&
+        cleanEmail != 'admin@booyah.com' && cleanEmail != 'swgayanmitra@gmail.com') {
+      return AuthResult(
+        success: false,
+        errorMessage: 'Anti-Abuse Rule: 1 Device allows only 1 registered account. This device is already bound to $prefBoundEmail.',
+      );
+    }
 
     // 1. Check local registered map
     final localMap = await _getLocalUsersMap();
@@ -359,6 +373,8 @@ class AuthService {
     WebStorageHelper.setItem(_activeUserJsonKey, userJsonStr);
     WebStorageHelper.setItem(_currentUserKey, email);
     WebStorageHelper.setItem(_savedUidKey, user.uid);
+    WebStorageHelper.setItem(_boundDeviceEmailKey, email);
+    WebStorageHelper.setItem(_boundDeviceUidKey, user.uid);
 
     // 2. SharedPreferences
     try {
@@ -366,6 +382,8 @@ class AuthService {
       await prefs.setString(_activeUserJsonKey, userJsonStr);
       await prefs.setString(_currentUserKey, email);
       await prefs.setString(_savedUidKey, user.uid);
+      await prefs.setString(_boundDeviceEmailKey, email);
+      await prefs.setString(_boundDeviceUidKey, user.uid);
     } catch (e) {
       debugPrint('[AuthService] SharedPreferences save error: $e');
     }

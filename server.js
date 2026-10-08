@@ -46,6 +46,7 @@ let db = {
   withdrawals: [],
   voucherClaims: [],
   weeklyDistributions: [],
+  referrals: [],
   banners: [],
   notifications: [],
   tournamentModes: [
@@ -680,6 +681,20 @@ app.post('/api/leaderboard/distribute', (req, res) => {
   saveDB();
   broadcast('WEEKLY_PRIZES_DISTRIBUTED', record);
   res.json({ success: true, record });
+});
+
+// 9c. Referral Attribution & Tracking API
+app.get('/api/referrals', (req, res) => {
+  res.json({ success: true, referrals: db.referrals || [] });
+});
+
+app.post('/api/referrals', (req, res) => {
+  const referral = req.body;
+  if (!db.referrals) db.referrals = [];
+  db.referrals.unshift(referral);
+  saveDB();
+  broadcast('REFERRAL_REGISTERED', referral);
+  res.json({ success: true, referral });
 });
 
 // 10. User Management

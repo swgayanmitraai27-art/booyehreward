@@ -3,6 +3,7 @@ import '../models/voucher_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
+import '../widgets/refer_and_earn_widget.dart';
 import '../services/ad_service.dart';
 
 class EarnCoinsScreen extends StatefulWidget {
@@ -393,6 +394,10 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            // 🎁 REFER & EARN BONUS CARD
+            ReferAndEarnCard(appState: widget.appState),
           ] else ...[
             // Tab 2: Rewards Store (Exchange Winning Coins for Play Codes & Diamonds)
             Container(

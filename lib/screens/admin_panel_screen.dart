@@ -101,6 +101,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _modeBannerController = TextEditingController(text: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png');
   final TextEditingController _modeSlotsController = TextEditingController(text: '48');
   String _modeSelectedBaseMode = 'br'; // 'br', 'cs', 'loneWolf'
+  final TextEditingController _referralSearchController = TextEditingController();
 
   @override
   void initState() {
@@ -277,6 +278,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _notifBodyController.dispose();
     _notifImageUrlController.dispose();
     _notifUserIdController.dispose();
+    _referralSearchController.dispose();
     super.dispose();
   }
 
@@ -383,7 +385,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final res = await widget.appState.adminDistributeWeeklyLeaderboardPrizes();
+              await widget.appState.adminDistributeWeeklyLeaderboardPrizes();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -512,6 +514,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(9, '🔔 Push Notifications & FCM Broadcast'),
                 const SizedBox(width: 8),
                 _buildTabBtn(10, '🎮 Tournament Modes & Covers (${widget.appState.tournamentModes.length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(11, '🎁 Referral Attribution (${widget.appState.allGlobalReferralRecords.length})'),
               ],
             ),
           ),
@@ -528,6 +532,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 8) _buildSettingsSection(),
           if (activeSection == 9) _buildPushNotificationBroadcastSection(),
           if (activeSection == 10) _buildTournamentModesManagementSection(),
+          if (activeSection == 11) _buildReferralLedgerSection(),
         ],
       ),
     );
@@ -6186,6 +6191,345 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               icon: const Icon(Icons.add_circle_outline, size: 18),
               label: const Text('SAVE & PUBLISH MODE TO LOBBY', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- 🎁 11. REFERRAL ATTRIBUTION & BONUS LEDGER SECTION ---
+  Widget _buildReferralLedgerSection() {
+    final allReferrals = widget.appState.allGlobalReferralRecords;
+    final query = _referralSearchController.text.trim().toLowerCase();
+
+    final filtered = allReferrals.where((r) {
+      if (query.isEmpty) return true;
+      return r.referrerCode.toLowerCase().contains(query) ||
+          r.referrerName.toLowerCase().contains(query) ||
+          r.referrerUid.toLowerCase().contains(query) ||
+          r.referredName.toLowerCase().contains(query) ||
+          r.referredUid.toLowerCase().contains(query);
+    }).toList();
+
+    final totalReferrals = allReferrals.length;
+    final totalBonusCash = allReferrals.fold(0.0, (sum, r) => sum + (r.bonusCashAwarded * 2));
+    final totalAdCoins = allReferrals.fold(0, (sum, r) => sum + (r.adCoinsAwarded * 2));
+    final uniqueReferrers = allReferrals.map((r) => r.referrerUid).toSet().length;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(8),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.card_giftcard, color: Color(0xFFD97706), size: 22),
+                  ),
+                  const SizedBox(width: 10),
+                  const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'REFERRAL ATTRIBUTION LEDGER',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF0F172A),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        'Track who referred whom, 6-digit codes & double bonus coins',
+                        style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withAlpha(20),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFF059669).withAlpha(60)),
+                ),
+                child: Text(
+                  'Total: $totalReferrals Referrals',
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Summary Metric Cards
+          GridView.count(
+            crossAxisCount: 4,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 8,
+            childAspectRatio: 1.8,
+            children: [
+              _buildRefMetricBox('TOTAL REFERRALS', '$totalReferrals', Icons.people, Colors.blue),
+              _buildRefMetricBox('ACTIVE REFERRERS', '$uniqueReferrers', Icons.stars, Colors.amber),
+              _buildRefMetricBox('BONUS CASH ISSUED', '₹${totalBonusCash.toInt()}', Icons.currency_rupee, AppTheme.winningGreen),
+              _buildRefMetricBox('AD COINS AWARDED', '$totalAdCoins 🟡', Icons.monetization_on, Colors.purple),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Search Bar
+          TextField(
+            controller: _referralSearchController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Search by Referrer Code, User Name, or UID...',
+              hintStyle: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+              suffixIcon: _referralSearchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 16),
+                      onPressed: () {
+                        _referralSearchController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Referral List
+          if (filtered.isEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                children: [
+                  const Icon(Icons.card_giftcard, size: 36, color: Color(0xFF94A3B8)),
+                  const SizedBox(height: 8),
+                  Text(
+                    query.isNotEmpty
+                        ? 'No referral records match "$query"'
+                        : 'No referrals recorded yet.\nUsers will appear here when they register using 6-digit referral codes.',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+            ),
+          ] else ...[
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: filtered.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, i) {
+                final ref = filtered[i];
+                final dateStr = '${ref.createdAt.day}/${ref.createdAt.month}/${ref.createdAt.year} ${_formatTime(ref.createdAt)}';
+
+                return Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Column(
+                          children: [
+                            const Text(
+                              'CODE',
+                              style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8)),
+                            ),
+                            Text(
+                              ref.referrerCode,
+                              style: const TextStyle(
+                                fontFamily: 'Rajdhani',
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.amber,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+
+                      // Referrer & Referee Info
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Text(
+                                  'Inviter: ',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF64748B)),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    ref.referrerName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${ref.referrerUid})',
+                                  style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Row(
+                              children: [
+                                const Text(
+                                  'Joined: ',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF059669)),
+                                ),
+                                Flexible(
+                                  child: Text(
+                                    ref.referredName,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '(${ref.referredUid})',
+                                  style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              dateStr,
+                              style: const TextStyle(fontSize: 9, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Reward Badge
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF059669).withAlpha(25),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF059669).withAlpha(80)),
+                            ),
+                            child: const Text(
+                              '+10₹ Bonus Each',
+                              style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withAlpha(30),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text(
+                              '+10 🟡 Ad Coins Each',
+                              style: TextStyle(fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRefMetricBox(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            children: [
+              Icon(icon, size: 12, color: color),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 7.5, fontWeight: FontWeight.w900, color: Color(0xFF64748B)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
           ),
         ],
       ),
