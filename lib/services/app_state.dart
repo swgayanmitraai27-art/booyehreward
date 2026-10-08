@@ -286,13 +286,309 @@ class AppState extends ChangeNotifier {
       role: 'user',
     );
 
-    // Matches, Transactions, Withdrawals, Voucher Claims will be populated directly from Firestore
-    matches = [];
+    matches = _getDefaultMatches();
+    banners = _getDefaultBanners();
     transactions = [];
     withdrawals = [];
     voucherClaims = [];
-    banners = [];
   }
+
+  List<BannerModel> _getDefaultBanners() => [
+    BannerModel(
+      id: 'banner_welcome_01',
+      title: '🔥 Official Telegram Support & Daily Updates',
+      imageUrl: 'https://i.ibb.co/W43nNfnY/Chat-GPT-Image-Oct-7-2026-10-03-53-AM-1.png',
+      clickUrl: 'http://t.me/booyahrewardofficial',
+      isActive: true,
+      createdAt: DateTime.now(),
+    ),
+  ];
+
+  List<MatchModel> _getDefaultMatches() => [
+    // 1. FREE TOURNAMENTS
+    MatchModel(
+      id: 'match_free_br_01',
+      title: '🆓 Free Fire BR Solo (Ad Coins)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.free,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 5,
+      prizePool: PrizePool(totalPool: 50, firstPlace: 25, secondPlace: 15, thirdPlace: 10, perKill: 2),
+      maxSlots: 48,
+      filledSlots: 14,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 60)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_free_cs_01',
+      title: '🆓 Free Fire CS 4v4 Squad (Ad Coins)',
+      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.free,
+      mode: MatchMode.cs,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.cs4v4,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 2,
+      prizePool: PrizePool(totalPool: 20, firstPlace: 20, perKill: 0),
+      maxSlots: 8,
+      filledSlots: 4,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 90)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_free_lw_01',
+      title: '🆓 Lone Wolf 1v1 Battle (Ad Coins)',
+      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.free,
+      mode: MatchMode.loneWolf,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.loneWolf1v1,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 2,
+      prizePool: PrizePool(totalPool: 10, firstPlace: 10, perKill: 0),
+      maxSlots: 2,
+      filledSlots: 1,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 45)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+
+    // 2. PAID TOURNAMENTS
+    MatchModel(
+      id: 'match_br_10_01',
+      title: 'BR Solo Quick Cup (₹10 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 10,
+      prizePool: PrizePool(totalPool: 360, firstPlace: 180, secondPlace: 100, thirdPlace: 80, perKill: 5),
+      maxSlots: 48,
+      filledSlots: 22,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 30)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_br_20_01',
+      title: 'BR Solo Pro Championship (₹20 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.purgatory,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 20,
+      prizePool: PrizePool(totalPool: 720, firstPlace: 360, secondPlace: 220, thirdPlace: 140, perKill: 10),
+      maxSlots: 48,
+      filledSlots: 31,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 75)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_br_50_01',
+      title: 'BR Elite Masters (₹50 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.kalahari,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 50,
+      prizePool: PrizePool(totalPool: 1800, firstPlace: 900, secondPlace: 540, thirdPlace: 360, perKill: 25),
+      maxSlots: 48,
+      filledSlots: 18,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 120)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_br_100_01',
+      title: 'BR High Roller Grand Slam (₹100 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 100,
+      prizePool: PrizePool(totalPool: 3600, firstPlace: 1800, secondPlace: 1100, thirdPlace: 700, perKill: 50),
+      maxSlots: 48,
+      filledSlots: 15,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(hours: 3)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_cs_10_01',
+      title: 'CS 4v4 Squad Clash (₹10 Entry)',
+      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.cs,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.cs4v4,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 10,
+      prizePool: PrizePool(totalPool: 60, firstPlace: 60, perKill: 0),
+      maxSlots: 8,
+      filledSlots: 6,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 40)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_cs_20_01',
+      title: 'CS 4v4 Squad Showdown (₹20 Entry)',
+      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.cs,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.cs4v4,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 20,
+      prizePool: PrizePool(totalPool: 120, firstPlace: 120, perKill: 0),
+      maxSlots: 8,
+      filledSlots: 4,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 80)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_cs_50_01',
+      title: 'CS 4v4 Squad Masters (₹50 Entry)',
+      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.cs,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.cs4v4,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 50,
+      prizePool: PrizePool(totalPool: 300, firstPlace: 300, perKill: 0),
+      maxSlots: 8,
+      filledSlots: 2,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(hours: 2)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_lw_10_01',
+      title: 'Lone Wolf 1v1 Dual (₹10 Entry)',
+      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.loneWolf,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.loneWolf1v1,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 10,
+      prizePool: PrizePool(totalPool: 15, firstPlace: 15, perKill: 0),
+      maxSlots: 2,
+      filledSlots: 1,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 25)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_lw_20_01',
+      title: 'Lone Wolf 1v1 Battle (₹20 Entry)',
+      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.loneWolf,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.loneWolf1v1,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 20,
+      prizePool: PrizePool(totalPool: 30, firstPlace: 30, perKill: 0),
+      maxSlots: 2,
+      filledSlots: 1,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(minutes: 50)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_mega_sunday_500',
+      title: '👑 Sunday Mega Championship (₹500 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 500,
+      prizePool: PrizePool(totalPool: 18000, firstPlace: 9000, secondPlace: 5400, thirdPlace: 3600, perKill: 150),
+      maxSlots: 48,
+      filledSlots: 42,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(days: 1)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+    MatchModel(
+      id: 'match_monthly_jackpot_1000',
+      title: '🏆 Monthly Grand Jackpot (₹1000 Entry)',
+      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
+      gameType: GameType.freeFire,
+      matchType: MatchType.paid,
+      mode: MatchMode.br,
+      teamType: TeamType.solo,
+      matchFormat: MatchFormat.solo,
+      map: MapType.bermuda,
+      entryFeeType: EntryFeeType.cash,
+      entryFee: 1000,
+      prizePool: PrizePool(totalPool: 36000, firstPlace: 18000, secondPlace: 10800, thirdPlace: 7200, perKill: 300),
+      maxSlots: 48,
+      filledSlots: 36,
+      status: MatchStatus.upcoming,
+      matchTime: DateTime.now().add(const Duration(days: 2)),
+      credentials: MatchCredentials(roomId: '', roomPassword: ''),
+      participants: [],
+    ),
+  ];
 
   List<BannerModel> get activeBanners {
     if (!isRealCashModeEnabled) {
@@ -322,25 +618,29 @@ class AppState extends ChangeNotifier {
       if (!isRealCashModeEnabled && m.matchType != MatchType.free) return false;
 
       // 1. Free / Paid Filter
-      if (selectedFilter == 'FREE' && m.matchType != MatchType.free) return false;
-      if (selectedFilter == 'PAID' && m.matchType != MatchType.paid) return false;
+      final filter = selectedFilter.toUpperCase();
+      if (filter == 'FREE' && m.matchType != MatchType.free) return false;
+      if (filter == 'PAID' && m.matchType != MatchType.paid) return false;
 
       // 2. Mode Filter (BR, CS, Lone Wolf)
-      if (selectedMode == 'BR' && m.mode != MatchMode.br) return false;
-      if (selectedMode == 'CS' && m.mode != MatchMode.cs) return false;
-      if (selectedMode == 'LONE_WOLF' && m.mode != MatchMode.loneWolf) return false;
+      final modeFilter = selectedMode.toUpperCase();
+      if (modeFilter == 'BR' && m.mode != MatchMode.br) return false;
+      if (modeFilter == 'CS' && m.mode != MatchMode.cs) return false;
+      if ((modeFilter == 'LONE_WOLF' || modeFilter == 'LONEWOLF') && m.mode != MatchMode.loneWolf) return false;
 
       // 3. Team Type Filter (Solo, Duo, Squad)
-      if (selectedTeamType == 'SOLO' && m.teamType != TeamType.solo) return false;
-      if (selectedTeamType == 'DUO' && m.teamType != TeamType.duo) return false;
-      if (selectedTeamType == 'SQUAD' && m.teamType != TeamType.squad) return false;
+      final teamFilter = selectedTeamType.toUpperCase();
+      if (teamFilter == 'SOLO' && m.teamType != TeamType.solo) return false;
+      if (teamFilter == 'DUO' && m.teamType != TeamType.duo) return false;
+      if (teamFilter == 'SQUAD' && m.teamType != TeamType.squad) return false;
 
       // 4. Status Filter (Upcoming, Ongoing, Completed/Resulted)
-      if (selectedStatus == 'UPCOMING' && m.status != MatchStatus.upcoming) return false;
-      if (selectedStatus == 'ONGOING' && m.status != MatchStatus.ongoing) return false;
-      if (selectedStatus == 'COMPLETED' && m.status != MatchStatus.completed) return false;
-      // In main 'ALL' lobby, only show active joinable matches (Upcoming & Live), completed matches are in Resulted tab
-      if (selectedStatus == 'ALL' && m.status == MatchStatus.completed) return false;
+      final statusFilter = selectedStatus.toUpperCase();
+      if (statusFilter == 'UPCOMING' && m.status != MatchStatus.upcoming && m.status != MatchStatus.roomFilling) return false;
+      if (statusFilter == 'ONGOING' && m.status != MatchStatus.ongoing) return false;
+      if (statusFilter == 'COMPLETED' && m.status != MatchStatus.completed) return false;
+      // In main 'ALL' lobby, only show active joinable matches (Upcoming, RoomFilling & Live), completed matches are in Resulted tab
+      if (statusFilter == 'ALL' && m.status == MatchStatus.completed) return false;
 
       return true;
     }).toList();
@@ -2043,10 +2343,24 @@ class AppState extends ChangeNotifier {
 
   Future<void> _syncUser() async {
     await AuthService.saveUser(user);
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/users"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(user.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
     await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
   }
 
   Future<void> _syncMatch(MatchModel m) async {
+    try {
+      await http.put(
+        Uri.parse("$vpsApiUrl/matches/${m.id}"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(m.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
     await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
   }
 

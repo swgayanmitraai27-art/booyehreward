@@ -542,39 +542,52 @@ class MatchModel {
   };
 
   factory MatchModel.fromJson(Map<String, dynamic> json) {
-    final formatStr = (json['matchFormat'] ?? json['format'] ?? 'solo').toString();
-    final format = MatchFormat.values.firstWhere((e) => e.name == formatStr, orElse: () => MatchFormat.solo);
+    final formatStr = (json['matchFormat'] ?? json['format'] ?? 'solo').toString().toLowerCase();
+    final format = MatchFormat.values.firstWhere(
+      (e) => e.name.toLowerCase() == formatStr,
+      orElse: () => MatchFormat.solo,
+    );
 
-    final modeStr = (json['mode'] ?? '').toString();
-    final mode = modeStr.isNotEmpty
-        ? MatchMode.values.firstWhere((e) => e.name == modeStr, orElse: () => _inferMode(format))
-        : _inferMode(format);
+    final modeStr = (json['mode'] ?? '').toString().toLowerCase();
+    MatchMode mode;
+    if (modeStr == 'cs' || modeStr == 'clash_squad' || modeStr == 'clashsquad') {
+      mode = MatchMode.cs;
+    } else if (modeStr == 'lonewolf' || modeStr == 'lone_wolf' || modeStr == 'lw') {
+      mode = MatchMode.loneWolf;
+    } else if (modeStr == 'br' || modeStr == 'battle_royale' || modeStr == 'battleroyale') {
+      mode = MatchMode.br;
+    } else {
+      mode = _inferMode(format);
+    }
 
-    final teamTypeStr = (json['teamType'] ?? '').toString();
-    final teamType = teamTypeStr.isNotEmpty
-        ? TeamType.values.firstWhere((e) => e.name == teamTypeStr, orElse: () => _inferTeamType(format))
-        : _inferTeamType(format);
+    final teamTypeStr = (json['teamType'] ?? '').toString().toLowerCase();
+    TeamType teamType;
+    if (teamTypeStr == 'squad' || teamTypeStr == '4v4') {
+      teamType = TeamType.squad;
+    } else if (teamTypeStr == 'duo' || teamTypeStr == '2v2') {
+      teamType = TeamType.duo;
+    } else if (teamTypeStr == 'solo' || teamTypeStr == '1v1') {
+      teamType = TeamType.solo;
+    } else {
+      teamType = _inferTeamType(format);
+    }
 
     MatchStatus parseStatus(dynamic st) {
       final s = (st ?? 'upcoming').toString().toLowerCase();
-      if (s == 'completed') return MatchStatus.completed;
-      if (s == 'ongoing') return MatchStatus.ongoing;
-      if (s == 'cancelled') return MatchStatus.cancelled;
-      if (s == 'filling_room' || s == 'roomfilling') return MatchStatus.roomFilling;
+      if (s.contains('completed') || s.contains('result')) return MatchStatus.completed;
+      if (s.contains('ongoing') || s.contains('live')) return MatchStatus.ongoing;
+      if (s.contains('cancel')) return MatchStatus.cancelled;
+      if (s.contains('filling') || s.contains('room')) return MatchStatus.roomFilling;
       return MatchStatus.upcoming;
     }
 
-    final matchTypeStr = (json['matchType'] ?? 'free').toString();
-    final matchType = MatchType.values.firstWhere(
-      (e) => e.name == matchTypeStr,
-      orElse: () => MatchType.free,
-    );
+    final matchTypeStr = (json['matchType'] ?? json['type'] ?? 'paid').toString().toLowerCase();
+    final matchType = matchTypeStr == 'free' ? MatchType.free : MatchType.paid;
 
-    final entryFeeTypeStr = (json['entryFeeType'] ?? (matchType == MatchType.paid ? 'cash' : 'adCoins')).toString();
-    final entryFeeType = EntryFeeType.values.firstWhere(
-      (e) => e.name == entryFeeTypeStr,
-      orElse: () => matchType == MatchType.paid ? EntryFeeType.cash : EntryFeeType.adCoins,
-    );
+    final entryFeeTypeStr = (json['entryFeeType'] ?? (matchType == MatchType.paid ? 'cash' : 'adCoins')).toString().toLowerCase();
+    final entryFeeType = entryFeeTypeStr == 'adcoins' || entryFeeTypeStr == 'ad_coins' || entryFeeTypeStr == 'free'
+        ? EntryFeeType.adCoins
+        : EntryFeeType.cash;
 
     final firstPrize = json['firstPrize'] != null ? ((json['firstPrize']) as num).toDouble() : null;
     final secondPrize = json['secondPrize'] != null ? ((json['secondPrize']) as num).toDouble() : null;
@@ -583,11 +596,14 @@ class MatchModel {
     final fifthPrize = json['fifthPrize'] != null ? ((json['fifthPrize']) as num).toDouble() : null;
     final perKill = json['perKill'] != null ? ((json['perKill']) as num).toDouble() : null;
 
-    final gameTypeStr = (json['gameType'] ?? 'freeFire').toString();
-    final gameType = GameType.values.firstWhere((e) => e.name == gameTypeStr, orElse: () => GameType.freeFire);
+    final gameTypeStr = (json['gameType'] ?? 'freeFire').toString().toLowerCase();
+    final gameType = gameTypeStr.contains('max') ? GameType.freeFireMax : GameType.freeFire;
 
-    final mapStr = (json['map'] ?? 'bermuda').toString();
-    final map = MapType.values.firstWhere((e) => e.name == mapStr, orElse: () => MapType.bermuda);
+    final mapStr = (json['map'] ?? 'bermuda').toString().toLowerCase();
+    final map = MapType.values.firstWhere(
+      (e) => e.name.toLowerCase() == mapStr,
+      orElse: () => MapType.bermuda,
+    );
 
     return MatchModel(
       id: (json['id'] ?? '').toString(),
