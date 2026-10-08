@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:file_picker/file_picker.dart';
-import 'package:image_picker/image_picker.dart';
 import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
@@ -15,6 +13,7 @@ import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
 import '../utils/url_launcher_util.dart';
 import '../utils/image_url_resolver.dart';
+import '../utils/universal_image_picker.dart';
 
 class AdminPanelScreen extends StatefulWidget {
   final AppState appState;
@@ -115,42 +114,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Future<void> _pickAndUploadImage(TextEditingController controller) async {
     try {
-      Uint8List? bytes;
-      String? filename;
-
-      try {
-        final picker = ImagePicker();
-        final picked = await picker.pickImage(
-          source: ImageSource.gallery,
-          maxWidth: 1920,
-          maxHeight: 1080,
-          imageQuality: 85,
-        );
-        if (picked != null) {
-          bytes = await picked.readAsBytes();
-          filename = picked.name;
-        }
-      } catch (_) {
-        try {
-          final result = await FilePicker.platform.pickFiles(
-            type: FileType.image,
-            withData: true,
-          );
-          if (result != null && result.files.isNotEmpty) {
-            bytes = result.files.first.bytes;
-            filename = result.files.first.name;
-          }
-        } catch (_) {}
-      }
-
-      if (bytes != null && bytes.isNotEmpty) {
-        final name = (filename != null && filename.isNotEmpty) ? filename : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
+      final pickedData = await pickImageFromDevice();
+      if (pickedData != null && pickedData.bytes.isNotEmpty) {
+        final name = pickedData.name.isNotEmpty
+            ? pickedData.name
+            : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('⏳ Uploading image directly to VPS...')),
         );
-        final uploadedUrl = await widget.appState.uploadBannerImageFile(bytes, name);
+        final uploadedUrl = await widget.appState.uploadBannerImageFile(pickedData.bytes, name);
         if (uploadedUrl != null) {
           setState(() {
             controller.text = uploadedUrl;
