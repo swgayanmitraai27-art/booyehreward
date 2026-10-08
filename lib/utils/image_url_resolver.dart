@@ -41,10 +41,11 @@ class ImageUrlResolver {
       return url.replaceAll('dl=0', 'raw=1');
     }
 
-    // Imgur direct image conversion
-    if (url.startsWith('https://imgur.com/') && !url.endsWith('.png') && !url.endsWith('.jpg') && !url.endsWith('.jpeg')) {
-      final id = url.split('/').last;
-      return 'https://i.imgur.com/$id.png';
+    // VPS IP / HTTP rewrite to HTTPS domain
+    if (url.contains('35.154.113.3') || url.startsWith('http://vps.swgayanbhumi.in')) {
+      url = url.replaceFirst('http://35.154.113.3', 'https://vps.swgayanbhumi.in')
+               .replaceFirst('https://35.154.113.3', 'https://vps.swgayanbhumi.in')
+               .replaceFirst('http://vps.swgayanbhumi.in', 'https://vps.swgayanbhumi.in');
     }
 
     return url;

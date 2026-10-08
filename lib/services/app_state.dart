@@ -1818,20 +1818,22 @@ class AppState extends ChangeNotifier {
         debugPrint('[AppState] Sync banners error: $e');
       }
 
-      // 8. Sync Telegram Support & App Config
-      try {
-        final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
-        if (configDoc != null) {
-          if (configDoc['telegramSupportUrl'] != null) {
-            telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+      // 8. Sync Telegram Support & App Config (Only if VPS failed)
+      if (!backendSyncSuccess) {
+        try {
+          final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
+          if (configDoc != null) {
+            if (configDoc['telegramSupportUrl'] != null) {
+              telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
+            }
+            if (configDoc['isRealCashModeEnabled'] != null) {
+              isRealCashModeEnabled = configDoc['isRealCashModeEnabled'] == true ||
+                  configDoc['isRealCashModeEnabled'].toString() == 'true';
+            }
           }
-          if (configDoc['isRealCashModeEnabled'] != null) {
-            isRealCashModeEnabled = configDoc['isRealCashModeEnabled'] == true ||
-                configDoc['isRealCashModeEnabled'].toString() == 'true';
-          }
+        } catch (e) {
+          debugPrint('[AppState] Sync telegram support & config error: $e');
         }
-      } catch (e) {
-        debugPrint('[AppState] Sync telegram support & config error: $e');
       }
 
       // 9. Sync Realtime Push Notifications
