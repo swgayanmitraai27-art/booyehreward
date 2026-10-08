@@ -115,28 +115,42 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   Future<void> _pickAndUploadImage(TextEditingController controller) async {
     try {
-      final result = await FilePicker.platform.pickFiles(
-        type: FileType.image,
-        withData: true,
-      );
-      if (result != null && result.files.isNotEmpty) {
-        final file = result.files.first;
-        final bytes = file.bytes;
-        final filename = file.name.isNotEmpty ? file.name : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
+      Uint8List? bytes;
+      String? filename;
 
-        if (bytes == null || bytes.isEmpty) {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not read image data. Please choose another file.')),
-          );
-          return;
+      try {
+        final picker = ImagePicker();
+        final picked = await picker.pickImage(
+          source: ImageSource.gallery,
+          maxWidth: 1920,
+          maxHeight: 1080,
+          imageQuality: 85,
+        );
+        if (picked != null) {
+          bytes = await picked.readAsBytes();
+          filename = picked.name;
         }
+      } catch (_) {
+        try {
+          final result = await FilePicker.platform.pickFiles(
+            type: FileType.image,
+            withData: true,
+          );
+          if (result != null && result.files.isNotEmpty) {
+            bytes = result.files.first.bytes;
+            filename = result.files.first.name;
+          }
+        } catch (_) {}
+      }
+
+      if (bytes != null && bytes.isNotEmpty) {
+        final name = (filename != null && filename.isNotEmpty) ? filename : 'banner_${DateTime.now().millisecondsSinceEpoch}.png';
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('⏳ Uploading image directly to VPS...')),
         );
-        final uploadedUrl = await widget.appState.uploadBannerImageFile(bytes, filename);
+        final uploadedUrl = await widget.appState.uploadBannerImageFile(bytes, name);
         if (uploadedUrl != null) {
           setState(() {
             controller.text = uploadedUrl;
