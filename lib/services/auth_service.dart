@@ -40,7 +40,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final prefBoundEmail = prefs.getString(_boundDeviceEmailKey) ?? boundEmail;
     if (prefBoundEmail != null && prefBoundEmail.isNotEmpty && prefBoundEmail != cleanEmail &&
-        cleanEmail != 'admin@booyah.com' && cleanEmail != 'swgayanmitra@gmail.com') {
+        cleanEmail != 'admin@booyah.com' && cleanEmail != 'swgayanmitra@gmail.com' && cleanEmail != 'swgayanbhumi@swgayanbhumi.in') {
       return AuthResult(
         success: false,
         errorMessage: 'Anti-Abuse Rule: 1 Device allows only 1 registered account. This device is already bound to $prefBoundEmail.',
@@ -114,7 +114,7 @@ class AuthService {
       inGameUid: inGameUid.trim(),
       inGameLevel: inGameLevel >= 40 ? inGameLevel : 45,
       password: password,
-      role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com') ? 'admin' : 'user',
+      role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') ? 'admin' : 'user',
       wallet: UserWallet(
         adCoins: 5,        // 5 🟡 Free Welcome Ad Coins (1 Free match entry)
         rewardCoins: 0,
@@ -224,7 +224,7 @@ class AuthService {
           inGameUid: '284719284',
           inGameLevel: 52,
           password: password,
-          role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com') ? 'admin' : 'user',
+          role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') ? 'admin' : 'user',
           wallet: UserWallet(
             adCoins: 5,
             rewardCoins: 0,
@@ -257,7 +257,7 @@ class AuthService {
     }
 
     // --- STEP 4: Admin Demo Account instant creation ---
-    if ((cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com') &&
+    if ((cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') &&
         (password == 'admin123' || password.isNotEmpty)) {
       final adminUser = UserModel(
         uid: 'admin_master_01',

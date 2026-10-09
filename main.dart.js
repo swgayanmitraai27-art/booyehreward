@@ -9721,7 +9721,7 @@ s=3
 return A.v(A.hL(),$async$oJ)
 case 3:b1=b4.bO(b5.am(c4.a,"booyah_bound_device_email"))
 if(b1==null)b1=b0
-if(b1!=null&&b1.length!==0&&b1!==a9&&!J.d(a9,"admin@booyah.com")&&!J.d(a9,"swgayanmitra@gmail.com")){q=new A.hw(!1,null,"Anti-Abuse Rule: 1 Device allows only 1 registered account. This device is already bound to "+b1+".")
+if(b1!=null&&b1.length!==0&&b1!==a9&&!J.d(a9,"admin@booyah.com")&&!J.d(a9,"swgayanmitra@gmail.com")&&!J.d(a9,"swgayanbhumi@swgayanbhumi.in")){q=new A.hw(!1,null,"Anti-Abuse Rule: 1 Device allows only 1 registered account. This device is already bound to "+b1+".")
 s=1
 break}s=4
 return A.v(A.vI(),$async$oJ)
@@ -9783,7 +9783,7 @@ a3=B.c.aD(c2)
 a4=B.c.aD(b8)
 a5=B.c.aD(b9)
 a6=b7>=40?b7:45
-a7=J.d(a9,"admin@booyah.com")||J.d(a9,"swgayanmitra@gmail.com")?"admin":"user"
+a7=J.d(a9,"admin@booyah.com")||J.d(a9,"swgayanmitra@gmail.com")||J.d(a9,"swgayanbhumi@swgayanbhumi.in")?"admin":"user"
 a8=A.Vb(A.AE(0,0,30,null),null,null,a0,a9,a6,a4,a5,!1,!1,c1,a3,null,null,a7,new A.qc(0,0,0,0,0,5),0,0,a,new A.qd(5,0,0,0,0))
 s=15
 return A.v(A.eF(a8),$async$oJ)
@@ -9879,7 +9879,7 @@ a3=J.am(f,"localId")
 e=a3==null?"usr_"+Date.now():a3
 a=B.b.gU(J.a5I(a6,"@"))
 a0=B.b.gU(J.a5I(a6,"@"))
-a4=J.d(a6,"admin@booyah.com")||J.d(a6,"swgayanmitra@gmail.com")?"admin":"user"
+a4=J.d(a6,"admin@booyah.com")||J.d(a6,"swgayanmitra@gmail.com")||J.d(a6,"swgayanbhumi@swgayanbhumi.in")?"admin":"user"
 d=A.Vb(A.AE(0,0,30,null),null,null,a,a6,52,"\u26a1"+a0.toUpperCase()+"\u26a1","284719284",!1,!1,b1,"+91 9935259374",null,null,a4,new A.qc(0,0,0,0,0,5),0,0,e,new A.qd(5,0,0,0,0))
 J.en(a7,a6,d.aW())
 s=31
@@ -9900,7 +9900,7 @@ s=27
 break
 case 24:s=2
 break
-case 27:if(J.d(a6,"admin@booyah.com")||J.d(a6,"swgayanmitra@gmail.com"))a=b1==="admin123"||b1.length!==0
+case 27:if(J.d(a6,"admin@booyah.com")||J.d(a6,"swgayanmitra@gmail.com")||J.d(a6,"swgayanbhumi@swgayanbhumi.in"))a=b1==="admin123"||b1.length!==0
 else a=!1
 s=a?33:34
 break

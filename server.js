@@ -103,6 +103,7 @@ let db = {
 
 // --- PERSISTENCE HELPERS ---
 function loadDB() {
+  console.log('[DB] Checking DB_FILE:', DB_FILE, 'Exists:', fs.existsSync(DB_FILE));
   try {
     if (fs.existsSync(DB_FILE)) {
       const data = fs.readFileSync(DB_FILE, 'utf8');
@@ -226,6 +227,7 @@ function createScheduledMatch({ key, titlePrefix, entryFee, maxSlots, mode, team
 }
 
 function seedInitialData() {
+  if (db.matches && db.matches.length > 0) return;
   db.banners = [
     {
       id: 'banner_tg_official',
@@ -504,6 +506,20 @@ app.delete('/api/matches/:id', (req, res) => {
   saveDB();
   broadcast('MATCH_DELETED', { id });
   res.json({ success: true, id });
+});
+
+app.post('/api/admin/reset_matches', (req, res) => {
+  db.matches = Array.isArray(req.body.matches) ? req.body.matches : [];
+  saveDB();
+  broadcast('MATCHES_UPDATED', db.matches);
+  res.json({ success: true, count: db.matches.length, matches: db.matches });
+});
+
+app.delete('/api/admin/delete_all_matches', (req, res) => {
+  db.matches = [];
+  saveDB();
+  broadcast('MATCHES_CLEARED', {});
+  res.json({ success: true, message: 'All matches deleted' });
 });
 
 // 5. Join Match Slot
