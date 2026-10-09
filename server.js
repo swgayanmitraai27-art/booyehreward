@@ -377,7 +377,10 @@ app.get('/api/sync', (req, res) => {
     banners: activeBanners,
     modes: db.tournamentModes || [],
     config: db.config,
-    notifications: db.notifications.slice(0, 30),
+    notifications: (db.notifications || []).slice(0, 30),
+    referrals: db.referrals || [],
+    transactions: (db.transactions || []).slice(0, 100),
+    allUsers: Object.values(db.users || {}),
     user,
     stats: db.stats
   });
@@ -718,7 +721,83 @@ app.post('/api/referrals', (req, res) => {
   res.json({ success: true, referral });
 });
 
+// Atomic Referral Application Endpoint
+app.post('/api/referrals/apply', (req, res) => {
+  const { referredUid, referralCode } = req.body;
+  const code = (referralCode || '').trim().toUpperCase();
+
+  const referredUser = db.users[referredUid];
+  if (!referredUser) return res.status(404).json({ success: false, message: 'User not found on server' });
+  if (referredUser.referredBy) return res.status(400).json({ success: false, message: 'You have already applied a referral code!' });
+  if (referredUser.referralCode && referredUser.referralCode.toUpperCase() === code) {
+    return res.status(400).json({ success: false, message: 'You cannot use your own referral code!' });
+  }
+
+  // Find referrer in db.users
+  let referrerUser = Object.values(db.users).find(u => (u.referralCode || '').toUpperCase() === code && u.uid !== referredUid);
+
+  const rewardBonusCash = 10;
+  const rewardAdCoins = 10;
+
+  // Credit referred user
+  if (!referredUser.wallet) referredUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+  referredUser.wallet.bonusCash = (referredUser.wallet.bonusCash || 0) + rewardBonusCash;
+  referredUser.wallet.adCoins = (referredUser.wallet.adCoins || 0) + rewardAdCoins;
+  referredUser.referredBy = code;
+
+  // Credit referrer if found
+  if (referrerUser) {
+    if (!referrerUser.wallet) referrerUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+    referrerUser.wallet.bonusCash = (referrerUser.wallet.bonusCash || 0) + rewardBonusCash;
+    referrerUser.wallet.adCoins = (referrerUser.wallet.adCoins || 0) + rewardAdCoins;
+    referrerUser.totalReferrals = (referrerUser.totalReferrals || 0) + 1;
+    referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + 10;
+
+    // Referrer notification
+    db.notifications.unshift({
+      id: `notif_ref_${Date.now()}`,
+      title: '👥 New Friend Joined via your Referral!',
+      body: `${referredUser.displayName || 'A friend'} used your code ${code}! ₹10 Bonus Cash + 10 Ad Coins credited to your wallet.`,
+      createdAt: new Date().toISOString(),
+      type: 'matchResult',
+      targetType: 'user',
+      targetId: referrerUser.uid
+    });
+  }
+
+  // Create Referral Record
+  const refRecord = {
+    id: `ref_${Date.now()}`,
+    referrerUid: referrerUser ? referrerUser.uid : `referrer_${code}`,
+    referrerName: referrerUser ? (referrerUser.displayName || referrerUser.inGameName || 'Friend') : `Inviter (${code})`,
+    referrerCode: code,
+    referredUid: referredUser.uid,
+    referredName: referredUser.displayName || referredUser.inGameName || 'New Player',
+    createdAt: new Date().toISOString(),
+    bonusCashAwarded: rewardBonusCash,
+    adCoinsAwarded: rewardAdCoins
+  };
+
+  if (!db.referrals) db.referrals = [];
+  db.referrals.unshift(refRecord);
+
+  saveDB();
+  broadcast('REFERRAL_APPLIED', { refRecord, referrerUser, referredUser });
+
+  res.json({
+    success: true,
+    message: 'Referral code applied! ₹10 Bonus Cash + 10 Ad Coins credited to both wallets.',
+    refRecord,
+    referredUser,
+    referrerUser
+  });
+});
+
 // 10. User Management
+app.get('/api/users', (req, res) => {
+  res.json({ success: true, users: Object.values(db.users || {}) });
+});
+
 app.get('/api/users/:uid', (req, res) => {
   const { uid } = req.params;
   const user = db.users[uid];

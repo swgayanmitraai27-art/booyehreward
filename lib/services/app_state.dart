@@ -2293,7 +2293,75 @@ class AppState extends ChangeNotifier {
       return {'success': false, 'message': 'You cannot use your own referral code!'};
     }
 
+    // --- STEP 1: Fast Atomic VPS Referral Application ---
+    try {
+      final res = await http.post(
+        Uri.parse("$vpsApiUrl/referrals/apply"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'referredUid': user.uid,
+          'referralCode': code,
+        }),
+      ).timeout(const Duration(seconds: 5));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          if (data['referredUser'] != null && data['referredUser'] is Map) {
+            user = UserModel.fromJson(Map<String, dynamic>.from(data['referredUser']));
+            await AuthService.saveUser(user);
+          } else {
+            user.wallet.bonusCash += 10.0;
+            user.wallet.adCoins += 10;
+            user.referredBy = code;
+            _syncUser();
+          }
+
+          if (data['refRecord'] != null && data['refRecord'] is Map) {
+            final rec = ReferralRecord.fromJson(Map<String, dynamic>.from(data['refRecord']));
+            allGlobalReferralRecords.removeWhere((r) => r.id == rec.id);
+            allGlobalReferralRecords.insert(0, rec);
+            referralRecords.removeWhere((r) => r.id == rec.id);
+            if (rec.referrerUid == user.uid || rec.referrerCode == user.referralCode) {
+              referralRecords.insert(0, rec);
+            }
+            _saveLocalReferralsCache();
+          }
+
+          notifyListeners();
+          return {
+            'success': true,
+            'message': '🎁 Referral Code Applied! 10 Bonus Cash + 10 Ad Coins credited to both wallets!'
+          };
+        } else {
+          return {
+            'success': false,
+            'message': data['message'] ?? 'Could not apply referral code.'
+          };
+        }
+      }
+    } catch (e) {
+      debugPrint('[AppState] VPS referral apply notice: $e');
+    }
+
     UserModel? referrer;
+    // Check VPS /users endpoint for referrer
+    try {
+      final userRes = await http.get(Uri.parse("$vpsApiUrl/users")).timeout(const Duration(seconds: 4));
+      if (userRes.statusCode == 200) {
+        final uData = jsonDecode(userRes.body);
+        if (uData['users'] is List) {
+          for (var d in (uData['users'] as List)) {
+            final u = UserModel.fromJson(Map<String, dynamic>.from(d));
+            if (u.referralCode.toUpperCase() == code && u.uid != user.uid) {
+              referrer = u;
+              break;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     try {
       final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
       for (var d in userDocs) {
@@ -2846,6 +2914,23 @@ class AppState extends ChangeNotifier {
               }).toList();
             }
 
+            // 7. Referrals from VPS
+            if (data['referrals'] is List) {
+              final parsed = (data['referrals'] as List).map((d) => ReferralRecord.fromJson(Map<String, dynamic>.from(d))).toList();
+              parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              allGlobalReferralRecords = parsed;
+              referralRecords = allGlobalReferralRecords.where((r) => r.referrerUid == user.uid || r.referrerCode == user.referralCode).toList();
+              _saveLocalReferralsCache();
+            }
+
+            // 8. Transactions from VPS
+            if (data['transactions'] is List) {
+              final parsed = (data['transactions'] as List).map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
+              parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              allGlobalTransactions = parsed;
+              transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
+              _saveLocalTxnCache();
+            }
 
             backendSyncSuccess = true;
           }
