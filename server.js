@@ -814,6 +814,53 @@ app.post('/api/users', (req, res) => {
     ...user,
     lastSeen: new Date().toISOString()
   };
+
+  // Automated Referral Attribution for older client builds
+  try {
+    const rawRefCode = (user.referredBy || '').trim().toUpperCase();
+    if (rawRefCode && rawRefCode.length >= 4) {
+      if (!db.referrals) db.referrals = [];
+      const alreadyCredited = db.referrals.some(r => r.referredUid === user.uid);
+      if (!alreadyCredited) {
+        const referrerUser = Object.values(db.users).find(u => (u.referralCode || '').toUpperCase() === rawRefCode && u.uid !== user.uid);
+        if (referrerUser) {
+          if (!referrerUser.wallet) referrerUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+          referrerUser.wallet.bonusCash = (referrerUser.wallet.bonusCash || 0) + 10;
+          referrerUser.wallet.adCoins = (referrerUser.wallet.adCoins || 0) + 10;
+          referrerUser.totalReferrals = (referrerUser.totalReferrals || 0) + 1;
+          referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + 10;
+
+          if (!db.notifications) db.notifications = [];
+          db.notifications.unshift({
+            id: `notif_ref_${Date.now()}`,
+            title: '👥 New Friend Joined via your Referral!',
+            body: `${user.displayName || user.inGameName || 'A friend'} joined using your code ${rawRefCode}! ₹10 Bonus Cash + 10 Ad Coins credited.`,
+            createdAt: new Date().toISOString(),
+            type: 'matchResult',
+            targetType: 'user',
+            targetId: referrerUser.uid
+          });
+
+          const refRecord = {
+            id: `ref_${Date.now()}`,
+            referrerUid: referrerUser.uid,
+            referrerName: referrerUser.displayName || referrerUser.inGameName || 'Friend',
+            referrerCode: rawRefCode,
+            referredUid: user.uid,
+            referredName: user.displayName || user.inGameName || 'New Player',
+            createdAt: new Date().toISOString(),
+            bonusCashAwarded: 10,
+            adCoinsAwarded: 10
+          };
+          db.referrals.unshift(refRecord);
+          broadcast('REFERRAL_APPLIED', { refRecord, referrerUser, referredUser: db.users[user.uid] });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[REFERRAL_AUTO_SYNC_ERR]', err);
+  }
+
   saveDB();
   res.json({ success: true, user: db.users[user.uid] });
 });

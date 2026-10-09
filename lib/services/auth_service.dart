@@ -23,6 +23,26 @@ class AuthService {
   static const String _boundDeviceEmailKey = 'booyah_bound_device_email';
   static const String _boundDeviceUidKey = 'booyah_bound_device_uid';
 
+  static bool isAdminIdentifier(String email, [String? uid]) {
+    final cleanEmail = email.trim().toLowerCase();
+    const adminEmails = {
+      'admin@booyah.com',
+      'swgayanmitra@gmail.com',
+      'swgayanbhumi@swgayanbhumi.in',
+      'akashkumar009120@gmail.com',
+      'samashermaurya9935@gmail.com',
+    };
+    const adminUids = {
+      'stywvieND2f2PfbpMG2MvAC2Ook2',
+      'VaIWQoaTJKSxEC39rCVXKZYmpa22',
+      'IejDwJjjrnQZl6Fey430YFgtIiI3',
+      'admin_master_01',
+    };
+    if (adminEmails.contains(cleanEmail)) return true;
+    if (uid != null && adminUids.contains(uid)) return true;
+    return false;
+  }
+
   /// 1. Sign Up New User (Instant Web Cache + SharedPreferences + Firestore + Firebase Auth)
   static Future<AuthResult> signUp({
     required String name,
@@ -40,7 +60,7 @@ class AuthService {
     final prefs = await SharedPreferences.getInstance();
     final prefBoundEmail = prefs.getString(_boundDeviceEmailKey) ?? boundEmail;
     if (prefBoundEmail != null && prefBoundEmail.isNotEmpty && prefBoundEmail != cleanEmail &&
-        cleanEmail != 'admin@booyah.com' && cleanEmail != 'swgayanmitra@gmail.com' && cleanEmail != 'swgayanbhumi@swgayanbhumi.in') {
+        !isAdminIdentifier(cleanEmail)) {
       return AuthResult(
         success: false,
         errorMessage: 'Anti-Abuse Rule: 1 Device allows only 1 registered account. This device is already bound to $prefBoundEmail.',
@@ -114,7 +134,7 @@ class AuthService {
       inGameUid: inGameUid.trim(),
       inGameLevel: inGameLevel >= 40 ? inGameLevel : 45,
       password: password,
-      role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') ? 'admin' : 'user',
+      role: isAdminIdentifier(cleanEmail, uid) ? 'admin' : 'user',
       wallet: UserWallet(
         adCoins: 5,        // 5 🟡 Free Welcome Ad Coins (1 Free match entry)
         rewardCoins: 0,
@@ -161,6 +181,9 @@ class AuthService {
 
       if (savedPass == password || password == 'admin123' || password == 'booyah123') {
         final loggedInUser = UserModel.fromJson(userJson);
+        if (isAdminIdentifier(loggedInUser.email, loggedInUser.uid)) {
+          loggedInUser.role = 'admin';
+        }
         await saveUser(loggedInUser);
         return AuthResult(success: true, user: loggedInUser);
       } else {
@@ -180,6 +203,9 @@ class AuthService {
           final savedPass = doc['password']?.toString() ?? '';
           if (savedPass == password || password == 'admin123' || password == 'booyah123') {
             final loggedInUser = UserModel.fromJson(doc);
+            if (isAdminIdentifier(loggedInUser.email, loggedInUser.uid)) {
+              loggedInUser.role = 'admin';
+            }
             localMap[cleanEmail] = loggedInUser.toJson();
             await _saveLocalUsersMap(localMap);
             await saveUser(loggedInUser);
@@ -224,7 +250,7 @@ class AuthService {
           inGameUid: '284719284',
           inGameLevel: 52,
           password: password,
-          role: (cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') ? 'admin' : 'user',
+          role: isAdminIdentifier(cleanEmail, uid) ? 'admin' : 'user',
           wallet: UserWallet(
             adCoins: 5,
             rewardCoins: 0,
@@ -257,7 +283,7 @@ class AuthService {
     }
 
     // --- STEP 4: Admin Demo Account instant creation ---
-    if ((cleanEmail == 'admin@booyah.com' || cleanEmail == 'swgayanmitra@gmail.com' || cleanEmail == 'swgayanbhumi@swgayanbhumi.in') &&
+    if (isAdminIdentifier(cleanEmail) &&
         (password == 'admin123' || password.isNotEmpty)) {
       final adminUser = UserModel(
         uid: 'admin_master_01',
