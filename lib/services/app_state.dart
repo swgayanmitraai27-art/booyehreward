@@ -59,7 +59,7 @@ class AppState extends ChangeNotifier {
   List<TournamentModeItem> get activeTournamentModes => tournamentModes.where((m) => m.enabled).toList();
   
   String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
-  bool isRealCashModeEnabled = true; // Synced with VPS config
+  bool isRealCashModeEnabled = false; // Default: Play Store Review Safe Mode (OFF)
 
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
@@ -181,6 +181,12 @@ class AppState extends ChangeNotifier {
           transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
           notifyListeners();
         }
+      }
+
+      final cachedSafeMode = WebStorageHelper.getItem('booyah_safe_mode_cash_enabled') ?? prefs.getString('booyah_safe_mode_cash_enabled');
+      if (cachedSafeMode != null) {
+        isRealCashModeEnabled = cachedSafeMode == 'true';
+        notifyListeners();
       }
     } catch (e) {
       debugPrint('[AppState] Load local cache error: $e');
@@ -2610,6 +2616,9 @@ class AppState extends ChangeNotifier {
   void adminDeleteMatch(String matchId) {
     matches.removeWhere((m) => m.id == matchId);
     _saveLocalMatchesCache();
+    try {
+      http.delete(Uri.parse("$vpsApiUrl/matches/$matchId")).timeout(const Duration(seconds: 4));
+    } catch (_) {}
     FirestoreRestService.deleteDocument(FirebaseConfig.matchesCollection, matchId);
     notifyListeners();
   }
@@ -2808,6 +2817,10 @@ class AppState extends ChangeNotifier {
               if (cfg['isRealCashModeEnabled'] != null) {
                 isRealCashModeEnabled = cfg['isRealCashModeEnabled'] == true ||
                     cfg['isRealCashModeEnabled'].toString() == 'true';
+                try {
+                  WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false');
+                  SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false'));
+                } catch (_) {}
               }
               if (cfg['brBannerUrl'] != null && cfg['brBannerUrl'].toString().isNotEmpty) {
                 brBannerUrl = cfg['brBannerUrl'].toString();
@@ -2944,6 +2957,10 @@ class AppState extends ChangeNotifier {
             if (configDoc['isRealCashModeEnabled'] != null) {
               isRealCashModeEnabled = configDoc['isRealCashModeEnabled'] == true ||
                   configDoc['isRealCashModeEnabled'].toString() == 'true';
+              try {
+                WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false');
+                SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false'));
+              } catch (_) {}
             }
           }
         } catch (e) {
@@ -3016,6 +3033,11 @@ class AppState extends ChangeNotifier {
   // --- ADMIN: GOOGLE PLAY REVIEW SAFE MODE TOGGLE (REAL CASH ON/OFF) ---
   Future<void> adminSetRealCashMode(bool enabled) async {
     isRealCashModeEnabled = enabled;
+    try {
+      WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', enabled ? 'true' : 'false');
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('booyah_safe_mode_cash_enabled', enabled ? 'true' : 'false');
+    } catch (_) {}
     notifyListeners();
 
     // 1. Sync to VPS Backend

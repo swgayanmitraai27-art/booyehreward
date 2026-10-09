@@ -77,7 +77,7 @@ let db = {
   ],
   config: {
     telegramSupportUrl: 'http://t.me/booyahrewardofficial',
-    isRealCashModeEnabled: true,
+    isRealCashModeEnabled: false,
     brBannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     csBannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     lwBannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
@@ -479,7 +479,12 @@ app.post('/api/matches', (req, res) => {
 app.put('/api/matches/:id', (req, res) => {
   const { id } = req.params;
   const index = db.matches.findIndex(m => m.id === id);
-  if (index === -1) return res.status(404).json({ success: false, message: 'Match not found' });
+  if (index === -1) {
+    db.matches.unshift(req.body);
+    saveDB();
+    broadcast('MATCH_CREATED', req.body);
+    return res.json({ success: true, match: req.body });
+  }
 
   const prevStatus = db.matches[index].status;
   db.matches[index] = { ...db.matches[index], ...req.body };
