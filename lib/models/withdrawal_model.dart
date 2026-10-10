@@ -5,7 +5,8 @@ class WithdrawalModel {
   String userId;
   String userName;
   String? userPhone;
-  double amount;
+  double amount; // INR Payout Amount (e.g. ₹50.0)
+  double coinAmount; // Winning Coins Redeemed (e.g. 500 Coins)
   String upiId;
   WithdrawalStatus status;
   DateTime requestedAt;
@@ -19,13 +20,14 @@ class WithdrawalModel {
     required this.userName,
     this.userPhone,
     required this.amount,
+    double? coinAmount,
     required this.upiId,
     required this.status,
     required this.requestedAt,
     this.processedAt,
     this.adminNotes,
     this.payoutTxnRef,
-  });
+  }) : coinAmount = coinAmount ?? amount;
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -33,6 +35,7 @@ class WithdrawalModel {
     'userName': userName,
     'userPhone': userPhone,
     'amount': amount,
+    'coinAmount': coinAmount,
     'upiId': upiId,
     'status': status.name,
     'requestedAt': requestedAt.toIso8601String(),
@@ -41,20 +44,24 @@ class WithdrawalModel {
     'payoutTxnRef': payoutTxnRef,
   };
 
-  factory WithdrawalModel.fromJson(Map<String, dynamic> json) => WithdrawalModel(
-    id: json['id'] ?? '',
-    userId: json['userId'] ?? '',
-    userName: json['userName'] ?? '',
-    userPhone: json['userPhone'],
-    amount: ((json['amount'] ?? 0) as num).toDouble(),
-    upiId: json['upiId'] ?? '',
-    status: WithdrawalStatus.values.firstWhere(
-      (e) => e.name == json['status'],
-      orElse: () => WithdrawalStatus.pending,
-    ),
-    requestedAt: json['requestedAt'] != null ? DateTime.parse(json['requestedAt']) : DateTime.now(),
-    processedAt: json['processedAt'] != null ? DateTime.parse(json['processedAt']) : null,
-    adminNotes: json['adminNotes'],
-    payoutTxnRef: json['payoutTxnRef'],
-  );
+  factory WithdrawalModel.fromJson(Map<String, dynamic> json) {
+    final amt = ((json['amount'] ?? 0) as num).toDouble();
+    return WithdrawalModel(
+      id: json['id'] ?? '',
+      userId: json['userId'] ?? '',
+      userName: json['userName'] ?? '',
+      userPhone: json['userPhone'],
+      amount: amt,
+      coinAmount: json['coinAmount'] != null ? ((json['coinAmount']) as num).toDouble() : amt,
+      upiId: json['upiId'] ?? '',
+      status: WithdrawalStatus.values.firstWhere(
+        (e) => e.name == json['status'],
+        orElse: () => WithdrawalStatus.pending,
+      ),
+      requestedAt: json['requestedAt'] != null ? DateTime.parse(json['requestedAt']) : DateTime.now(),
+      processedAt: json['processedAt'] != null ? DateTime.parse(json['processedAt']) : null,
+      adminNotes: json['adminNotes'],
+      payoutTxnRef: json['payoutTxnRef'],
+    );
+  }
 }

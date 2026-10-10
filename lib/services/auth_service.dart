@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'web_storage/web_storage.dart';
 import '../models/user_model.dart';
 import 'firebase_config.dart';
-import 'firestore_rest_service.dart';
 
 class AuthResult {
   final bool success;
@@ -76,53 +75,24 @@ class AuthService {
       );
     }
 
-    // 2. Check Firestore remote users collection
+    // 2. Check VPS remote users collection
     try {
-      final remoteDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      final existsRemotely = remoteDocs.any((d) => d['email']?.toString().toLowerCase() == cleanEmail);
-      if (existsRemotely) {
-        return AuthResult(
-          success: false,
-          errorMessage: 'This email is already registered in cloud database! Please Login.',
-        );
-      }
-    } catch (e) {
-      debugPrint('[AuthService] Remote check error: $e');
-    }
-
-    String uid = 'usr_${DateTime.now().millisecondsSinceEpoch}';
-
-    // 3. Try Firebase Auth REST API signUp
-    try {
-      final fbAuthUrl = Uri.parse(
-        "https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${FirebaseConfig.apiKey}",
-      );
-      final fbRes = await http.post(
-        fbAuthUrl,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': cleanEmail,
-          'password': password,
-          'returnSecureToken': true,
-        }),
-      ).timeout(const Duration(seconds: 10));
-
-      if (fbRes.statusCode == 200) {
-        final fbData = jsonDecode(fbRes.body);
-        uid = fbData['localId'] ?? uid;
-      } else {
-        final fbData = jsonDecode(fbRes.body);
-        final err = fbData['error']?['message']?.toString();
-        if (err == 'EMAIL_EXISTS') {
+      final vpsRes = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users")).timeout(const Duration(seconds: 6));
+      if (vpsRes.statusCode == 200) {
+        final List remoteDocs = jsonDecode(vpsRes.body);
+        final existsRemotely = remoteDocs.any((d) => d['email']?.toString().toLowerCase() == cleanEmail);
+        if (existsRemotely) {
           return AuthResult(
             success: false,
-            errorMessage: 'This email already exists in Firebase. Please Login with your password.',
+            errorMessage: 'This email is already registered on server! Please Login.',
           );
         }
       }
     } catch (e) {
-      debugPrint('[AuthService] Firebase Auth network exception (fallback UID): $e');
+      debugPrint('[AuthService] VPS Remote check error: $e');
     }
+
+    String uid = 'usr_${DateTime.now().millisecondsSinceEpoch}';
 
     // Create New UserModel
     final newUser = UserModel(
@@ -156,7 +126,7 @@ class AuthService {
       ),
     );
 
-    // 4. Save to all persistent layers (Local Web Cache + SharedPreferences + Firestore)
+    // 3. Save to all persistent layers (Local Web Cache + SharedPreferences + VPS Backend)
     await saveUser(newUser);
 
     // Update local registered dictionary
@@ -166,7 +136,7 @@ class AuthService {
     return AuthResult(success: true, user: newUser);
   }
 
-  /// 2. Login Existing User (Local Cache -> Firestore Database -> Firebase Auth -> Admin Demo)
+  /// 2. Login Existing User (Local Cache -> VPS Backend Database -> Admin Demo)
   static Future<AuthResult> login({
     required String email,
     required String password,
@@ -194,35 +164,36 @@ class AuthService {
       }
     }
 
-    // --- STEP 2: Check Firestore Cloud Database (skillwinner_users) ---
+    // --- STEP 2: Check VPS Cloud Database (https://vps.swgayanbhumi.in/api/users) ---
     try {
-      final remoteDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      for (var doc in remoteDocs) {
-        final docEmail = doc['email']?.toString().toLowerCase();
-        if (docEmail == cleanEmail) {
-          final savedPass = doc['password']?.toString() ?? '';
-          if (savedPass == password || password == 'admin123' || password == 'booyah123') {
-            final loggedInUser = UserModel.fromJson(doc);
-            if (isAdminIdentifier(loggedInUser.email, loggedInUser.uid)) {
-              loggedInUser.role = 'admin';
+      final vpsRes = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users")).timeout(const Duration(seconds: 6));
+      if (vpsRes.statusCode == 200) {
+        final List remoteDocs = jsonDecode(vpsRes.body);
+        for (var doc in remoteDocs) {
+          final docEmail = doc['email']?.toString().toLowerCase();
+          if (docEmail == cleanEmail) {
+            final savedPass = doc['password']?.toString() ?? '';
+            if (savedPass == password || password == 'admin123' || password == 'booyah123') {
+              final loggedInUser = UserModel.fromJson(Map<String, dynamic>.from(doc));
+              if (isAdminIdentifier(loggedInUser.email, loggedInUser.uid)) {
+                loggedInUser.role = 'admin';
+              }
+              localMap[cleanEmail] = loggedInUser.toJson();
+              await _saveLocalUsersMap(localMap);
+              await saveUser(loggedInUser);
+              return AuthResult(success: true, user: loggedInUser);
+            } else {
+              return AuthResult(
+                success: false,
+                errorMessage: 'Incorrect password for this email. Please try again.',
+              );
             }
-            localMap[cleanEmail] = loggedInUser.toJson();
-            await _saveLocalUsersMap(localMap);
-            await saveUser(loggedInUser);
-            return AuthResult(success: true, user: loggedInUser);
-          } else {
-            return AuthResult(
-              success: false,
-              errorMessage: 'Incorrect password for this email. Please try again.',
-            );
           }
         }
       }
     } catch (e) {
-      debugPrint('[AuthService] Firestore login lookup error: $e');
+      debugPrint('[AuthService] VPS login lookup error: $e');
     }
-
-    // --- STEP 3: Check Firebase Auth REST API ---
     try {
       final fbAuthUrl = Uri.parse(
         "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=${FirebaseConfig.apiKey}",
@@ -371,25 +342,29 @@ class AuthService {
       }
     }
 
-    // 4. Check saved_uid in Firestore as last fallback
+    // 4. Check saved_uid in VPS Backend as last fallback
     final savedUid = WebStorageHelper.getItem(_savedUidKey) ?? prefs.getString(_savedUidKey);
     if (savedUid != null && savedUid.isNotEmpty) {
       try {
-        final doc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, savedUid);
-        if (doc != null && doc.isNotEmpty) {
-          final u = UserModel.fromJson(doc);
-          await saveUser(u);
-          return u;
+        final res = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users")).timeout(const Duration(seconds: 5));
+        if (res.statusCode == 200) {
+          final List docs = jsonDecode(res.body);
+          final userDoc = docs.firstWhere((d) => d['uid'] == savedUid, orElse: () => null);
+          if (userDoc != null) {
+            final u = UserModel.fromJson(Map<String, dynamic>.from(userDoc));
+            await saveUser(u);
+            return u;
+          }
         }
       } catch (e) {
-        debugPrint('[AuthService] Fallback Firestore sync error: $e');
+        debugPrint('[AuthService] Fallback VPS user sync error: $e');
       }
     }
 
     return null;
   }
 
-  /// 4. Save/Update User Profile and Wallet Data to ALL Caches & Cloud
+  /// 4. Save/Update User Profile and Wallet Data to ALL Caches & VPS Cloud
   static Future<void> saveUser(UserModel user) async {
     final userJson = user.toJson();
     final userJsonStr = jsonEncode(userJson);
@@ -423,11 +398,15 @@ class AuthService {
       debugPrint('[AuthService] LocalMap save error: $e');
     }
 
-    // 4. Push to Firestore
+    // 4. Push directly to VPS Backend Database
     try {
-      await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, userJson);
+      await http.post(
+        Uri.parse("https://vps.swgayanbhumi.in/api/users"),
+        headers: {'Content-Type': 'application/json'},
+        body: userJsonStr,
+      ).timeout(const Duration(seconds: 5));
     } catch (e) {
-      debugPrint('[AuthService] Firestore save error: $e');
+      debugPrint('[AuthService] VPS user save notice: $e');
     }
   }
 

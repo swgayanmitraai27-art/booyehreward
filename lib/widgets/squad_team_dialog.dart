@@ -4,7 +4,6 @@ import '../models/match_model.dart';
 import '../models/team_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
-import 'deposit_dialog.dart';
 import 'match_rules_card.dart';
 
 class SquadTeamDialog extends StatefulWidget {
@@ -384,12 +383,12 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Entry Fee to Deduct:',
-                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+              const Text(
+                'Entry Requirement:',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
               ),
               Text(
-                isFree ? '🟡 ${fee.toInt()} Ad Coins' : '₹${fee.toInt()} Cash',
+                match.entryFeeDisplay,
                 style: AppTheme.gamingNumber(fontSize: 14, color: const Color(0xFF047857)),
               ),
             ],
@@ -456,12 +455,6 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
                       });
                     } else {
                       setState(() => errorText = res['message']);
-                      if (res['message'].toString().contains('Insufficient Cash')) {
-                        showDialog(
-                          context: context,
-                          builder: (c) => DepositDialog(appState: widget.appState),
-                        );
-                      }
                     }
                   },
             child: isSubmitting
@@ -553,9 +546,9 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Entry Fee to Deduct:', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46))),
+              const Text('Entry Requirement:', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46))),
               Text(
-                isFree ? '🟡 ${fee.toInt()} Ad Coins' : '₹${fee.toInt()} Cash',
+                match.entryFeeDisplay,
                 style: AppTheme.gamingNumber(fontSize: 14, color: const Color(0xFF047857)),
               ),
             ],
@@ -626,12 +619,6 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
                       });
                     } else {
                       setState(() => errorText = res['message']);
-                      if (res['message'].toString().contains('Insufficient Cash')) {
-                        showDialog(
-                          context: context,
-                          builder: (c) => DepositDialog(appState: widget.appState),
-                        );
-                      }
                     }
                   },
             child: isSubmitting

@@ -60,6 +60,8 @@ class AppState extends ChangeNotifier {
   
   String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
   bool isRealCashModeEnabled = false; // Default: Play Store Review Safe Mode (OFF)
+  double coinToRupeeRate = 0.10; // Default: 1000 Coins = ₹100 (1 Coin = ₹0.10)
+  int minWithdrawalCoins = 1000; // Minimum 1000 Winning Coins for withdrawal
 
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
@@ -316,10 +318,10 @@ class AppState extends ChangeNotifier {
   ];
 
   List<MatchModel> _getDefaultMatches() => [
-    // 1. FREE TOURNAMENTS (Ad Coins)
+    // 1. FREE FIRE BATTLE ROYALE (Watch Ads to Enter)
     MatchModel(
       id: 'FREE-BR-01',
-      title: '🆓 Free Fire BR Solo (Ad Coins)',
+      title: '⚡ Free Fire BR Solo Championship',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
       matchType: MatchType.free,
@@ -328,341 +330,76 @@ class AppState extends ChangeNotifier {
       matchFormat: MatchFormat.solo,
       map: MapType.bermuda,
       entryFeeType: EntryFeeType.adCoins,
-      entryFee: 5,
-      prizePool: PrizePool(totalPool: 50, firstPlace: 25, secondPlace: 15, thirdPlace: 10, perKill: 2),
+      entryFee: 1, // 1 Ad to Join
+      prizePool: PrizePool(totalPool: 500, firstPlace: 250, secondPlace: 150, thirdPlace: 100, perKill: 20),
       maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 60)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FREE-CS-01',
-      title: '🆓 Free Fire CS 4v4 Squad (Ad Coins)',
-      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.cs,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.cs4v4,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 2,
-      prizePool: PrizePool(totalPool: 20, firstPlace: 20, perKill: 0),
-      maxSlots: 8,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 90)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FREE-LW-01',
-      title: '🆓 Lone Wolf 1v1 Battle (Ad Coins)',
-      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.loneWolf,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.loneWolf1v1,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 2,
-      prizePool: PrizePool(totalPool: 10, firstPlace: 10, perKill: 0),
-      maxSlots: 2,
       filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(minutes: 45)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
-
-    // 2. 12 PAID DAILY TOURNAMENTS
-    // A. Battle Royale (4 Matches)
     MatchModel(
-      id: 'FF-BR-101',
-      title: 'BR Solo Quick Cup (₹10 Entry)',
+      id: 'FREE-BR-02',
+      title: '🔥 Free Fire BR Squad Mega Showdown',
       bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
       gameType: GameType.freeFire,
-      matchType: MatchType.paid,
+      matchType: MatchType.free,
       mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 10,
-      prizePool: PrizePool(totalPool: 360, firstPlace: 180, secondPlace: 100, thirdPlace: 80, perKill: 5),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 30)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-BR-102',
-      title: 'BR Solo Pro Championship (₹20 Entry)',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
+      teamType: TeamType.squad,
+      matchFormat: MatchFormat.squad,
       map: MapType.purgatory,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 20,
-      prizePool: PrizePool(totalPool: 720, firstPlace: 360, secondPlace: 220, thirdPlace: 140, perKill: 10),
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 2, // 2 Ads to Join
+      prizePool: PrizePool(totalPool: 1000, firstPlace: 500, secondPlace: 300, thirdPlace: 200, perKill: 30),
       maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 75)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-BR-103',
-      title: 'BR Elite Masters (₹50 Entry)',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.kalahari,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 50,
-      prizePool: PrizePool(totalPool: 1800, firstPlace: 900, secondPlace: 540, thirdPlace: 360, perKill: 25),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 120)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-BR-104',
-      title: 'BR High Roller Grand Slam (₹100 Entry)',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 100,
-      prizePool: PrizePool(totalPool: 3600, firstPlace: 1800, secondPlace: 1100, thirdPlace: 700, perKill: 50),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(hours: 3)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-
-    // B. Clash Squad (4 Matches)
-    MatchModel(
-      id: 'FF-CS-201',
-      title: 'CS 4v4 Squad Clash (₹10 Entry)',
-      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.cs,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.cs4v4,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 10,
-      prizePool: PrizePool(totalPool: 60, firstPlace: 60, perKill: 0),
-      maxSlots: 8,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 40)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-CS-202',
-      title: 'CS 4v4 Squad Showdown (₹20 Entry)',
-      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.cs,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.cs4v4,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 20,
-      prizePool: PrizePool(totalPool: 120, firstPlace: 120, perKill: 0),
-      maxSlots: 8,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 80)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-CS-203',
-      title: 'CS 4v4 Squad Masters (₹50 Entry)',
-      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.cs,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.cs4v4,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 50,
-      prizePool: PrizePool(totalPool: 300, firstPlace: 300, perKill: 0),
-      maxSlots: 8,
       filledSlots: 0,
       status: MatchStatus.upcoming,
       matchTime: DateTime.now().add(const Duration(hours: 2)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
+
+    // 2. CLASH SQUAD (4v4)
     MatchModel(
-      id: 'FF-CS-204',
-      title: 'CS 4v4 Champions League (₹100 Entry)',
+      id: 'FREE-CS-01',
+      title: '🎯 Free Fire CS 4v4 Squad Clash',
       bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
       gameType: GameType.freeFire,
-      matchType: MatchType.paid,
+      matchType: MatchType.free,
       mode: MatchMode.cs,
       teamType: TeamType.squad,
       matchFormat: MatchFormat.cs4v4,
       map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 100,
-      prizePool: PrizePool(totalPool: 600, firstPlace: 600, perKill: 0),
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 1, // 1 Ad to Join
+      prizePool: PrizePool(totalPool: 400, firstPlace: 400, perKill: 0),
       maxSlots: 8,
       filledSlots: 0,
       status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(hours: 4)),
+      matchTime: DateTime.now().add(const Duration(minutes: 60)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
 
-    // C. Lone Wolf 1v1 (4 Matches)
+    // 3. LONE WOLF (1v1)
     MatchModel(
-      id: 'FF-LW-301',
-      title: 'Lone Wolf 1v1 Dual (₹10 Entry)',
+      id: 'FREE-LW-01',
+      title: '🐺 Lone Wolf 1v1 Battle Master',
       bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
       gameType: GameType.freeFire,
-      matchType: MatchType.paid,
+      matchType: MatchType.free,
       mode: MatchMode.loneWolf,
       teamType: TeamType.solo,
       matchFormat: MatchFormat.loneWolf1v1,
       map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 10,
-      prizePool: PrizePool(totalPool: 15, firstPlace: 15, perKill: 0),
-      maxSlots: 2,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 25)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-LW-302',
-      title: 'Lone Wolf 1v1 Battle (₹20 Entry)',
-      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.loneWolf,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.loneWolf1v1,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 20,
-      prizePool: PrizePool(totalPool: 30, firstPlace: 30, perKill: 0),
-      maxSlots: 2,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 50)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-LW-303',
-      title: 'Lone Wolf 1v1 Masters (₹50 Entry)',
-      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.loneWolf,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.loneWolf1v1,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 50,
-      prizePool: PrizePool(totalPool: 75, firstPlace: 75, perKill: 0),
-      maxSlots: 2,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 90)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FF-LW-304',
-      title: 'Lone Wolf 1v1 Grand Slam (₹100 Entry)',
-      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.loneWolf,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.loneWolf1v1,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 100,
+      entryFeeType: EntryFeeType.adCoins,
+      entryFee: 1, // 1 Ad to Join
       prizePool: PrizePool(totalPool: 150, firstPlace: 150, perKill: 0),
       maxSlots: 2,
       filledSlots: 0,
       status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(hours: 3)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-
-    // 3. SPECIAL TOURNAMENTS
-    MatchModel(
-      id: 'MEGA-SUN-500',
-      title: '👑 Sunday Mega Championship (₹500 Entry)',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 500,
-      prizePool: PrizePool(totalPool: 18000, firstPlace: 9000, secondPlace: 5400, thirdPlace: 3600, perKill: 150),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(days: 1)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'JACKPOT-1000',
-      title: '🏆 Monthly Grand Jackpot (₹1000 Entry)',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.paid,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.cash,
-      entryFee: 1000,
-      prizePool: PrizePool(totalPool: 36000, firstPlace: 18000, secondPlace: 10800, thirdPlace: 7200, perKill: 300),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(days: 2)),
+      matchTime: DateTime.now().add(const Duration(minutes: 30)),
       credentials: MatchCredentials(roomId: '', roomPassword: ''),
       participants: [],
     ),
@@ -762,25 +499,18 @@ class AppState extends ChangeNotifier {
     double balAfter = 0.0;
     String walletUsed = '';
 
-    // DEDUCT ENTRY FEE WITH SMART PRIORITY (Bonus Cash -> Deposit Cash -> Winning Cash)
+    // DEDUCT ENTRY FEE OR CONFIRM ADS WATCHED
     if (match.matchType == MatchType.free) {
-      if (user.wallet.adCoins < match.entryFee) {
-        return {
-          'success': false,
-          'message': 'Insufficient Ad Coins! You need ${match.entryFee.toInt()} 🟡 Ad Coins. Watch ads to earn free coins.'
-        };
-      }
-      balBefore = user.wallet.adCoins.toDouble();
-      user.wallet.adCoins -= match.entryFee.toInt();
-      balAfter = user.wallet.adCoins.toDouble();
-      walletUsed = 'AD_COINS';
+      balBefore = user.wallet.winningCash;
+      balAfter = user.wallet.winningCash;
+      walletUsed = 'WATCH_ADS';
     } else {
       // PAID MATCH: Smart Priority Deduction
       final fee = match.entryFee;
       if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
-          'message': 'Insufficient Balance! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
+          'message': 'Insufficient Balance! Entry fee is ₹${fee.toInt()}.'
         };
       }
 
@@ -818,7 +548,7 @@ class AppState extends ChangeNotifier {
       inGameUid: user.inGameUid ?? inGameUid,
       slotNumber: chosenSlot,
       paidWith: walletUsed,
-      amountPaid: match.entryFee,
+      amountPaid: match.matchType == MatchType.free ? 0 : match.entryFee,
       joinedAt: DateTime.now(),
     );
 
@@ -826,23 +556,26 @@ class AppState extends ChangeNotifier {
     match.filledSlots += 1;
     user.stats.matchesPlayed += 1;
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchEntryFee,
-        walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
-        amount: -match.entryFee,
-        currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: balAfter,
-        status: 'SUCCESS',
-        description: 'Joined ${match.title} (Slot #$chosenSlot)',
-        createdAt: DateTime.now(),
-      ),
-    );
+    if (match.matchType != MatchType.free) {
+      transactions.insert(
+        0,
+        TransactionModel(
+          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+          userId: user.uid,
+          userName: user.displayName,
+          type: TransactionType.matchEntryFee,
+          walletAffected: WalletType.depositCash,
+          amount: -match.entryFee,
+          currency: 'INR',
+          balanceBefore: balBefore,
+          balanceAfter: balAfter,
+          status: 'SUCCESS',
+          description: 'Joined ${match.title} (Slot #$chosenSlot)',
+          createdAt: DateTime.now(),
+        ),
+      );
+      _syncTransaction(transactions.first);
+    }
 
     _syncUser();
     _checkAndTriggerMatchAutoStart(match);
@@ -902,7 +635,7 @@ class AppState extends ChangeNotifier {
       if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
-          'message': 'Insufficient Cash! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
+          'message': 'Please watch the required video ads to enter.'
         };
       }
 
@@ -1062,7 +795,7 @@ class AppState extends ChangeNotifier {
       if (user.wallet.totalPlayableCash < fee) {
         return {
           'success': false,
-          'message': 'Insufficient Cash! Entry fee is ₹${fee.toInt()}. Add cash via Razorpay.'
+          'message': 'Please watch the required video ads to enter.'
         };
       }
 
@@ -1380,20 +1113,30 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- WITHDRAWAL SYSTEM (UPI) ---
-  Map<String, dynamic> requestWithdrawal(double amount, String upiId) {
-    if (amount < 50) {
-      return {'success': false, 'message': 'Minimum withdrawal limit is ₹50.'};
+  // --- WITHDRAWAL SYSTEM (WINNING COINS TO UPI CASH) ---
+  Map<String, dynamic> requestWithdrawal(double coinsToWithdraw, String upiId) {
+    if (coinsToWithdraw < minWithdrawalCoins) {
+      return {
+        'success': false,
+        'message': 'Minimum withdrawal limit is $minWithdrawalCoins 🪙 Winning Coins (₹${(minWithdrawalCoins * coinToRupeeRate).toStringAsFixed(1)}).'
+      };
     }
-    if (user.wallet.winningCash < amount) {
-      return {'success': false, 'message': 'Insufficient Winning Cash (Available: ₹${user.wallet.winningCash.toInt()}). (Note: Free match Reward Coins are redeemed in Store).'};
+    if (user.wallet.winningCash < coinsToWithdraw) {
+      return {
+        'success': false,
+        'message': 'Insufficient Winning Coins! You have ${user.wallet.winningCash.toInt()} 🪙 Winning Coins available.'
+      };
     }
     if (!upiId.contains('@')) {
-      return {'success': false, 'message': 'Please enter a valid UPI ID (e.g. 9876543210@ybl or user@oksbi).'};
+      return {
+        'success': false,
+        'message': 'Please enter a valid UPI ID (e.g. 9876543210@ybl or user@oksbi).'
+      };
     }
 
+    final double inrAmount = coinsToWithdraw * coinToRupeeRate;
     final balBefore = user.wallet.winningCash;
-    user.wallet.winningCash -= amount;
+    user.wallet.winningCash -= coinsToWithdraw;
 
     final reqId = 'wreq_${DateTime.now().millisecondsSinceEpoch}';
     final newRequest = WithdrawalModel(
@@ -1401,10 +1144,12 @@ class AppState extends ChangeNotifier {
       userId: user.uid,
       userName: '${user.displayName} (${user.inGameName})',
       userPhone: user.phoneNumber,
-      amount: amount,
+      amount: inrAmount,
+      coinAmount: coinsToWithdraw,
       upiId: upiId,
       status: WithdrawalStatus.pending,
       requestedAt: DateTime.now(),
+      adminNotes: 'Redeemed ${coinsToWithdraw.toInt()} Winning Coins @ ₹$coinToRupeeRate/coin',
     );
 
     withdrawals.insert(0, newRequest);
@@ -1415,12 +1160,12 @@ class AppState extends ChangeNotifier {
       userName: user.displayName,
       type: TransactionType.withdrawalRequest,
       walletAffected: WalletType.winningCash,
-      amount: -amount,
-      currency: 'INR',
+      amount: -coinsToWithdraw,
+      currency: 'WINNING_COINS',
       balanceBefore: balBefore,
       balanceAfter: user.wallet.winningCash,
       status: 'PENDING',
-      description: 'Withdrawal Request to UPI $upiId',
+      description: 'UPI Withdrawal: ₹${inrAmount.toStringAsFixed(1)} (${coinsToWithdraw.toInt()} Coins) to $upiId',
       createdAt: DateTime.now(),
     );
     transactions.insert(0, withTxn);
@@ -1432,8 +1177,31 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     return {
       'success': true,
-      'message': 'Withdrawal request for ₹${amount.toInt()} submitted! Status: PENDING',
+      'message': 'Withdrawal request for ₹${inrAmount.toStringAsFixed(1)} (${coinsToWithdraw.toInt()} Coins) submitted successfully! Payout will be sent to $upiId within 2-4 hours.',
     };
+  }
+
+  // --- ADMIN: UPDATE WINNING COIN CONVERSION RATE ---
+  Future<void> adminUpdateCoinRate(double rate, {int? minCoins}) async {
+    if (rate > 0) coinToRupeeRate = rate;
+    if (minCoins != null && minCoins > 0) minWithdrawalCoins = minCoins;
+    notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/config"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'coinToRupeeRate': coinToRupeeRate,
+          'minWithdrawalCoins': minWithdrawalCoins,
+          'isRealCashModeEnabled': isRealCashModeEnabled,
+          'telegramSupportUrl': telegramSupportUrl,
+          'brBannerUrl': brBannerUrl,
+          'csBannerUrl': csBannerUrl,
+          'lwBannerUrl': lwBannerUrl,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   // --- ADMIN: PUBLISH ROOM ID & PASSWORD ---
@@ -1644,6 +1412,8 @@ class AppState extends ChangeNotifier {
     final winningParticipants = (winningTeam == 'Team A') ? match.teamAParticipants : match.teamBParticipants;
     final losingParticipants = (winningTeam == 'Team A') ? match.teamBParticipants : match.teamAParticipants;
 
+    final bool isCashPrize = match.prizePool.isCashPrize || isPaid;
+
     // Distributable Prize Pool (75% for paid, totalPool for free)
     final double totalPrizePool = isPaid ? match.distributablePrizePool : match.prizePool.totalPool;
     final int winningCount = winningParticipants.isNotEmpty ? winningParticipants.length : (match.maxSlots / 2).ceil();
@@ -1656,7 +1426,7 @@ class AppState extends ChangeNotifier {
       p.prizeAwarded = prizePerPlayer;
 
       if (p.uid == user.uid || p.inGameName == user.inGameName) {
-        if (isPaid) {
+        if (isCashPrize) {
           final balBefore = user.wallet.winningCash;
           user.wallet.winningCash += prizePerPlayer;
           user.stats.totalWinningsCash += prizePerPlayer;
@@ -1706,7 +1476,7 @@ class AppState extends ChangeNotifier {
           uid: p.uid,
           inGameName: p.inGameName,
           amount: prizePerPlayer,
-          isPaid: isPaid,
+          isPaid: isCashPrize,
           matchTitle: match.title,
           rank: 1,
           kills: 0,
@@ -1744,6 +1514,7 @@ class AppState extends ChangeNotifier {
       match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
     }
     final bool isPaid = match.matchType == MatchType.paid;
+    final bool isCashPrize = match.prizePool.isCashPrize || isPaid;
 
     // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
     final double actualCollection = isPaid
@@ -1768,7 +1539,7 @@ class AppState extends ChangeNotifier {
 
       if (participant.uid == user.uid || participant.inGameName == user.inGameName) {
         if (totalPrize > 0) {
-          if (isPaid) {
+          if (isCashPrize) {
             final balBefore = user.wallet.winningCash;
             user.wallet.winningCash += totalPrize;
             user.stats.totalWinningsCash += totalPrize;
@@ -1821,7 +1592,7 @@ class AppState extends ChangeNotifier {
           uid: participant.uid,
           inGameName: participant.inGameName,
           amount: totalPrize,
-          isPaid: isPaid,
+          isPaid: isCashPrize,
           matchTitle: match.title,
           rank: rank,
           kills: kills,
@@ -2889,6 +2660,14 @@ class AppState extends ChangeNotifier {
                   WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false');
                   SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false'));
                 } catch (_) {}
+              }
+              if (cfg['coinToRupeeRate'] != null) {
+                final r = (cfg['coinToRupeeRate'] as num).toDouble();
+                if (r > 0) coinToRupeeRate = r;
+              }
+              if (cfg['minWithdrawalCoins'] != null) {
+                final m = (cfg['minWithdrawalCoins'] as num).toInt();
+                if (m > 0) minWithdrawalCoins = m;
               }
               if (cfg['brBannerUrl'] != null && cfg['brBannerUrl'].toString().isNotEmpty) {
                 brBannerUrl = cfg['brBannerUrl'].toString();

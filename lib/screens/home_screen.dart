@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
+import '../services/ad_service.dart';
 import '../widgets/booyah_header.dart';
 import '../widgets/booyah_footer.dart';
 import 'tournament_lobby_screen.dart';
@@ -22,6 +23,13 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
 
+  void _handleTabChange(int index) {
+    if (_currentIndex != index) {
+      AdService.showInterstitialAd(context: context);
+      setState(() => _currentIndex = index);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAdmin = widget.appState.user.role == 'admin';
@@ -29,21 +37,21 @@ class _HomeScreenState extends State<HomeScreen> {
     final List<Widget> screens = [
       TournamentLobbyScreen(
         appState: widget.appState,
-        onEarnCoinsClick: () => setState(() => _currentIndex = 3),
-        onTabChange: (tab) => setState(() => _currentIndex = tab),
+        onEarnCoinsClick: () => _handleTabChange(3),
+        onTabChange: (tab) => _handleTabChange(tab),
       ),
       MyMatchesScreen(
         appState: widget.appState,
-        onBrowseMatches: () => setState(() => _currentIndex = 0),
+        onBrowseMatches: () => _handleTabChange(0),
       ),
       WeeklyLeaderboardScreen(
         appState: widget.appState,
-        onBrowseTournaments: () => setState(() => _currentIndex = 0),
+        onBrowseTournaments: () => _handleTabChange(0),
       ),
       EarnCoinsScreen(appState: widget.appState),
       WalletScreen(
         appState: widget.appState,
-        onGoToStore: () => setState(() => _currentIndex = 3),
+        onGoToStore: () => _handleTabChange(3),
       ),
       if (isAdmin) AdminPanelScreen(appState: widget.appState),
       ProfileScreen(appState: widget.appState),
@@ -52,7 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: BooyahHeader(
         appState: widget.appState,
-        onTabChange: (index) => setState(() => _currentIndex = index),
+        onTabChange: (index) => _handleTabChange(index),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -66,7 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex < screens.length ? _currentIndex : 0,
-        onTap: (index) => setState(() => _currentIndex = index),
+        onTap: (index) => _handleTabChange(index),
         type: BottomNavigationBarType.fixed,
         backgroundColor: Colors.white,
         selectedItemColor: const Color(0xFF0F172A),

@@ -48,6 +48,7 @@ class NotificationService {
   );
 
   bool _isInitialized = false;
+  bool get isInitialized => _isInitialized;
 
   /// Initialize Push Notification Service for Web and Native Android/iOS
   Future<void> initialize({String? userId}) async {
@@ -160,6 +161,8 @@ class NotificationService {
     if (userId != null && userId.isNotEmpty) {
       await subscribeToTopic('user_$userId');
     }
+
+    _isInitialized = true;
   }
 
   /// Explicitly request notification permission (can be called from UI buttons / settings)

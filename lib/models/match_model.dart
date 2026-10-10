@@ -187,6 +187,12 @@ class PrizePool {
   double? thirdPlace;
   double? fourthPlace;
   double? fifthPlace;
+  double? sixthPlace;
+  double? seventhPlace;
+  double? eighthPlace;
+  double? ninthPlace;
+  double? tenthPlace;
+  bool isCashPrize; // True if match pays Real Cash (₹), False if Reward Coins
 
   PrizePool({
     required this.totalPool,
@@ -196,6 +202,12 @@ class PrizePool {
     this.thirdPlace,
     this.fourthPlace,
     this.fifthPlace,
+    this.sixthPlace,
+    this.seventhPlace,
+    this.eighthPlace,
+    this.ninthPlace,
+    this.tenthPlace,
+    this.isCashPrize = true,
   });
 
   Map<String, dynamic> toJson() => {
@@ -206,6 +218,12 @@ class PrizePool {
     'thirdPlace': thirdPlace,
     'fourthPlace': fourthPlace,
     'fifthPlace': fifthPlace,
+    'sixthPlace': sixthPlace,
+    'seventhPlace': seventhPlace,
+    'eighthPlace': eighthPlace,
+    'ninthPlace': ninthPlace,
+    'tenthPlace': tenthPlace,
+    'isCashPrize': isCashPrize,
   };
 
   factory PrizePool.fromJson(dynamic json, {
@@ -214,7 +232,13 @@ class PrizePool {
     double? fallbackThird,
     double? fallbackFourth,
     double? fallbackFifth,
+    double? fallbackSixth,
+    double? fallbackSeventh,
+    double? fallbackEighth,
+    double? fallbackNinth,
+    double? fallbackTenth,
     double? fallbackPerKill,
+    bool? fallbackIsCashPrize,
   }) {
     if (json is num) {
       return PrizePool(
@@ -225,6 +249,12 @@ class PrizePool {
         thirdPlace: fallbackThird,
         fourthPlace: fallbackFourth,
         fifthPlace: fallbackFifth,
+        sixthPlace: fallbackSixth,
+        seventhPlace: fallbackSeventh,
+        eighthPlace: fallbackEighth,
+        ninthPlace: fallbackNinth,
+        tenthPlace: fallbackTenth,
+        isCashPrize: fallbackIsCashPrize ?? true,
       );
     }
     if (json is! Map) {
@@ -236,6 +266,12 @@ class PrizePool {
         thirdPlace: fallbackThird,
         fourthPlace: fallbackFourth,
         fifthPlace: fallbackFifth,
+        sixthPlace: fallbackSixth,
+        seventhPlace: fallbackSeventh,
+        eighthPlace: fallbackEighth,
+        ninthPlace: fallbackNinth,
+        tenthPlace: fallbackTenth,
+        isCashPrize: fallbackIsCashPrize ?? true,
       );
     }
     return PrizePool(
@@ -254,6 +290,22 @@ class PrizePool {
       fifthPlace: json['fifthPlace'] != null
           ? ((json['fifthPlace']) as num).toDouble()
           : (json['fifth_place'] != null ? ((json['fifth_place']) as num).toDouble() : fallbackFifth),
+      sixthPlace: json['sixthPlace'] != null
+          ? ((json['sixthPlace']) as num).toDouble()
+          : (json['sixth_place'] != null ? ((json['sixth_place']) as num).toDouble() : fallbackSixth),
+      seventhPlace: json['seventhPlace'] != null
+          ? ((json['seventhPlace']) as num).toDouble()
+          : (json['seventh_place'] != null ? ((json['seventh_place']) as num).toDouble() : fallbackSeventh),
+      eighthPlace: json['eighthPlace'] != null
+          ? ((json['eighthPlace']) as num).toDouble()
+          : (json['eighth_place'] != null ? ((json['eighth_place']) as num).toDouble() : fallbackEighth),
+      ninthPlace: json['ninthPlace'] != null
+          ? ((json['ninthPlace']) as num).toDouble()
+          : (json['ninth_place'] != null ? ((json['ninth_place']) as num).toDouble() : fallbackNinth),
+      tenthPlace: json['tenthPlace'] != null
+          ? ((json['tenthPlace']) as num).toDouble()
+          : (json['tenth_place'] != null ? ((json['tenth_place']) as num).toDouble() : fallbackTenth),
+      isCashPrize: json['isCashPrize'] != null ? (json['isCashPrize'] == true) : (fallbackIsCashPrize ?? true),
     );
   }
 }
@@ -451,6 +503,11 @@ class MatchModel {
     if (rank == 3 && prizePool.thirdPlace != null && prizePool.thirdPlace! > 0) return prizePool.thirdPlace!;
     if (rank == 4 && prizePool.fourthPlace != null && prizePool.fourthPlace! > 0) return prizePool.fourthPlace!;
     if (rank == 5 && prizePool.fifthPlace != null && prizePool.fifthPlace! > 0) return prizePool.fifthPlace!;
+    if (rank == 6 && prizePool.sixthPlace != null && prizePool.sixthPlace! > 0) return prizePool.sixthPlace!;
+    if (rank == 7 && prizePool.seventhPlace != null && prizePool.seventhPlace! > 0) return prizePool.seventhPlace!;
+    if (rank == 8 && prizePool.eighthPlace != null && prizePool.eighthPlace! > 0) return prizePool.eighthPlace!;
+    if (rank == 9 && prizePool.ninthPlace != null && prizePool.ninthPlace! > 0) return prizePool.ninthPlace!;
+    if (rank == 10 && prizePool.tenthPlace != null && prizePool.tenthPlace! > 0) return prizePool.tenthPlace!;
     return rankPrizePool * getRankPercentage(rank);
   }
 
@@ -516,6 +573,9 @@ class MatchModel {
 
   bool get isFull => filledSlots >= maxSlots && maxSlots > 0;
   bool get isFillingRoom => status == MatchStatus.roomFilling || (isFull && status == MatchStatus.upcoming);
+
+  int get requiredAds => entryFee.toInt() > 0 ? entryFee.toInt() : (entryFee > 0 ? entryFee.ceil() : 0);
+  String get entryFeeDisplay => requiredAds == 0 ? 'FREE' : '🎬 $requiredAds ${requiredAds == 1 ? "Ad" : "Ads"}';
 
   Duration get roomCountdownRemaining {
     if (roomFillingStartedAt == null) {

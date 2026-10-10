@@ -3,7 +3,6 @@ import '../models/withdrawal_model.dart';
 import '../models/transaction_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
-import '../widgets/deposit_dialog.dart';
 import '../widgets/withdraw_dialog.dart';
 import '../widgets/ff_brand_elements.dart';
 import 'package:intl/intl.dart';
@@ -235,13 +234,13 @@ class _WalletScreenState extends State<WalletScreen> {
               if (widget.appState.isRealCashModeEnabled) ...[
                 const SizedBox(height: 16),
 
-                // 2. PRO REAL MONEY WALLET (Paid Esports)
+                // 2. PRO WINNING COINS WALLET (Esports Payouts)
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withAlpha(12),
@@ -259,172 +258,101 @@ class _WalletScreenState extends State<WalletScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFECFDF5),
+                              color: const Color(0xFFFEF3C7),
                               borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFA7F3D0)),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
                             ),
                             child: const Row(
                               children: [
-                                Text('💎', style: TextStyle(fontSize: 10)),
+                                Text('🪙', style: TextStyle(fontSize: 11)),
                                 SizedBox(width: 4),
                                 Text(
-                                  'PRO REAL CASH ECONOMY',
+                                  'WINNING COINS WALLET',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
                                     fontSize: 9.5,
                                     fontWeight: FontWeight.w900,
-                                    color: Color(0xFF065F46),
+                                    color: Color(0xFF92400E),
                                     letterSpacing: 0.8,
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                          const Text(
-                            'Real Money • Instant UPI Payouts',
-                            style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: AppTheme.winningGreen),
+                          Text(
+                            '1000 Coins = ₹${(1000 * widget.appState.coinToRupeeRate).toInt()} Cash',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFB45309)),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
 
-                      // 3-Card Real & Promotional Economy (Bonus Cash, Deposit Cash, Winning Cash)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFEF3C7).withAlpha(100),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFFDE68A)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '🎁 BONUS CASH',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '₹${wallet.bonusCash.toStringAsFixed(1)}',
-                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
-                                  ),
-                                  const Text(
-                                    '10% Cashback (Used 1st)',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8, color: Color(0xFF92400E)),
-                                  ),
-                                ],
-                              ),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFDF5),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFFEF3C7)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '🏆 TOTAL WINNING COINS',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '🪙 ${wallet.winningCash.toInt()}',
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                                ),
+                                Text(
+                                  '≈ ₹${(wallet.winningCash * widget.appState.coinToRupeeRate).toStringAsFixed(2)} Real Cash Value',
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
+                                ),
+                              ],
                             ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF8FAFC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFE2E8F0)),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    '💵 DEPOSIT CASH',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF2563EB)),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '₹${wallet.depositCash.toInt()}',
-                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                                  ),
-                                  const Text(
-                                    'Match Entry Only',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8, color: Color(0xFF64748B)),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-
-                          Expanded(
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(10),
                                 border: Border.all(color: const Color(0xFFA7F3D0)),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: const Column(
                                 children: [
-                                  const Text(
-                                    '🏆 WINNINGS',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    '₹${wallet.winningCash.toInt()}',
-                                    style: const TextStyle(fontFamily: 'Inter', fontSize: 17, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
-                                  ),
-                                  const Text(
-                                    '100% Withdrawable',
-                                    style: TextStyle(fontFamily: 'Inter', fontSize: 8, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
-                                  ),
+                                  Text('MIN WITHDRAW', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
+                                  Text('1,000 COINS', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF047857))),
                                 ],
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                       const SizedBox(height: 12),
 
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 11),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => DepositDialog(appState: widget.appState),
-                                );
-                              },
-                              icon: const Icon(Icons.add_card, size: 16),
-                              label: const Text('+ ADD CASH', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900)),
-                            ),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(vertical: 13),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF0F172A),
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                padding: const EdgeInsets.symmetric(vertical: 11),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                              ),
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => WithdrawDialog(appState: widget.appState),
-                                );
-                              },
-                              icon: const Icon(Icons.account_balance, size: 16, color: AppTheme.primaryAmber),
-                              label: const Text('WITHDRAW (UPI)', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900)),
-                            ),
-                          ),
-                        ],
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => WithdrawDialog(appState: widget.appState),
+                            );
+                          },
+                          icon: const Icon(Icons.account_balance, size: 18, color: AppTheme.primaryAmber),
+                          label: const Text('WITHDRAW WINNING COINS (UPI)', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w900)),
+                        ),
                       ),
                     ],
                   ),

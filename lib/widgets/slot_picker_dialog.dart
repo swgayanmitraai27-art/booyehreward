@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/match_model.dart';
 import '../services/app_state.dart';
+import '../services/ad_service.dart';
 import '../theme/app_theme.dart';
-import 'deposit_dialog.dart';
 import 'match_rules_card.dart';
 
 class SlotPickerDialog extends StatefulWidget {
@@ -28,6 +28,8 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
   late TextEditingController _levelController;
   String? errorText;
   bool isSubmitting = false;
+  int _adsWatched = 0;
+  bool _isWatchingAd = false;
 
   @override
   void initState() {
@@ -45,18 +47,129 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     super.dispose();
   }
 
+  bool _validateForm() {
+    final ign = _ignController.text.trim();
+    final uid = _uidController.text.trim();
+    final levelStr = _levelController.text.trim();
+    final level = int.tryParse(levelStr);
+
+    if (ign.isEmpty) {
+      setState(() => errorText = 'Free Fire In-Game Name (IGN) daalna mandatory hai.');
+      return false;
+    }
+    if (uid.isEmpty || uid.length < 6 || int.tryParse(uid) == null) {
+      setState(() => errorText = 'Valid numeric Free Fire UID daalna zaroori hai (min 6 digits).');
+      return false;
+    }
+    if (level == null || level < 40) {
+      setState(() => errorText = 'Anti-Hack Rule: Minimum Free Fire Account Level 40+ hona anivarya hai (Aapka level: ${levelStr.isEmpty ? '0' : levelStr}).');
+      return false;
+    }
+    setState(() => errorText = null);
+    return true;
+  }
+
+  void _executeJoin() {
+    final ign = _ignController.text.trim();
+    final uid = _uidController.text.trim();
+    final level = int.tryParse(_levelController.text.trim()) ?? 40;
+
+    widget.appState.updateUserProfile(
+      inGameName: ign,
+      inGameUid: uid,
+      inGameLevel: level,
+    );
+
+    setState(() => isSubmitting = true);
+    final res = widget.appState.joinMatchWithSlot(
+      matchId: widget.match.id,
+      chosenSlot: selectedSlot!,
+      inGameName: ign,
+      inGameUid: uid,
+    );
+    setState(() => isSubmitting = false);
+
+    if (res['success'] == true) {
+      Navigator.of(context).pop();
+      AdService.showInterstitialAd(context: context, force: true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: const Color(0xFF065F46),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: Colors.white),
+              const SizedBox(width: 8),
+              Expanded(child: Text(res['message'] ?? 'Slot #$selectedSlot successfully booked!')),
+            ],
+          ),
+        ),
+      );
+    } else {
+      setState(() {
+        errorText = res['message'];
+      });
+    }
+  }
+
+  void _handleJoinOrWatchAd() {
+    if (selectedSlot == null) {
+      setState(() => errorText = 'Please select a slot from the grid above.');
+      return;
+    }
+
+    if (!_validateForm()) return;
+
+    final int requiredAds = widget.match.requiredAds;
+
+    // If 0 ads required or all ads already watched, join immediately
+    if (requiredAds == 0 || _adsWatched >= requiredAds) {
+      _executeJoin();
+      return;
+    }
+
+    // Otherwise show rewarded video ad
+    setState(() => _isWatchingAd = true);
+    AdService.showRewardedAd(
+      context: context,
+      onUserEarnedReward: () {
+        if (!mounted) return;
+        setState(() {
+          _adsWatched++;
+          _isWatchingAd = false;
+        });
+
+        if (_adsWatched >= requiredAds) {
+          // Finished all required ads -> Complete slot booking
+          _executeJoin();
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              backgroundColor: Colors.amber.shade900,
+              content: Text('🎬 Ad $_adsWatched/$requiredAds watched! Watch ${_adsWatched + 1} to unlock entry.'),
+            ),
+          );
+        }
+      },
+      onAdDismissed: () {
+        if (mounted && _isWatchingAd) {
+          setState(() => _isWatchingAd = false);
+        }
+      },
+    );
+
+    // Safety timeout in case ad callback doesn't return
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted && _isWatchingAd) {
+        setState(() => _isWatchingAd = false);
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final match = widget.match;
-    final user = widget.appState.user;
-    final isFree = match.matchType == MatchType.free;
-    final fee = match.entryFee;
-
-    // Balance checks
-    final bool hasEnoughCoins = user.wallet.adCoins >= fee;
-    final double totalCash = user.wallet.depositCash + user.wallet.winningCash;
-    final bool hasEnoughCash = totalCash >= fee;
-    final bool canAfford = isFree ? hasEnoughCoins : hasEnoughCash;
+    final int requiredAds = match.requiredAds;
+    final bool hasWatchedAllAds = requiredAds == 0 || _adsWatched >= requiredAds;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -69,45 +182,39 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isFree ? AppTheme.primaryAmber : const Color(0xFF0F172A),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: const BoxDecoration(
+                color: AppTheme.primaryAmber,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  Text(
-                    isFree ? '🟡' : '💵',
-                    style: const TextStyle(fontSize: 24),
-                  ),
+                  const Text('🎬', style: TextStyle(fontSize: 24)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          isFree ? 'FREE MATCH ENTRY' : 'PAID CASH MATCH',
-                          style: TextStyle(
+                          requiredAds == 0 ? 'FREE DIRECT ENTRY' : 'WATCH $requiredAds ${requiredAds == 1 ? "AD" : "ADS"} TO ENTER',
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
-                            color: isFree ? const Color(0xFF78350F) : Colors.amber,
+                            color: Color(0xFF78350F),
                           ),
                         ),
                         Text(
                           'Choose Your Match Slot',
                           style: AppTheme.gamingTitle(
                             fontSize: 18,
-                            color: isFree ? const Color(0xFF0F172A) : Colors.white,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: isFree ? Colors.black87 : Colors.white70,
-                    ),
+                    icon: const Icon(Icons.close, color: Colors.black87),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -144,7 +251,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                '${match.matchFormat.name.toUpperCase()} • ${match.map.name.toUpperCase()} • Prize: ${isFree ? '${match.prizePool.totalPool.toInt()} 🎟️ Coins' : '₹${match.prizePool.totalPool.toInt()}'}',
+                                '${match.matchFormat.name.toUpperCase()} • ${match.map.name.toUpperCase()} • Prize: ${match.prizePool.isCashPrize ? '₹${match.prizePool.totalPool.toInt()}' : '${match.prizePool.totalPool.toInt()} 🎟️ Coins'}',
                                 style: const TextStyle(
                                   fontSize: 11,
                                   color: Color(0xFF64748B),
@@ -156,14 +263,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: isFree ? Colors.amber.shade100 : const Color(0xFFECFDF5),
+                              color: Colors.amber.shade100,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
-                              isFree ? '🟡 ${fee.toInt()} Coin' : '₹${fee.toInt()}',
+                              match.entryFeeDisplay,
                               style: AppTheme.gamingNumber(
-                                fontSize: 14,
-                                color: isFree ? Colors.amber.shade900 : const Color(0xFF065F46),
+                                fontSize: 13,
+                                color: Colors.amber.shade900,
                               ),
                             ),
                           ),
@@ -358,71 +465,67 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                     ),
                     const SizedBox(height: 14),
 
-                    // Low Balance Warning
-                    if (!canAfford)
+                    // Ads Requirement Status Banner
+                    if (requiredAds > 0)
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.shade50,
+                          color: hasWatchedAllAds ? const Color(0xFFECFDF5) : Colors.amber.shade50,
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: Colors.red.shade200),
+                          border: Border.all(
+                            color: hasWatchedAllAds ? const Color(0xFFA7F3D0) : Colors.amber.shade200,
+                          ),
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Row(
                           children: [
-                            Row(
-                              children: [
-                                Icon(Icons.error_outline, color: Colors.red.shade700, size: 18),
-                                const SizedBox(width: 6),
-                                Text(
-                                  isFree ? 'Insufficient Ad Coins!' : 'Insufficient Cash Balance!',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    color: Colors.red.shade900,
+                            Icon(
+                              hasWatchedAllAds ? Icons.check_circle : Icons.play_circle_filled,
+                              color: hasWatchedAllAds ? const Color(0xFF059669) : Colors.amber.shade800,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasWatchedAllAds
+                                        ? 'Ads Requirement Completed! 🎉'
+                                        : 'Watch $requiredAds Rewarded ${requiredAds == 1 ? "Ad" : "Ads"} to Enter',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      color: hasWatchedAllAds ? const Color(0xFF065F46) : Colors.amber.shade900,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              isFree
-                                  ? 'You need ${fee.toInt()} 🟡 Ad Coin. Watch 3 rewarded ads to earn 1 free coin!'
-                                  : 'Entry fee is ₹${fee.toInt()}. Add cash securely via Razorpay.',
-                              style: TextStyle(fontSize: 11, color: Colors.red.shade800),
-                            ),
-                            const SizedBox(height: 8),
-                            if (isFree)
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppTheme.primaryAmber,
-                                  foregroundColor: Colors.black,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  widget.onEarnCoinsClick();
-                                },
-                                icon: const Icon(Icons.play_circle_filled, size: 16),
-                                label: const Text('Watch Ads to Earn Coin', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                              )
-                            else
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.blue.shade700,
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                ),
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                  showDialog(
-                                    context: context,
-                                    builder: (context) => DepositDialog(appState: widget.appState),
-                                  );
-                                },
-                                icon: const Icon(Icons.add_card, size: 16),
-                                label: const Text('Add Cash via Razorpay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    hasWatchedAllAds
+                                        ? 'You can now confirm and lock your slot!'
+                                        : 'Progress: $_adsWatched of $requiredAds ads watched',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: hasWatchedAllAds ? const Color(0xFF047857) : Colors.amber.shade800,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: hasWatchedAllAds ? const Color(0xFFD1FAE5) : Colors.amber.shade200,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '$_adsWatched / $requiredAds',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 11,
+                                  color: hasWatchedAllAds ? const Color(0xFF065F46) : Colors.amber.shade900,
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -457,88 +560,31 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: canAfford && selectedSlot != null
-                            ? (isFree ? AppTheme.primaryAmber : const Color(0xFF0F172A))
+                        backgroundColor: selectedSlot != null
+                            ? AppTheme.primaryAmber
                             : Colors.grey.shade300,
-                        foregroundColor: canAfford && selectedSlot != null
-                            ? (isFree ? Colors.black : Colors.white)
+                        foregroundColor: selectedSlot != null
+                            ? Colors.black
                             : Colors.grey.shade600,
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
-                      onPressed: (canAfford && selectedSlot != null && !isSubmitting)
-                          ? () {
-                              final ign = _ignController.text.trim();
-                              final uid = _uidController.text.trim();
-                              final levelStr = _levelController.text.trim();
-                              final level = int.tryParse(levelStr);
-
-                              if (ign.isEmpty) {
-                                setState(() {
-                                  errorText = 'Free Fire In-Game Name (IGN) daalna mandatory hai.';
-                                });
-                                return;
-                              }
-                              if (uid.isEmpty || uid.length < 6 || int.tryParse(uid) == null) {
-                                setState(() {
-                                  errorText = 'Valid numeric Free Fire UID daalna zaroori hai (min 6 digits).';
-                                });
-                                return;
-                              }
-                              if (level == null || level < 40) {
-                                setState(() {
-                                  errorText = 'Anti-Hack Rule: Minimum Free Fire Account Level 40+ hona anivarya hai (Aapka level: ${levelStr.isEmpty ? '0' : levelStr}).';
-                                });
-                                return;
-                              }
-
-                              // Auto-Save updated IGN, UID & Level to Profile so user doesn't have to re-type
-                              widget.appState.updateUserProfile(
-                                inGameName: ign,
-                                inGameUid: uid,
-                                inGameLevel: level,
-                              );
-
-                              setState(() => isSubmitting = true);
-                              final res = widget.appState.joinMatchWithSlot(
-                                matchId: match.id,
-                                chosenSlot: selectedSlot!,
-                                inGameName: ign,
-                                inGameUid: uid,
-                              );
-                              setState(() => isSubmitting = false);
-                              setState(() => isSubmitting = false);
-
-                              if (res['success'] == true) {
-                                Navigator.of(context).pop();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    backgroundColor: const Color(0xFF065F46),
-                                    content: Row(
-                                      children: [
-                                        const Icon(Icons.check_circle, color: Colors.white),
-                                        const SizedBox(width: 8),
-                                        Expanded(child: Text(res['message'])),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              } else {
-                                setState(() {
-                                  errorText = res['message'];
-                                });
-                              }
-                            }
+                      onPressed: (selectedSlot != null && !isSubmitting && !_isWatchingAd)
+                          ? _handleJoinOrWatchAd
                           : null,
                       child: Text(
                         selectedSlot == null
                             ? 'PICK A SLOT ABOVE'
-                            : isFree
-                                ? 'CONFIRM SLOT #$selectedSlot (1 COIN)'
-                                : 'PAY ₹${fee.toInt()} & LOCK SLOT #$selectedSlot',
+                            : _isWatchingAd
+                                ? 'PLAYING AD...'
+                                : isSubmitting
+                                    ? 'LOCKING SLOT...'
+                                    : (!hasWatchedAllAds
+                                        ? '🎬 WATCH AD (${_adsWatched + 1}/$requiredAds) & JOIN'
+                                        : 'CONFIRM & LOCK SLOT #$selectedSlot'),
                         style: AppTheme.gamingTitle(
                           fontSize: 14,
-                          color: isFree ? Colors.black : Colors.white,
+                          color: Colors.black,
                           isItalic: false,
                         ),
                       ),

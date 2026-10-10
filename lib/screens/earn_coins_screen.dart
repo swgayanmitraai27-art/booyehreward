@@ -18,6 +18,12 @@ class EarnCoinsScreen extends StatefulWidget {
 class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
   int activeTab = 0; // 0: Watch & Earn, 1: Rewards Store
 
+  @override
+  void initState() {
+    super.initState();
+    AdService.preloadRewardedAd();
+  }
+
   void _showRedeemDialog(StoreItem item) {
     final whatsappController = TextEditingController(text: widget.appState.user.phoneNumber);
     final uidController = TextEditingController(text: widget.appState.user.inGameUid);

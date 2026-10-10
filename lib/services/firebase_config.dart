@@ -17,10 +17,6 @@ class FirebaseConfig {
   // Web Push VAPID Key Pair for FCM Web Notifications
   static const String vapidKey = "BJfkFsBwWGuabGkeDJARmVXfKuL8QXkppIuc9q5OJ5XM5L1qAsZJydzU1G7GusbuY_7A87Rr6qPQFdDaXCSnln0";
 
-  // Backend API Base URL - Using www.swgayanbhumi.in to prevent 308 CORS browser redirect
-  static const String apiBaseUrl = "https://www.swgayanbhumi.in/api/payments";
+  // Push Notification Endpoint
   static const String pushNotificationEndpoint = "https://www.swgayanbhumi.in/api/push-notification";
-  static const String orderEndpoint = "https://www.swgayanbhumi.in/api/payments/create-order";
-  static const String verifyEndpoint = "https://www.swgayanbhumi.in/api/payments/verify";
-  static const String defaultRazorpayKeyId = "rzp_live_TakGRfnTFl20dG";
 }

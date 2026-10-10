@@ -69,14 +69,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _entryFeeController = TextEditingController(text: '50');
   final TextEditingController _maxSlotsController = TextEditingController(text: '8');
 
-  // BR Specific Rank Prizes, Per Kill, and Distribution Mode
-  String _brPrizeDistributionMode = 'top3'; // 'top3', 'top5', 'top10'
+  // BR Specific Rank Prizes and Per Kill
   final TextEditingController _firstPrizeController = TextEditingController(text: '500');
   final TextEditingController _secondPrizeController = TextEditingController(text: '200');
   final TextEditingController _thirdPrizeController = TextEditingController(text: '100');
   final TextEditingController _fourthPrizeController = TextEditingController(text: '0');
   final TextEditingController _fifthPrizeController = TextEditingController(text: '0');
+  final TextEditingController _sixthPrizeController = TextEditingController(text: '0');
+  final TextEditingController _seventhPrizeController = TextEditingController(text: '0');
+  final TextEditingController _eighthPrizeController = TextEditingController(text: '0');
+  final TextEditingController _ninthPrizeController = TextEditingController(text: '0');
+  final TextEditingController _tenthPrizeController = TextEditingController(text: '0');
   final TextEditingController _perKillController = TextEditingController(text: '10');
+  bool _isRealCashPrizeForFree = true; // For Free Matches: Give Real Cash (₹) vs Store Coins
 
   MatchType newMatchType = MatchType.paid;
   GameType newGameType = GameType.freeFire;
@@ -102,6 +107,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _modeSlotsController = TextEditingController(text: '48');
   String _modeSelectedBaseMode = 'br'; // 'br', 'cs', 'loneWolf'
   final TextEditingController _referralSearchController = TextEditingController();
+  late TextEditingController _coinRateController;
+  late TextEditingController _minWithdrawCoinsController;
 
   @override
   void initState() {
@@ -110,6 +117,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _brCategoryBannerController.text = widget.appState.brCategoryBanner;
     _csCategoryBannerController.text = widget.appState.csCategoryBanner;
     _lwCategoryBannerController.text = widget.appState.lwCategoryBanner;
+    _coinRateController = TextEditingController(text: widget.appState.coinToRupeeRate.toString());
+    _minWithdrawCoinsController = TextEditingController(text: widget.appState.minWithdrawalCoins.toString());
     _fetchRegisteredUsers();
   }
 
@@ -273,12 +282,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _thirdPrizeController.dispose();
     _fourthPrizeController.dispose();
     _fifthPrizeController.dispose();
+    _sixthPrizeController.dispose();
+    _seventhPrizeController.dispose();
+    _eighthPrizeController.dispose();
+    _ninthPrizeController.dispose();
+    _tenthPrizeController.dispose();
     _perKillController.dispose();
     _notifTitleController.dispose();
     _notifBodyController.dispose();
     _notifImageUrlController.dispose();
     _notifUserIdController.dispose();
     _referralSearchController.dispose();
+    _coinRateController.dispose();
+    _minWithdrawCoinsController.dispose();
     super.dispose();
   }
 
@@ -408,37 +424,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     );
   }
 
-  void _autoCalculateBRPrizes() {
-    final entryFee = double.tryParse(_entryFeeController.text) ?? 50;
-    final totalPlayers = int.tryParse(_maxSlotsController.text) ?? 48;
-    final totalPool = entryFee * totalPlayers;
-    final distributablePrizePool = newMatchType == MatchType.paid ? (totalPool * 0.75) : (totalPool * 0.4);
-    final perKill = double.tryParse(_perKillController.text) ?? 0;
-    final maxKills = totalPlayers > 1 ? (totalPlayers - 1) : 0;
-    final reservedKillPool = maxKills * perKill;
-    final rankPool = (distributablePrizePool - reservedKillPool) > 0 ? (distributablePrizePool - reservedKillPool) : 0.0;
-
-    if (_brPrizeDistributionMode == 'top3') {
-      _firstPrizeController.text = (rankPool * 0.50).toInt().toString();
-      _secondPrizeController.text = (rankPool * 0.30).toInt().toString();
-      _thirdPrizeController.text = (rankPool * 0.20).toInt().toString();
-      _fourthPrizeController.text = '0';
-      _fifthPrizeController.text = '0';
-    } else if (_brPrizeDistributionMode == 'top5') {
-      _firstPrizeController.text = (rankPool * 0.40).toInt().toString();
-      _secondPrizeController.text = (rankPool * 0.25).toInt().toString();
-      _thirdPrizeController.text = (rankPool * 0.15).toInt().toString();
-      _fourthPrizeController.text = (rankPool * 0.10).toInt().toString();
-      _fifthPrizeController.text = (rankPool * 0.10).toInt().toString();
-    } else {
-      // top10
-      _firstPrizeController.text = (rankPool * 0.30).toInt().toString();
-      _secondPrizeController.text = (rankPool * 0.20).toInt().toString();
-      _thirdPrizeController.text = (rankPool * 0.15).toInt().toString();
-      _fourthPrizeController.text = (rankPool * 0.075).toInt().toString();
-      _fifthPrizeController.text = (rankPool * 0.075).toInt().toString();
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1675,13 +1660,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               final rank = int.tryParse(rankControllers[p.uid]?.text.trim() ?? '1') ?? 1;
               final kills = int.tryParse(killControllers[p.uid]?.text.trim() ?? '0') ?? 0;
 
-              double rankPrize = 0;
-              if (rank == 1) rankPrize = match.prizePool.firstPlace / teamSize;
-              if (rank == 2) rankPrize = (match.prizePool.secondPlace ?? 0) / teamSize;
-              if (rank == 3) rankPrize = (match.prizePool.thirdPlace ?? 0) / teamSize;
-              if (rank == 4) rankPrize = (match.prizePool.fourthPlace ?? 0) / teamSize;
-              if (rank == 5) rankPrize = (match.prizePool.fifthPlace ?? 0) / teamSize;
-
+              final isCashPrize = match.prizePool.isCashPrize || isPaid;
+              final double rankPrize = match.getIndividualRankPrize(rank);
               final totalEstimatedPrize = rankPrize + (kills * match.prizePool.perKill);
 
               return Padding(
@@ -1708,7 +1688,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                                 child: const Icon(Icons.copy, size: 10, color: Color(0xFF047857)),
                               ),
                               const SizedBox(width: 6),
-                              Text('• Est: ${isPaid ? '₹${totalEstimatedPrize.toInt()}' : '${totalEstimatedPrize.toInt()} 🎟️'}',
+                              Text('• Est: ${isCashPrize ? '₹${totalEstimatedPrize.toInt()}' : '${totalEstimatedPrize.toInt()} 🎟️'}',
                                   style: const TextStyle(fontSize: 10, color: Colors.black87, fontWeight: FontWeight.bold)),
                             ],
                           ),
@@ -2205,12 +2185,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final thirdPrize = double.tryParse(_thirdPrizeController.text) ?? 0;
     final fourthPrize = double.tryParse(_fourthPrizeController.text) ?? 0;
     final fifthPrize = double.tryParse(_fifthPrizeController.text) ?? 0;
+    final sixthPrize = double.tryParse(_sixthPrizeController.text) ?? 0;
+    final seventhPrize = double.tryParse(_seventhPrizeController.text) ?? 0;
+    final eighthPrize = double.tryParse(_eighthPrizeController.text) ?? 0;
+    final ninthPrize = double.tryParse(_ninthPrizeController.text) ?? 0;
+    final tenthPrize = double.tryParse(_tenthPrizeController.text) ?? 0;
     final perKill = double.tryParse(_perKillController.text) ?? 0;
 
-    final double totalRankPrizes = firstPrize + secondPrize + thirdPrize + fourthPrize + fifthPrize;
+    final double totalRankPrizes = firstPrize + secondPrize + thirdPrize + fourthPrize + fifthPrize + sixthPrize + seventhPrize + eighthPrize + ninthPrize + tenthPrize;
     final double maxKillCost = (totalPlayers > 1 ? (totalPlayers - 1) : 0) * perKill;
     final double totalEstimatedPayout = totalRankPrizes + maxKillCost;
-    final bool isBRValid = newMatchMode != MatchMode.br || (totalEstimatedPayout <= distributablePrizePool + 0.5);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2259,40 +2243,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 12),
 
-          // Match Type Toggle (Free vs Paid)
-          Row(
-            children: [
-              Expanded(
-                child: ChoiceChip(
-                  label: const Text('🟡 FREE MATCH (Ad Coins)'),
-                  selected: newMatchType == MatchType.free,
-                  onSelected: (val) {
-                    setState(() {
-                      newMatchType = MatchType.free;
-                      _entryFeeController.text = '5';
-                      _autoCalculateBRPrizes();
-                    });
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ChoiceChip(
-                  label: const Text('💵 PAID MATCH (Real Cash 75/25)'),
-                  selected: newMatchType == MatchType.paid,
-                  onSelected: (val) {
-                    setState(() {
-                      newMatchType = MatchType.paid;
-                      _entryFeeController.text = '50';
-                      _autoCalculateBRPrizes();
-                    });
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-
           // 1. MATCH MODE DROPDOWN (BR, CS, Lone Wolf)
           Row(
             children: [
@@ -2324,7 +2274,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         _matchBannerUrlController.text = 'imgasest/brhomescreen .png';
                         _maxSlotsController.text = '48';
                         newTeamType = TeamType.solo;
-                        _autoCalculateBRPrizes();
                       }
                     });
                   },
@@ -2362,8 +2311,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         _maxSlotsController.text = team == TeamType.squad ? '8' : (team == TeamType.duo ? '4' : '2');
                       } else if (newMatchMode == MatchMode.loneWolf) {
                         _maxSlotsController.text = team == TeamType.solo ? '2' : (team == TeamType.duo ? '4' : '8');
-                      } else {
-                        _autoCalculateBRPrizes();
                       }
                     });
                   },
@@ -2414,21 +2361,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 3. ENTRY FEE & TOTAL PLAYERS (ANY NUMBER)
+          // 3. ENTRY ADS REQUIREMENT & TOTAL PLAYERS
           Row(
             children: [
               Expanded(
                 child: TextField(
                   controller: _entryFeeController,
                   keyboardType: TextInputType.number,
-                  onChanged: (v) {
-                    setState(() {
-                      if (newMatchMode == MatchMode.br) _autoCalculateBRPrizes();
-                    });
-                  },
+                  onChanged: (v) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: newMatchType == MatchType.free ? 'Entry Fee (🟡 Ad Coins)' : 'Entry Fee (₹ Real Cash)',
-                    prefixIcon: Icon(newMatchType == MatchType.free ? Icons.monetization_on : Icons.currency_rupee, size: 18),
+                    labelText: 'Required Ads to Join (🎬 Count)',
+                    hintText: 'e.g. 1, 2, 3 (0 for Free)',
+                    prefixIcon: const Icon(Icons.play_circle_filled, color: Colors.amber, size: 18),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2438,14 +2382,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 child: TextField(
                   controller: _maxSlotsController,
                   keyboardType: TextInputType.number,
-                  onChanged: (v) {
-                    setState(() {
-                      if (newMatchMode == MatchMode.br) _autoCalculateBRPrizes();
-                    });
-                  },
+                  onChanged: (v) => setState(() {}),
                   decoration: InputDecoration(
                     labelText: 'Total Players (Slots)',
-                    hintText: 'Any number: 2, 4, 8, 48, 50...',
+                    hintText: 'e.g. 2, 4, 8, 48...',
                     prefixIcon: const Icon(Icons.group, size: 18),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
@@ -2453,106 +2393,78 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 14),
-
-          // 4. 75/25 FINANCIAL ENGINE LIVE CARD
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFF0F172A), Color(0xFF1E293B)]),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 6),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.pie_chart, color: Colors.amber, size: 16),
-                        SizedBox(width: 6),
-                        Text('75/25 AUTOMATIC FINANCIAL ENGINE', style: TextStyle(color: Colors.amber, fontSize: 10, fontWeight: FontWeight.w900)),
-                      ],
-                    ),
-                    Text('Auto-Calculated', style: TextStyle(color: Colors.white54, fontSize: 9.5)),
-                  ],
+                const Text('Ad Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                ActionChip(
+                  label: const Text('0 (Direct Free)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '0'),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(10),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('TOTAL POOL (100%)', style: TextStyle(color: Colors.white70, fontSize: 8.5, fontWeight: FontWeight.bold)),
-                            Text(
-                              newMatchType == MatchType.free ? '${totalPool.toInt()} 🟡' : '₹${totalPool.toInt()}',
-                              style: AppTheme.gamingNumber(fontSize: 14, color: Colors.white),
-                            ),
-                            Text('$totalPlayers × ${entryFee.toInt()}', style: const TextStyle(color: Colors.white54, fontSize: 8)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withAlpha(10),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('COMMISSION (25%)', style: TextStyle(color: Color(0xFF34D399), fontSize: 8.5, fontWeight: FontWeight.bold)),
-                            Text(
-                              newMatchType == MatchType.free ? 'Zero Loss' : '₹${adminCommission.toInt()}',
-                              style: AppTheme.gamingNumber(fontSize: 14, color: const Color(0xFF34D399)),
-                            ),
-                            const Text('25% Platform Margin', style: TextStyle(color: Colors.white54, fontSize: 8)),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withAlpha(20),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('PRIZE POOL (75%)', style: TextStyle(color: Colors.amber, fontSize: 8.5, fontWeight: FontWeight.bold)),
-                            Text(
-                              newMatchType == MatchType.free ? '${(totalPool * 0.4).toInt()} 🎟️' : '₹${distributablePrizePool.toInt()}',
-                              style: AppTheme.gamingNumber(fontSize: 14, color: Colors.amber),
-                            ),
-                            const Text('75% Distributable', style: TextStyle(color: Colors.white54, fontSize: 8)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🎬 1 Ad', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '1'),
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🎬 2 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '2'),
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🎬 3 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '3'),
+                ),
+                const SizedBox(width: 4),
+                ActionChip(
+                  label: const Text('🎬 5 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '5'),
                 ),
               ],
             ),
           ),
           const SizedBox(height: 14),
 
-          // 5. SPECIFIC DISTRIBUTION RULES BY MODE
+          // Match Prize Type Selector
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.amber.shade300),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.emoji_events, color: Colors.amber, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    'Match Prize Type:',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                  ),
+                ),
+                ChoiceChip(
+                  label: const Text('💵 Real Cash (₹)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                  selected: _isRealCashPrizeForFree,
+                  onSelected: (val) => setState(() => _isRealCashPrizeForFree = true),
+                ),
+                const SizedBox(width: 6),
+                ChoiceChip(
+                  label: const Text('🎟️ Store Coins', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                  selected: !_isRealCashPrizeForFree,
+                  onSelected: (val) => setState(() => _isRealCashPrizeForFree = false),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // 5. MANUAL PRIZES BY MODE
           if (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ...[
-            // CS / Lone Wolf: Per Kill Disabled. Full 75% pool to winning team!
+            // CS / Lone Wolf: Full prize to winning team
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -2567,20 +2479,30 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     children: [
                       Icon(Icons.check_circle, size: 16, color: Color(0xFF047857)),
                       SizedBox(width: 6),
-                      Text('CLASH SQUAD / LONE WOLF PRIZE RULE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
+                      Text('CLASH SQUAD / LONE WOLF PRIZE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
                     ],
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _firstPrizeController,
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) => setState(() {}),
+                    decoration: InputDecoration(
+                      labelText: _isRealCashPrizeForFree ? 'Winning Team Total Prize (₹ Cash)' : 'Winning Team Total Prize (🎟️ Coins)',
+                      isDense: true,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '• Per Kill rewards are DISABLED for CS / Lone Wolf.\n'
-                    '• Entire 75% Prize Pool (₹${distributablePrizePool.toInt()}) will be divided EQUALLY among winning team members (≈ ₹${(distributablePrizePool / ((totalPlayers / 2) > 0 ? (totalPlayers / 2) : 1)).toInt()} per player).',
+                    '• Prize will be divided equally among members of the winning team.',
                     style: const TextStyle(fontSize: 11, color: Color(0xFF065F46)),
                   ),
                 ],
               ),
             ),
           ] else ...[
-            // BR (Full Map): Dynamic Rank Prizes + Optional Per Kill
+            // BR (Full Map): Manual Rank Prizes Top 1 to 10 + Optional Per Kill
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -2594,60 +2516,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('BR PRIZE DISTRIBUTION MODE', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+                      const Text('MANUAL RANK PRIZES (TOP 1 TO 10)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
                       Text(
-                        '75% Pool: ₹${distributablePrizePool.toInt()}',
-                        style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                        'Total Pool: ${_isRealCashPrizeForFree ? "₹" : ""}${totalEstimatedPayout.toInt()}${!_isRealCashPrizeForFree ? " 🎟️" : ""}',
+                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-
-                  // Distribution Mode Selector Chips
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('🏆 Top 3 (50/30/20)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                          selected: _brPrizeDistributionMode == 'top3',
-                          onSelected: (val) {
-                            setState(() {
-                              _brPrizeDistributionMode = 'top3';
-                              _autoCalculateBRPrizes();
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('🎖️ Top 5 (Esports)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                          selected: _brPrizeDistributionMode == 'top5',
-                          onSelected: (val) {
-                            setState(() {
-                              _brPrizeDistributionMode = 'top5';
-                              _autoCalculateBRPrizes();
-                            });
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: ChoiceChip(
-                          label: const Text('🌟 Top 10 (Wide)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                          selected: _brPrizeDistributionMode == 'top10',
-                          onSelected: (val) {
-                            setState(() {
-                              _brPrizeDistributionMode = 'top10';
-                              _autoCalculateBRPrizes();
-                            });
-                          },
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 4),
+                  const Text(
+                    '💡 Enter prizes for as many ranks as you want (e.g. Top 3, Top 5, or Top 10). Leave unused ranks as 0.',
+                    style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
+                  // Row 1: Rank 1, Rank 2, Rank 3
                   Row(
                     children: [
                       Expanded(
@@ -2656,7 +2539,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 1 Prize (₹)',
+                            labelText: 'Rank 1 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2669,7 +2552,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 2 Prize (₹)',
+                            labelText: 'Rank 2 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2682,7 +2565,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 3 Prize (₹)',
+                            labelText: 'Rank 3 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2692,6 +2575,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   ),
                   const SizedBox(height: 8),
 
+                  // Row 2: Rank 4, Rank 5, Rank 6
                   Row(
                     children: [
                       Expanded(
@@ -2700,7 +2584,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 4 Prize (₹)',
+                            labelText: 'Rank 4 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2713,7 +2597,84 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 5 Prize (₹)',
+                            labelText: 'Rank 5 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: TextField(
+                          controller: _sixthPrizeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Rank 6 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Row 3: Rank 7, Rank 8, Rank 9
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _seventhPrizeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Rank 7 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: TextField(
+                          controller: _eighthPrizeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Rank 8 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: TextField(
+                          controller: _ninthPrizeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Rank 9 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Row 4: Rank 10, Per Kill
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _tenthPrizeController,
+                          keyboardType: TextInputType.number,
+                          onChanged: (v) => setState(() {}),
+                          decoration: InputDecoration(
+                            labelText: 'Rank 10 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2724,13 +2685,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         child: TextField(
                           controller: _perKillController,
                           keyboardType: TextInputType.number,
-                          onChanged: (v) {
-                            setState(() {
-                              _autoCalculateBRPrizes();
-                            });
-                          },
+                          onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Per Kill (₹)',
+                            labelText: 'Per Kill (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2740,24 +2697,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Validation check display
+                  // Info box
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: isBRValid ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                      color: const Color(0xFFECFDF5),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: isBRValid ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA)),
+                      border: Border.all(color: const Color(0xFFA7F3D0)),
                     ),
                     child: Row(
                       children: [
-                        Icon(isBRValid ? Icons.check_circle : Icons.warning, size: 16, color: isBRValid ? const Color(0xFF047857) : Colors.red),
+                        const Icon(Icons.check_circle, size: 16, color: Color(0xFF047857)),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            isBRValid
-                                ? '✓ Valid: Rank Prizes (₹${totalRankPrizes.toInt()}) + Max Kills (₹${maxKillCost.toInt()}) are within 75% pool limit (₹${distributablePrizePool.toInt()}). If Duo/Squad, prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.'
-                                : '⚠️ Warning: Total Payout (₹${totalEstimatedPayout.toInt()}) exceeds 75% pool limit (₹${distributablePrizePool.toInt()}). Please reduce rank prizes or per-kill amount.',
-                            style: TextStyle(fontSize: 10, color: isBRValid ? const Color(0xFF065F46) : Colors.red, fontWeight: FontWeight.bold),
+                            '✓ Total Prize Pool: ${_isRealCashPrizeForFree ? "₹" : ""}${totalEstimatedPayout.toInt()}${!_isRealCashPrizeForFree ? " 🎟️" : ""} (Ranks: ${totalRankPrizes.toInt()} + Max Kills: ${maxKillCost.toInt()}). If Duo/Squad, rank prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.',
+                            style: const TextStyle(fontSize: 10, color: Color(0xFF065F46), fontWeight: FontWeight.bold),
                           ),
                         ),
                       ],
@@ -2925,13 +2880,21 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         : (newTeamType == TeamType.duo ? MatchFormat.duo : (newTeamType == TeamType.squad ? MatchFormat.squad : MatchFormat.solo)));
 
                 final prizePool = PrizePool(
-                  totalPool: newMatchType == MatchType.paid ? distributablePrizePool : totalPool * 0.4,
+                  totalPool: newMatchType == MatchType.paid
+                      ? distributablePrizePool
+                      : (totalEstimatedPayout > 0 ? totalEstimatedPayout : totalPool * 0.4),
                   perKill: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? 0 : perKill,
                   firstPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? distributablePrizePool : firstPrize,
                   secondPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : secondPrize,
                   thirdPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : thirdPrize,
                   fourthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : fourthPrize,
                   fifthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : fifthPrize,
+                  sixthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : sixthPrize,
+                  seventhPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : seventhPrize,
+                  eighthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : eighthPrize,
+                  ninthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : ninthPrize,
+                  tenthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : tenthPrize,
+                  isCashPrize: newMatchType == MatchType.paid || _isRealCashPrizeForFree,
                 );
 
                 final enteredTitle = _matchTitleController.text.trim();
@@ -5084,6 +5047,134 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ],
           ),
           const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 14),
+
+          // --- 🪙 WINNING COINS TO UPI CASH CONVERSION CONFIGURATION ---
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.amber.shade50.withAlpha(140),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.amber.shade300),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Text('🪙', style: TextStyle(fontSize: 20)),
+                        SizedBox(width: 8),
+                        Text(
+                          'WINNING COINS EXCHANGE RATE & MIN WITHDRAWAL',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade200,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        '1000 Coins = ₹${(1000 * widget.appState.coinToRupeeRate).toInt()}',
+                        style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Set how much Real Cash (₹) users receive when redeeming Winning Coins to UPI.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF78350F)),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _coinRateController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'Coin Rate (₹ per 1 Coin)',
+                          hintText: 'e.g. 0.10 for ₹100 / 1000 coins',
+                          prefixIcon: const Icon(Icons.currency_rupee, color: Colors.amber, size: 18),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _minWithdrawCoinsController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Min Withdrawal (Coins)',
+                          hintText: 'e.g. 1000',
+                          prefixIcon: const Icon(Icons.toll, color: Colors.amber, size: 18),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      const Text('Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF78350F))),
+                      ActionChip(
+                        label: const Text('1000 Coins = ₹100 (₹0.10/coin)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        onPressed: () => setState(() => _coinRateController.text = '0.10'),
+                      ),
+                      const SizedBox(width: 4),
+                      ActionChip(
+                        label: const Text('1000 Coins = ₹50 (₹0.05/coin)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        onPressed: () => setState(() => _coinRateController.text = '0.05'),
+                      ),
+                      const SizedBox(width: 4),
+                      ActionChip(
+                        label: const Text('1000 Coins = ₹200 (₹0.20/coin)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                        onPressed: () => setState(() => _coinRateController.text = '0.20'),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      final rate = double.tryParse(_coinRateController.text.trim()) ?? 0.10;
+                      final minCoins = int.tryParse(_minWithdrawCoinsController.text.trim()) ?? 1000;
+                      await widget.appState.adminUpdateCoinRate(rate, minCoins: minCoins);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppTheme.winningGreen,
+                          content: Text('Winning Coin Rate updated: 1000 Coins = ₹${(1000 * rate).toInt()} (Min $minCoins Coins)!'),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.check_circle, size: 16),
+                    label: const Text('SAVE COIN RATE TO VPS & APP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 14),
 

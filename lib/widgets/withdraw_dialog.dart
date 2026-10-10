@@ -12,15 +12,21 @@ class WithdrawDialog extends StatefulWidget {
 }
 
 class _WithdrawDialogState extends State<WithdrawDialog> {
-  final TextEditingController _amountController = TextEditingController(text: '100');
+  late TextEditingController _coinsController;
   final TextEditingController _upiController = TextEditingController();
   bool isProcessing = false;
   String? errorMsg;
   String? successMsg;
 
   @override
+  void initState() {
+    super.initState();
+    _coinsController = TextEditingController(text: '${widget.appState.minWithdrawalCoins}');
+  }
+
+  @override
   void dispose() {
-    _amountController.dispose();
+    _coinsController.dispose();
     _upiController.dispose();
     super.dispose();
   }
@@ -31,16 +37,18 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
       successMsg = null;
     });
 
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0;
+    final coins = double.tryParse(_coinsController.text.trim()) ?? 0;
     final upiId = _upiController.text.trim();
+    final minCoins = widget.appState.minWithdrawalCoins;
+    final rate = widget.appState.coinToRupeeRate;
 
-    if (amount < 50) {
-      setState(() => errorMsg = 'Minimum withdrawal amount is ₹50.');
+    if (coins < minCoins) {
+      setState(() => errorMsg = 'Minimum withdrawal limit is $minCoins 🪙 Winning Coins (₹${(minCoins * rate).toStringAsFixed(1)}).');
       return;
     }
 
-    if (amount > widget.appState.user.wallet.winningCash) {
-      setState(() => errorMsg = 'Insufficient Winning Cash! You have ₹${widget.appState.user.wallet.winningCash.toInt()} available.');
+    if (coins > widget.appState.user.wallet.winningCash) {
+      setState(() => errorMsg = 'Insufficient Winning Coins! You have ${widget.appState.user.wallet.winningCash.toInt()} 🪙 available.');
       return;
     }
 
@@ -51,9 +59,9 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
 
     setState(() => isProcessing = true);
 
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    Future.delayed(const Duration(milliseconds: 600), () {
       if (!mounted) return;
-      final res = widget.appState.requestWithdrawal(amount, upiId);
+      final res = widget.appState.requestWithdrawal(coins, upiId);
       setState(() {
         isProcessing = false;
         if (res['success'] == true) {
@@ -67,13 +75,17 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final winningCash = widget.appState.user.wallet.winningCash;
+    final winningCoins = widget.appState.user.wallet.winningCash;
+    final rate = widget.appState.coinToRupeeRate;
+    final minCoins = widget.appState.minWithdrawalCoins;
+    final enteredCoins = double.tryParse(_coinsController.text.trim()) ?? 0;
+    final calculatedPayout = enteredCoins * rate;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       backgroundColor: Colors.white,
       child: Container(
-        constraints: const BoxConstraints(maxWidth: 420),
+        constraints: const BoxConstraints(maxWidth: 440),
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -87,26 +99,26 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFECFDF5),
+                        color: const Color(0xFFFEF3C7),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Icon(Icons.currency_rupee, color: AppTheme.winningGreen, size: 22),
+                      child: const Text('🪙', style: TextStyle(fontSize: 22)),
                     ),
                     const SizedBox(width: 10),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          '3-WALLET WITHDRAWAL',
+                          'WINNING COINS REDEMPTION',
                           style: TextStyle(
                             fontSize: 9,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1,
-                            color: AppTheme.winningGreen,
+                            color: Color(0xFF92400E),
                           ),
                         ),
                         Text(
-                          'Withdraw to UPI',
+                          'Withdraw to UPI Cash',
                           style: AppTheme.gamingTitle(fontSize: 18),
                         ),
                       ],
@@ -119,34 +131,36 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
 
+            // Available Winning Coins Card
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0FDF4),
+                color: const Color(0xFFFFFDF5),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: const Color(0xFFBBF7D0)),
+                border: Border.all(color: const Color(0xFFFDE68A)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Column(
+                  Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'WITHDRAWABLE WINNINGS',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF166534)),
+                      const Text(
+                        'AVAILABLE WINNING COINS',
+                        style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                       ),
+                      const SizedBox(height: 2),
                       Text(
-                        'Won from paid matches only',
-                        style: TextStyle(fontSize: 9.5, color: Color(0xFF15803D)),
+                        '1 Coin = ₹${rate.toStringAsFixed(2)} Cash (1000 Coins = ₹${(1000 * rate).toInt()})',
+                        style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFFB45309)),
                       ),
                     ],
                   ),
                   Text(
-                    '₹${winningCash.toInt()}',
-                    style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFF166534)),
+                    '🪙 ${winningCoins.toInt()}',
+                    style: AppTheme.gamingNumber(fontSize: 18, color: const Color(0xFF78350F)),
                   ),
                 ],
               ),
@@ -184,17 +198,17 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                           Icon(Icons.schedule, size: 14, color: Color(0xFF059669)),
                           SizedBox(width: 6),
                           Text(
-                            '24 Hours Ke Andar Transfer to your UPI',
+                            '24 Hours Ke Andar Direct UPI Transfer',
                             style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF065F46)),
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      'Amount deducted immediately from wallet. Live payout status is updated below in your 4-Wallet history.',
+                    Text(
+                      successMsg!,
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF065F46), fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 14),
                     ElevatedButton(
@@ -210,30 +224,92 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                 ),
               ),
             ] else ...[
-              const Text(
-                'WITHDRAWAL AMOUNT (MIN ₹50)',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'COINS TO WITHDRAW (MIN $minCoins COINS)',
+                    style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                  ),
+                  InkWell(
+                    onTap: () {
+                      setState(() {
+                        _coinsController.text = '${winningCoins.toInt()}';
+                      });
+                    },
+                    child: const Text('Withdraw Max', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFFD97706))),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               TextField(
-                controller: _amountController,
+                controller: _coinsController,
                 keyboardType: TextInputType.number,
+                onChanged: (_) => setState(() {}),
                 style: AppTheme.gamingNumber(fontSize: 18),
                 decoration: InputDecoration(
                   prefixIcon: const Padding(
                     padding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    child: Text('₹', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    child: Text('🪙', style: TextStyle(fontSize: 18)),
                   ),
                   prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                 ),
               ),
+              const SizedBox(height: 6),
+
+              // Quick Coin Presets
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    ActionChip(
+                      label: const Text('1,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '1000'),
+                    ),
+                    const SizedBox(width: 4),
+                    ActionChip(
+                      label: const Text('2,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '2000'),
+                    ),
+                    const SizedBox(width: 4),
+                    ActionChip(
+                      label: const Text('5,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '5000'),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 10),
+
+              // Calculated Real Cash Payout Box
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'You Will Receive in UPI:',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF065F46)),
+                    ),
+                    Text(
+                      '₹${calculatedPayout.toStringAsFixed(2)}',
+                      style: AppTheme.gamingNumber(fontSize: 16, color: const Color(0xFF047857)),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 12),
 
               const Text(
                 'ENTER UPI ID / PHONEPE NUMBER',
-                style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
               ),
               const SizedBox(height: 6),
               TextField(
@@ -259,12 +335,12 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: winningCash >= 50 ? AppTheme.winningGreen : Colors.grey.shade300,
-                    foregroundColor: winningCash >= 50 ? Colors.white : Colors.grey.shade600,
+                    backgroundColor: (winningCoins >= minCoins && enteredCoins >= minCoins) ? AppTheme.winningGreen : Colors.grey.shade300,
+                    foregroundColor: (winningCoins >= minCoins && enteredCoins >= minCoins) ? Colors.white : Colors.grey.shade600,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                   ),
-                  onPressed: (winningCash >= 50 && !isProcessing) ? _processWithdrawal : null,
+                  onPressed: (winningCoins >= minCoins && enteredCoins >= minCoins && !isProcessing) ? _processWithdrawal : null,
                   child: isProcessing
                       ? const Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -279,7 +355,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                           ],
                         )
                       : Text(
-                          'SUBMIT WITHDRAWAL (₹${_amountController.text})',
+                          'SUBMIT WITHDRAWAL (₹${calculatedPayout.toStringAsFixed(1)})',
                           style: AppTheme.gamingTitle(fontSize: 14, color: Colors.white, isItalic: false),
                         ),
                 ),

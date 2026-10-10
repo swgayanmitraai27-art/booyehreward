@@ -237,9 +237,9 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
+                    color: Colors.black.withAlpha(140),
                     borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.amber.withOpacity(0.4), width: 0.8),
+                    border: Border.all(color: Colors.amber.withAlpha(100), width: 0.8),
                   ),
                   child: Text(
                     match.status == MatchStatus.completed
@@ -268,7 +268,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Format: ${match.matchFormat.name.toUpperCase()} • Map: ${match.map.name.toUpperCase()} • Prize: ${isFree ? '${match.prizePool.totalPool.toInt()} 🎟️ Reward Coins' : '₹${match.prizePool.totalPool.toInt()} Cash'}',
+                  'Format: ${match.matchFormat.name.toUpperCase()} • Map: ${match.map.name.toUpperCase()} • Prize: ${(match.prizePool.isCashPrize || !isFree) ? '₹${match.prizePool.totalPool.toInt()} Real Cash' : '${match.prizePool.totalPool.toInt()} 🎟️ Reward Coins'}',
                   style: const TextStyle(fontSize: 11.5, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 14),
