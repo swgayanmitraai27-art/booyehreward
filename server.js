@@ -482,9 +482,9 @@ function refundMatchParticipants(match) {
     if (!user.wallets) user.wallets = user.wallet;
 
     const refundAmt = Number(p.amountPaid) || Number(match.entryFee) || 0;
-    const isAdCoins = p.paidWith === 'AD_COINS' || match.matchType === 'free';
+    const isCash = p.paidWith === 'DEPOSIT_CASH' || match.entryFeeType === 'cash' || match.matchType === 'paid';
 
-    if (isAdCoins) {
+    if (!isCash) {
       user.wallet.adCoins = (user.wallet.adCoins || 0) + refundAmt;
       user.wallets.adCoins = user.wallet.adCoins;
 
@@ -493,12 +493,12 @@ function refundMatchParticipants(match) {
         userId: p.uid,
         userName: user.displayName || user.inGameName,
         amount: refundAmt,
-        currency: 'COINS',
-        type: 'refund',
+        currency: 'AD_COINS',
+        type: 'matchRefund',
         walletAffected: 'adCoins',
         title: '🟡 Match Refund: Ad Coins Returned',
         description: `Match #${match.matchNumber || match.title} cancelled by admin. Entry refund.`,
-        status: 'success',
+        status: 'SUCCESS',
         createdAt: new Date().toISOString()
       };
       if (!db.transactions) db.transactions = [];
@@ -524,11 +524,11 @@ function refundMatchParticipants(match) {
         userName: user.displayName || user.inGameName,
         amount: refundAmt,
         currency: 'INR',
-        type: 'refund',
+        type: 'matchRefund',
         walletAffected: 'depositCash',
         title: '💵 Match Refund: Entry Cash Returned',
         description: `Match #${match.matchNumber || match.title} cancelled by admin. Entry refund.`,
-        status: 'success',
+        status: 'SUCCESS',
         createdAt: new Date().toISOString()
       };
       if (!db.transactions) db.transactions = [];

@@ -349,16 +349,18 @@ class TournamentLobbyScreen extends StatelessWidget {
               const SizedBox(height: 10),
 
               // Coin Economy Filter Row (All / WinCoin / Reward Coin)
-              Row(
-                children: [
-                  _buildEconomyChip('ALL', 'All Matches', null, selectedFilter == 'ALL'),
-                  const SizedBox(width: 6),
-                  _buildEconomyChip('WIN_COIN', 'WinCoin Matches', '🪙', selectedFilter == 'WIN_COIN'),
-                  const SizedBox(width: 6),
-                  _buildEconomyChip('REWARD_COIN', 'Reward Coin Matches', '🎟️', selectedFilter == 'REWARD_COIN'),
-                ],
-              ),
-              const SizedBox(height: 10),
+              if (appState.isRealCashModeEnabled) ...[
+                Row(
+                  children: [
+                    _buildEconomyChip('ALL', 'All Matches', null, selectedFilter == 'ALL'),
+                    const SizedBox(width: 6),
+                    _buildEconomyChip('WIN_COIN', 'Paid Matches (₹)', '🪙', selectedFilter == 'WIN_COIN'),
+                    const SizedBox(width: 6),
+                    _buildEconomyChip('REWARD_COIN', 'Free Matches', '🎟️', selectedFilter == 'REWARD_COIN'),
+                  ],
+                ),
+                const SizedBox(height: 10),
+              ],
 
               // Match Status Row (ALL / UPCOMING / ONGOING / RESULTS)
               SingleChildScrollView(
@@ -718,11 +720,7 @@ class TournamentLobbyScreen extends StatelessWidget {
         : null;
     final progress = match.filledSlots / match.maxSlots;
 
-    final isTeamMatch = match.teamType == TeamType.duo ||
-        match.teamType == TeamType.squad ||
-        match.matchFormat == MatchFormat.duo ||
-        match.matchFormat == MatchFormat.squad ||
-        match.matchFormat == MatchFormat.cs4v4;
+    final isTeamMatch = match.isTeamMatch;
 
     return Container(
       decoration: BoxDecoration(
@@ -1113,11 +1111,15 @@ class TournamentLobbyScreen extends StatelessWidget {
                       child: Text(
                         isTeamMatch
                             ? (match.entryFee <= 0
-                                ? 'JOIN SQUAD (FREE DIRECT ENTRY)'
-                                : 'JOIN SQUAD (🟡 ${match.entryFee.toInt()} AD COINS)')
+                                ? 'JOIN SQUAD'
+                                : (match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid
+                                    ? 'JOIN SQUAD (₹${match.entryFee.toInt()})'
+                                    : 'JOIN SQUAD (🟡 ${match.entryFee.toInt()})'))
                             : (match.entryFee <= 0
-                                ? 'PICK SLOT (FREE DIRECT ENTRY)'
-                                : 'JOIN WITH ${match.entryFee.toInt()} AD COINS (PICK SLOT)'),
+                                ? 'JOIN MATCH'
+                                : (match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid
+                                    ? 'JOIN MATCH (₹${match.entryFee.toInt()})'
+                                    : 'JOIN MATCH (🟡 ${match.entryFee.toInt()})')),
                         style: AppTheme.gamingTitle(
                           fontSize: 13,
                           color: isFree ? Colors.black : Colors.white,

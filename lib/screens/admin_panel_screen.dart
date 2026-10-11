@@ -96,6 +96,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   }
 
   MatchType newMatchType = MatchType.free;
+  EntryFeeType newEntryFeeType = EntryFeeType.adCoins;
   GameType newGameType = GameType.freeFire;
   MatchMode newMatchMode = MatchMode.cs;
   TeamType newTeamType = TeamType.squad;
@@ -687,7 +688,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   Icon(Icons.analytics, color: Colors.amber, size: 18),
                   SizedBox(width: 6),
                   Text(
-                    '75/25 PLATFORM ECONOMY',
+                    'TOURNAMENT OVERVIEW',
                     style: TextStyle(color: Colors.amber, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 1),
                   ),
                 ],
@@ -1370,12 +1371,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A), size: 52),
               const SizedBox(height: 12),
               const Text(
-                'Sabhi Matches ke Results Declare ho chuke hain! 🎉',
+                'All Match Results Declared! 🎉',
                 style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
               ),
               const SizedBox(height: 6),
               const Text(
-                'Abhi koi pending match nahi hai jiska result declare karna ho.',
+                'There are no pending matches awaiting result declaration.',
                 style: TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 16),
@@ -2347,7 +2348,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
-                'DYNAMIC MATCH CREATION (75/25 ENGINE)',
+                'CREATE TOURNAMENT MATCH',
                 style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
               ),
               Container(
@@ -2357,7 +2358,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  newMatchType == MatchType.free ? '🟡 FREE AD MATCH' : '💵 PAID 75/25 ENGINE',
+                  newMatchType == MatchType.free ? '🟡 FREE MATCH' : '💵 PAID MATCH',
                   style: TextStyle(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w900,
@@ -2498,7 +2499,134 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 3. ENTRY AD COINS & TOTAL PLAYERS
+          // 3. MATCH ENTRY TYPE SELECTOR (FREE AD COINS VS REAL CASH ₹)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'MATCH ENTRY TYPE & CURRENCY:',
+                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    // Option 1: Free Match (Ad Coins 🟡)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            newMatchType = MatchType.free;
+                            newEntryFeeType = EntryFeeType.adCoins;
+                            _entryFeeController.text = '0';
+                            _prizeType = 'storeRewardCoins';
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: newEntryFeeType == EntryFeeType.adCoins ? Colors.amber.shade100 : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: newEntryFeeType == EntryFeeType.adCoins ? Colors.amber.shade800 : const Color(0xFFCBD5E1),
+                              width: newEntryFeeType == EntryFeeType.adCoins ? 2 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('🟡', style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'FREE MATCH',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      color: newEntryFeeType == EntryFeeType.adCoins ? const Color(0xFF78350F) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Entry via Ad Coins',
+                                    style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Option 2: Paid Match (Real Cash ₹)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            newMatchType = MatchType.paid;
+                            newEntryFeeType = EntryFeeType.cash;
+                            _entryFeeController.text = '20';
+                            _prizeType = 'winningCoins';
+                          });
+                        },
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                          decoration: BoxDecoration(
+                            color: newEntryFeeType == EntryFeeType.cash ? const Color(0xFFEFF6FF) : Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: newEntryFeeType == EntryFeeType.cash ? const Color(0xFF1D4ED8) : const Color(0xFFCBD5E1),
+                              width: newEntryFeeType == EntryFeeType.cash ? 2 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text('💵', style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 6),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'PAID MATCH',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w900,
+                                      color: newEntryFeeType == EntryFeeType.cash ? const Color(0xFF1E40AF) : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const Text(
+                                    'Entry via Real Cash ₹',
+                                    style: TextStyle(fontSize: 9, color: Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // ENTRY FEE & TOTAL PLAYERS
           Row(
             children: [
               Expanded(
@@ -2507,9 +2635,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   keyboardType: TextInputType.number,
                   onChanged: (v) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: 'Entry Fee in Ad Coins (🟡)',
-                    hintText: 'e.g. 1, 2, 5 (0 for Free)',
-                    prefixIcon: const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
+                    labelText: newEntryFeeType == EntryFeeType.cash ? 'Entry Fee in Real Cash (₹)' : 'Entry Fee in Ad Coins (🟡)',
+                    hintText: newEntryFeeType == EntryFeeType.cash ? 'e.g. 10, 20, 50, 100' : 'e.g. 1, 2, 5 (0 for Free)',
+                    prefixIcon: Icon(
+                      newEntryFeeType == EntryFeeType.cash ? Icons.currency_rupee : Icons.monetization_on,
+                      color: newEntryFeeType == EntryFeeType.cash ? const Color(0xFF1D4ED8) : Colors.amber,
+                      size: 18,
+                    ),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2531,35 +2663,67 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ],
           ),
           const SizedBox(height: 6),
+
+          // Dynamic Presets based on Entry Currency
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                const Text('Coin Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                ActionChip(
-                  label: const Text('0 (Free)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '0'),
+                Text(
+                  newEntryFeeType == EntryFeeType.cash ? 'Cash Presets: ' : 'Coin Presets: ',
+                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
                 ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  label: const Text('🟡 1 Coin', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '1'),
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  label: const Text('🟡 2 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '2'),
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  label: const Text('🟡 5 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '5'),
-                ),
-                const SizedBox(width: 4),
-                ActionChip(
-                  label: const Text('🟡 10 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '10'),
-                ),
+                if (newEntryFeeType == EntryFeeType.cash) ...[
+                  ActionChip(
+                    label: const Text('₹10', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '10'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('₹20', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '20'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('₹30', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '30'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('₹50', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '50'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('₹100', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '100'),
+                  ),
+                ] else ...[
+                  ActionChip(
+                    label: const Text('0 (Free)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '0'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('🟡 1 Coin', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '1'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('🟡 2 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '2'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('🟡 5 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '5'),
+                  ),
+                  const SizedBox(width: 4),
+                  ActionChip(
+                    label: const Text('🟡 10 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                    onPressed: () => setState(() => _entryFeeController.text = '10'),
+                  ),
+                ],
               ],
             ),
           ),
@@ -3103,7 +3267,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 final resolvedBanner = await ImageUrlResolver.resolveDirectImageUrl(bannerUrl);
 
                 final format = newMatchMode == MatchMode.cs
-                    ? MatchFormat.cs4v4
+                    ? (newTeamType == TeamType.solo
+                        ? MatchFormat.solo
+                        : (newTeamType == TeamType.duo ? MatchFormat.duo : MatchFormat.cs4v4))
                     : (newMatchMode == MatchMode.loneWolf
                         ? (newTeamType == TeamType.solo ? MatchFormat.loneWolf1v1 : MatchFormat.loneWolf2v2)
                         : (newTeamType == TeamType.duo ? MatchFormat.duo : (newTeamType == TeamType.squad ? MatchFormat.squad : MatchFormat.solo)));
@@ -3146,8 +3312,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   teamType: newTeamType,
                   matchFormat: format,
                   map: newMapType,
-                  matchType: MatchType.free,
-                  entryFeeType: EntryFeeType.adCoins,
+                  matchType: newMatchType,
+                  entryFeeType: newEntryFeeType,
                   entryFee: entryFee,
                   prizePool: prizePool,
                   maxSlots: totalPlayers,
@@ -4262,7 +4428,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'IMMUTABLE MATCH LEDGER',
+                            'MATCH AUDIT HISTORY',
                             style: TextStyle(
                               fontFamily: 'Inter',
                               fontSize: 10,
@@ -5566,18 +5732,18 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: const Color(0xFFFEF3C7),
+                color: match.isCashMatch ? const Color(0xFFEFF6FF) : const Color(0xFFFEF3C7),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFFDE68A)),
+                border: Border.all(color: match.isCashMatch ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A)),
               ),
               child: Row(
                 children: [
-                  const Text('🟡', style: TextStyle(fontSize: 18)),
+                  Text(match.isCashMatch ? '💵' : '🟡', style: const TextStyle(fontSize: 18)),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'All ${match.participants.length} player(s) joined will automatically receive their 🟡 Ad Coins entry fee refunded back to their wallet!',
-                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
+                      'All ${match.participants.length} player(s) joined will automatically receive their ${match.isCashMatch ? "Real Cash (₹)" : "🟡 Ad Coins"} entry fee refunded back to their wallet!',
+                      style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: match.isCashMatch ? const Color(0xFF1E40AF) : const Color(0xFF78350F)),
                     ),
                   ),
                 ],
@@ -5603,13 +5769,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: const Color(0xFF065F46),
-                    content: Text(res['message'] ?? 'Match cancelled and coins refunded!'),
+                    content: Text(res['message'] ?? 'Match cancelled and refund processed!'),
                   ),
                 );
                 setState(() {});
               }
             },
-            child: const Text('CANCEL MATCH & REFUND COINS'),
+            child: Text(match.isCashMatch ? 'CANCEL MATCH & REFUND REAL CASH' : 'CANCEL MATCH & REFUND COINS'),
           ),
         ],
       ),
@@ -5867,7 +6033,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     final targetMatchId = _notifSelectedMatchId ?? (matches.isNotEmpty ? matches.first.id : '');
                     if (targetMatchId.isEmpty) return;
                     try {
-                      final res = await http.post(
+                      await http.post(
                         Uri.parse('https://vps.swgayanbhumi.in/api/notifications/broadcast-personalized-match'),
                         headers: {'Content-Type': 'application/json'},
                         body: jsonEncode({

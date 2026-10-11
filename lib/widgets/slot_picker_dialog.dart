@@ -53,15 +53,15 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     final level = int.tryParse(levelStr);
 
     if (ign.isEmpty) {
-      setState(() => errorText = 'Free Fire In-Game Name (IGN) daalna mandatory hai.');
+      setState(() => errorText = 'Free Fire In-Game Name (IGN) is required.');
       return false;
     }
     if (uid.isEmpty || uid.length < 6 || int.tryParse(uid) == null) {
-      setState(() => errorText = 'Valid numeric Free Fire UID daalna zaroori hai (min 6 digits).');
+      setState(() => errorText = 'Valid numeric Free Fire UID is required (min 6 digits).');
       return false;
     }
     if (level == null || level < 40) {
-      setState(() => errorText = 'Anti-Hack Rule: Minimum Free Fire Account Level 40+ hona anivarya hai (Aapka level: ${levelStr.isEmpty ? '0' : levelStr}).');
+      setState(() => errorText = 'Fair Play Requirement: Minimum Free Fire Account Level 40+ is required (Current: ${levelStr.isEmpty ? '0' : levelStr}).');
       return false;
     }
     setState(() => errorText = null);

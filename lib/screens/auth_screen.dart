@@ -131,9 +131,9 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // STRICT LEVEL 40+ ANTI-HACK CHECK
+    // STRICT LEVEL 40+ FAIR PLAY CHECK
     if (level < 40) {
-      setState(() => _signupError = 'Anti-Hack Rule: Free Fire Level must be minimum 40+ to join tournaments.');
+      setState(() => _signupError = 'Fair Play Policy: Free Fire level must be minimum 40+ to join tournaments.');
       return;
     }
 
@@ -516,7 +516,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
           _buildInputField(
             controller: _levelController,
-            label: 'Free Fire Level (Min 40+ Anti-Hack)',
+            label: 'Free Fire Level (Minimum 40+ Required)',
             hint: '40+',
             icon: Icons.shield_outlined,
             keyboardType: TextInputType.number,

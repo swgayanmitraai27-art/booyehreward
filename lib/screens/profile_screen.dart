@@ -268,7 +268,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           SizedBox(width: 6),
                           Expanded(
                             child: Text(
-                              'Note: Ye aapki Free Fire Game Profile ka Account Level hai (App level nahi). Hack prevention ke liye minimum Level 40+ hona compulsory hai.',
+                              'Note: Free Fire In-Game Account Level (Fair play requirement: Level 40+ to enter tournaments).',
                               style: TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
                             ),
                           ),
@@ -296,15 +296,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final level = int.tryParse(_levelController.text.trim()) ?? 0;
 
                           if (ign.isEmpty) {
-                            setState(() => errorText = 'Free Fire In-Game Name (IGN) zaroori hai.');
+                            setState(() => errorText = 'Free Fire In-Game Name (IGN) is required.');
                             return;
                           }
                           if (uid.isEmpty || uid.length < 6) {
-                            setState(() => errorText = 'Valid numeric Free Fire UID zaroori hai (min 6 digits).');
+                            setState(() => errorText = 'Valid numeric Free Fire UID is required (min 6 digits).');
                             return;
                           }
                           if (level < 40) {
-                            setState(() => errorText = 'Anti-Hack Rule: Minimum Free Fire Level 40+ hona zaroori hai!');
+                            setState(() => errorText = 'Fair Play Requirement: Minimum Free Fire Level 40+ is required.');
                             return;
                           }
 

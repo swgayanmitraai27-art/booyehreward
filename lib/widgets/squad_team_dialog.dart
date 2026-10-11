@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../models/match_model.dart';
 import '../models/team_model.dart';
 import '../services/app_state.dart';
@@ -415,15 +416,15 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
                     final level = int.tryParse(levelStr);
 
                     if (ign.isEmpty) {
-                      setState(() => errorText = 'Free Fire In-Game Name (IGN) daalna mandatory hai.');
+                      setState(() => errorText = 'Free Fire In-Game Name (IGN) is required.');
                       return;
                     }
                     if (ffUid.isEmpty || ffUid.length < 6 || int.tryParse(ffUid) == null) {
-                      setState(() => errorText = 'Valid numeric Free Fire UID daalna mandatory hai (min 6 digits).');
+                      setState(() => errorText = 'Valid numeric Free Fire UID is required (min 6 digits).');
                       return;
                     }
                     if (level == null || level < 40) {
-                      setState(() => errorText = 'Anti-Hack Rule: Aapki Free Fire ID ka level minimum 40+ hona compulsory hai (Aapka Level: ${levelStr.isEmpty ? '0' : levelStr}).');
+                      setState(() => errorText = 'Fair Play Requirement: Free Fire account level must be 40+ (Current: ${levelStr.isEmpty ? '0' : levelStr}).');
                       return;
                     }
 
@@ -490,6 +491,16 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
             labelText: '6-Digit Team Code',
             hintText: 'e.g. BYH842',
             prefixIcon: const Icon(Icons.key, color: Colors.amber),
+            suffixIcon: TextButton.icon(
+              icon: const Icon(Icons.content_paste, size: 16, color: Color(0xFF2563EB)),
+              label: const Text('PASTE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF2563EB))),
+              onPressed: () async {
+                final data = await Clipboard.getData(Clipboard.kTextPlain);
+                if (data?.text != null && data!.text!.trim().isNotEmpty) {
+                  setState(() => _teamCodeController.text = data.text!.trim().toUpperCase());
+                }
+              },
+            ),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
@@ -575,19 +586,19 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
                     final level = int.tryParse(levelStr);
 
                     if (code.isEmpty) {
-                      setState(() => errorText = '6-Digit Team Code daalna zaroori hai.');
+                      setState(() => errorText = 'Please enter a valid 6-character Team Code.');
                       return;
                     }
                     if (ign.isEmpty) {
-                      setState(() => errorText = 'Free Fire In-Game Name (IGN) daalna mandatory hai.');
+                      setState(() => errorText = 'Free Fire In-Game Name (IGN) is required.');
                       return;
                     }
                     if (ffUid.isEmpty || ffUid.length < 6 || int.tryParse(ffUid) == null) {
-                      setState(() => errorText = 'Valid numeric Free Fire UID daalna mandatory hai (min 6 digits).');
+                      setState(() => errorText = 'Valid numeric Free Fire UID is required (min 6 digits).');
                       return;
                     }
                     if (level == null || level < 40) {
-                      setState(() => errorText = 'Anti-Hack Rule: Aapki Free Fire ID ka level minimum 40+ hona compulsory hai (Aapka Level: ${levelStr.isEmpty ? '0' : levelStr}).');
+                      setState(() => errorText = 'Fair Play Requirement: Free Fire account level must be 40+ (Current: ${levelStr.isEmpty ? '0' : levelStr}).');
                       return;
                     }
 
@@ -679,17 +690,53 @@ class _SquadTeamDialogState extends State<SquadTeamDialog> {
                 children: [
                   Text(
                     team.teamCode,
-                    style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 4),
-                  ),
-                  const SizedBox(width: 10),
-                  IconButton(
-                    icon: const Icon(Icons.copy, color: Colors.amber, size: 22),
-                    onPressed: () => _copy(team.teamCode, 'Team Code'),
-                    tooltip: 'Copy Team Code',
+                    style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 4),
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.copy, size: 16),
+                    label: const Text('COPY CODE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: () => _copy(team.teamCode, 'Team Code'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF25D366),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.share, size: 16),
+                    label: const Text('SHARE ON WHATSAPP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                    onPressed: () async {
+                      final text = Uri.encodeComponent(
+                        '🔥 Join my squad for "${match.title}" on Booyah Rewards!\n\n'
+                        '🛡️ Team: ${team.teamName}\n'
+                        '🔑 Team Code: ${team.teamCode}\n\n'
+                        'Download Booyah Rewards, enter this Team Code & let\'s win together!'
+                      );
+                      final url = Uri.parse('https://wa.me/?text=$text');
+                      if (await canLaunchUrl(url)) {
+                        await launchUrl(url, mode: LaunchMode.externalApplication);
+                      } else {
+                        _copy(team.teamCode, 'Team Code');
+                      }
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               Text(
                 remaining > 0
                     ? 'Share this code with $remaining friends to join your squad!'

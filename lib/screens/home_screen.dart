@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
 import '../services/app_state.dart';
 import '../services/auth_service.dart';
 import '../services/ad_service.dart';
 import '../utils/url_launcher_util.dart';
 import '../widgets/booyah_header.dart';
-import '../widgets/booyah_footer.dart';
 import 'tournament_lobby_screen.dart';
 import 'my_matches_screen.dart';
 import 'weekly_leaderboard_screen.dart';

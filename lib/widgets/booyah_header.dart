@@ -146,47 +146,49 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 6),
 
-          // 🪙 3. Winning Coins (UPI Withdrawable)
-          InkWell(
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => WithdrawDialog(appState: appState),
-              );
-            },
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-              decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFA7F3D0)),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.green.withAlpha(20),
-                    blurRadius: 4,
-                    offset: const Offset(0, 1),
-                  ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  const Text('🪙', style: TextStyle(fontSize: 12)),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${user.wallet.winningCash.toInt()}',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF065F46),
+          // 🪙 3. Winning Coins (UPI Withdrawable - Only in Real Cash Mode)
+          if (appState.isRealCashModeEnabled) ...[
+            InkWell(
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => WithdrawDialog(appState: appState),
+                );
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFECFDF5),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFA7F3D0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.green.withAlpha(20),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const Text('🪙', style: TextStyle(fontSize: 12)),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${user.wallet.winningCash.toInt()}',
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: Color(0xFF065F46),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 6),
+            const SizedBox(width: 6),
+          ],
 
           // 🏆 4. Weekly Leaderboard Quick Button
           InkWell(

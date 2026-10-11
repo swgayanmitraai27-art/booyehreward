@@ -75,12 +75,12 @@ class TransactionModel {
     userId: (json['userId'] ?? 'anonymous') as String,
     userName: (json['userName'] ?? 'Player') as String,
     type: TransactionType.values.firstWhere(
-      (e) => e.name == json['type'],
+      (e) => e.name == json['type'] || (json['type'] == 'refund' && e == TransactionType.matchRefund),
       orElse: () => TransactionType.deposit,
     ),
     walletAffected: WalletType.values.firstWhere(
       (e) => e.name == json['walletAffected'],
-      orElse: () => WalletType.depositCash,
+      orElse: () => (json['currency'] == 'AD_COINS' ? WalletType.adCoins : (json['currency'] == 'REWARD_COINS' ? WalletType.rewardCoins : WalletType.depositCash)),
     ),
     amount: ((json['amount'] ?? json['credited_amount'] ?? 0) as num).toDouble(),
     currency: (json['currency'] ?? 'INR') as String,

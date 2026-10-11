@@ -97,7 +97,7 @@ class _MatchRulesCardState extends State<MatchRulesCard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildRuleItem(
-                    title: '1. Minimum FF Account Level 40+ (Anti-Hack):',
+                    title: '1. Minimum FF Account Level 40+ (Fair Play):',
                     desc: 'Player ki Free Fire ID ka level minimum 40 ya usse zyada hona compulsory hai. Hack prevention ke liye 40 se kam level wali IDs ko room se bina refund kick/disqualify kar diya jayega.',
                     isCrucial: true,
                   ),

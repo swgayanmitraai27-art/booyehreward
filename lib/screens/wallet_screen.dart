@@ -4,7 +4,7 @@ import '../models/transaction_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/withdraw_dialog.dart';
-import '../widgets/deposit_dialog.dart';
+import 'deposit_screen.dart';
 import '../widgets/ff_brand_elements.dart';
 import 'package:intl/intl.dart';
 
@@ -52,42 +52,9 @@ class _WalletScreenState extends State<WalletScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.appState.isRealCashModeEnabled ? 'DUAL ECONOMY LEDGER' : 'REWARDS & COINS LEDGER',
-                        style: const TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 9.5,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF64748B),
-                          letterSpacing: 1,
-                        ),
-                      ),
-                      Text(
-                        widget.appState.isRealCashModeEnabled ? '4-Wallet Balance & Payouts' : 'Coins Balance & Vouchers',
-                        style: AppTheme.gamingTitle(fontSize: 20),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
-                    ),
-                    child: Row(
-                      children: [
-                        Image.asset('imgasest/FF_SHORT_LOGO.PNG.png', width: 14, height: 14),
-                        const SizedBox(width: 4),
-                        const Text(
-                          'ZERO-LOSS ACTIVE',
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                        ),
-                      ],
-                    ),
+                  Text(
+                    'My Wallet',
+                    style: AppTheme.gamingTitle(fontSize: 22),
                   ),
                 ],
               ),
@@ -126,10 +93,10 @@ class _WalletScreenState extends State<WalletScreen> {
                               Text('🎮', style: TextStyle(fontSize: 10)),
                               SizedBox(width: 4),
                               Text(
-                                'FREE-TO-PLAY ECONOMY',
+                                'TOURNAMENT COINS',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
-                                  fontSize: 9.5,
+                                  fontSize: 10,
                                   fontWeight: FontWeight.w900,
                                   color: Color(0xFF92400E),
                                   letterSpacing: 0.8,
@@ -137,10 +104,6 @@ class _WalletScreenState extends State<WalletScreen> {
                               ),
                             ],
                           ),
-                        ),
-                        const Text(
-                          'Ad-Supported • Store Redemptions',
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8)),
                         ),
                       ],
                     ),
@@ -268,10 +231,10 @@ class _WalletScreenState extends State<WalletScreen> {
                                 Text('💵', style: TextStyle(fontSize: 11)),
                                 SizedBox(width: 4),
                                 Text(
-                                  'DEPOSIT CASH WALLET',
+                                  'DEPOSIT CASH',
                                   style: TextStyle(
                                     fontFamily: 'Inter',
-                                    fontSize: 9.5,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w900,
                                     color: Color(0xFF1D4ED8),
                                     letterSpacing: 0.8,
@@ -287,7 +250,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: const Text(
-                              '🎁 +10% BONUS CASHBACK',
+                              '+10% BONUS',
                               style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                             ),
                           ),
@@ -309,7 +272,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text(
-                                  '💵 AVAILABLE DEPOSIT CASH',
+                                  'AVAILABLE BALANCE',
                                   style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF64748B)),
                                 ),
                                 const SizedBox(height: 2),
@@ -323,20 +286,6 @@ class _WalletScreenState extends State<WalletScreen> {
                                     style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
                                   ),
                               ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFBFDBFE)),
-                              ),
-                              child: const Column(
-                                children: [
-                                  Text('MATCH ENTRY', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8))),
-                                  Text('REAL CASH ₹', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E40AF))),
-                                ],
-                              ),
                             ),
                           ],
                         ),
@@ -354,9 +303,10 @@ class _WalletScreenState extends State<WalletScreen> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                           ),
                           onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => DepositDialog(appState: widget.appState),
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => DepositScreen(appState: widget.appState),
+                              ),
                             );
                           },
                           icon: const Icon(Icons.add_circle_outline, size: 18, color: Colors.white),
@@ -563,7 +513,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 4),
                   child: Text(
-                    'RECENT COIN ACTIVITY & STORE CLAIMS',
+                    'TRANSACTION HISTORY',
                     style: TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 11,

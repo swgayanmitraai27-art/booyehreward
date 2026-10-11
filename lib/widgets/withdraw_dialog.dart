@@ -75,6 +75,27 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.appState.isRealCashModeEnabled) {
+      return Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.lock_outline, color: Colors.orange, size: 40),
+              const SizedBox(height: 12),
+              const Text('Withdrawals Unavailable', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 8),
+              const Text('UPI withdrawals are only active during Real Cash Tournament mode.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+              const SizedBox(height: 16),
+              ElevatedButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
+            ],
+          ),
+        ),
+      );
+    }
+
     final winningCoins = widget.appState.user.wallet.winningCash;
     final rate = widget.appState.coinToRupeeRate;
     final minCoins = widget.appState.minWithdrawalCoins;
@@ -265,18 +286,28 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                 child: Row(
                   children: [
                     ActionChip(
-                      label: const Text('1,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      onPressed: () => setState(() => _coinsController.text = '1000'),
+                      label: const Text('20 Coins (₹20)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '20'),
                     ),
                     const SizedBox(width: 4),
                     ActionChip(
-                      label: const Text('2,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      onPressed: () => setState(() => _coinsController.text = '2000'),
+                      label: const Text('50 Coins (₹50)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '50'),
                     ),
                     const SizedBox(width: 4),
                     ActionChip(
-                      label: const Text('5,000 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      onPressed: () => setState(() => _coinsController.text = '5000'),
+                      label: const Text('100 Coins (₹100)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '100'),
+                    ),
+                    const SizedBox(width: 4),
+                    ActionChip(
+                      label: const Text('200 Coins (₹200)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '200'),
+                    ),
+                    const SizedBox(width: 4),
+                    ActionChip(
+                      label: const Text('500 Coins (₹500)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '500'),
                     ),
                   ],
                 ),

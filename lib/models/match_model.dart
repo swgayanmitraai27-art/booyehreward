@@ -465,10 +465,30 @@ class MatchModel {
   }
 
   int get teamSize {
-    if (teamType == TeamType.squad || matchFormat == MatchFormat.squad || matchFormat == MatchFormat.cs4v4) return 4;
-    if (teamType == TeamType.duo || matchFormat == MatchFormat.duo || matchFormat == MatchFormat.loneWolf2v2) return 2;
+    // 1. If explicitly configured as solo (1 player)
+    if (teamType == TeamType.solo || matchFormat == MatchFormat.solo || matchFormat == MatchFormat.loneWolf1v1) {
+      return 1;
+    }
+    // 2. If duo (2 players)
+    if (teamType == TeamType.duo || matchFormat == MatchFormat.duo || matchFormat == MatchFormat.loneWolf2v2) {
+      return 2;
+    }
+    // 3. If squad (4 players)
+    if (teamType == TeamType.squad || matchFormat == MatchFormat.squad) {
+      return 4;
+    }
+    // 4. CS Clash Squad special handling
+    if (matchFormat == MatchFormat.cs4v4) {
+      if (teamType == TeamType.solo) return 1;
+      if (teamType == TeamType.duo) return 2;
+      return 4;
+    }
     return 1;
   }
+
+  bool get isTeamMatch => teamSize >= 2;
+  bool get isCashMatch => entryFeeType == EntryFeeType.cash || matchType == MatchType.paid;
+  bool get isPaidCash => isCashMatch;
 
   int get totalTeams => (maxSlots / teamSize).ceil();
 
