@@ -575,7 +575,9 @@ class MatchModel {
   bool get isFillingRoom => status == MatchStatus.roomFilling || (isFull && status == MatchStatus.upcoming);
 
   int get requiredAds => entryFee.toInt() > 0 ? entryFee.toInt() : (entryFee > 0 ? entryFee.ceil() : 0);
-  String get entryFeeDisplay => requiredAds == 0 ? 'FREE' : '🎬 $requiredAds ${requiredAds == 1 ? "Ad" : "Ads"}';
+  String get entryFeeDisplay => entryFee.toInt() == 0
+      ? 'FREE'
+      : '🟡 ${entryFee.toInt()} ${entryFee.toInt() == 1 ? "Coin" : "Coins"}';
 
   Duration get roomCountdownRemaining {
     if (roomFillingStartedAt == null) {

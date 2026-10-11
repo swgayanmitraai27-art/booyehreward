@@ -28,7 +28,6 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
   late TextEditingController _levelController;
   String? errorText;
   bool isSubmitting = false;
-  int _adsWatched = 0;
   bool _isWatchingAd = false;
 
   @override
@@ -70,6 +69,13 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
   }
 
   void _executeJoin() {
+    if (selectedSlot == null) {
+      setState(() => errorText = 'Please select a slot from the grid above.');
+      return;
+    }
+
+    if (!_validateForm()) return;
+
     final ign = _ignController.text.trim();
     final uid = _uidController.text.trim();
     final level = int.tryParse(_levelController.text.trim()) ?? 40;
@@ -111,44 +117,21 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     }
   }
 
-  void _handleJoinOrWatchAd() {
-    if (selectedSlot == null) {
-      setState(() => errorText = 'Please select a slot from the grid above.');
-      return;
-    }
-
-    if (!_validateForm()) return;
-
-    final int requiredAds = widget.match.requiredAds;
-
-    // If 0 ads required or all ads already watched, join immediately
-    if (requiredAds == 0 || _adsWatched >= requiredAds) {
-      _executeJoin();
-      return;
-    }
-
-    // Otherwise show rewarded video ad
+  void _watchAdToEarnCoin() {
     setState(() => _isWatchingAd = true);
     AdService.showRewardedAd(
       context: context,
       onUserEarnedReward: () {
         if (!mounted) return;
-        setState(() {
-          _adsWatched++;
-          _isWatchingAd = false;
-        });
+        final res = widget.appState.watchRewardedAd();
+        setState(() => _isWatchingAd = false);
 
-        if (_adsWatched >= requiredAds) {
-          // Finished all required ads -> Complete slot booking
-          _executeJoin();
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              backgroundColor: Colors.amber.shade900,
-              content: Text('🎬 Ad $_adsWatched/$requiredAds watched! Watch ${_adsWatched + 1} to unlock entry.'),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: res['coinAwarded'] == true ? const Color(0xFF065F46) : Colors.amber.shade900,
+            content: Text(res['message'] ?? 'Ad completed!'),
+          ),
+        );
       },
       onAdDismissed: () {
         if (mounted && _isWatchingAd) {
@@ -157,7 +140,6 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
       },
     );
 
-    // Safety timeout in case ad callback doesn't return
     Future.delayed(const Duration(seconds: 1), () {
       if (mounted && _isWatchingAd) {
         setState(() => _isWatchingAd = false);
@@ -168,8 +150,10 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
   @override
   Widget build(BuildContext context) {
     final match = widget.match;
-    final int requiredAds = match.requiredAds;
-    final bool hasWatchedAllAds = requiredAds == 0 || _adsWatched >= requiredAds;
+    final userCoins = widget.appState.user.wallet.adCoins;
+    final int feeCoins = match.entryFee.toInt();
+    final bool hasEnoughCoins = feeCoins == 0 || userCoins >= feeCoins;
+    final int adsWatchedSinceCoin = widget.appState.user.adTracker.adsWatchedSinceLastCoin;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -188,14 +172,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
               ),
               child: Row(
                 children: [
-                  const Text('🎬', style: TextStyle(fontSize: 24)),
+                  const Text('🟡', style: TextStyle(fontSize: 24)),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          requiredAds == 0 ? 'FREE DIRECT ENTRY' : 'WATCH $requiredAds ${requiredAds == 1 ? "AD" : "ADS"} TO ENTER',
+                          feeCoins == 0 ? 'FREE DIRECT ENTRY' : 'ENTRY FEE: 🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"}',
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
@@ -228,7 +212,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Match summary & entry fee
+                    // Match summary & Ad Coins Wallet status
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -277,7 +261,64 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+
+                    // User Ad Coins Balance Bar
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: hasEnoughCoins ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: hasEnoughCoins ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                '🟡 Your Ad Coins:',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: hasEnoughCoins ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '$userCoins 🟡',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: hasEnoughCoins ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!hasEnoughCoins)
+                            InkWell(
+                              onTap: () {
+                                Navigator.of(context).pop();
+                                widget.onEarnCoinsClick();
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.shade900,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: const Text(
+                                  'EARN COINS',
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
 
                     // Slot Picker Grid Title
                     Row(
@@ -306,7 +347,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
 
                     // Slot Matrix Grid
                     Container(
-                      height: 190,
+                      height: 180,
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
@@ -463,72 +504,54 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
 
-                    // Ads Requirement Status Banner
-                    if (requiredAds > 0)
+                    // If Insufficient coins: Show Quick Watch Ad Widget
+                    if (!hasEnoughCoins) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: hasWatchedAllAds ? const Color(0xFFECFDF5) : Colors.amber.shade50,
+                          color: const Color(0xFFFFFBEB),
                           borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: hasWatchedAllAds ? const Color(0xFFA7F3D0) : Colors.amber.shade200,
-                          ),
+                          border: Border.all(color: const Color(0xFFFDE68A)),
                         ),
                         child: Row(
                           children: [
-                            Icon(
-                              hasWatchedAllAds ? Icons.check_circle : Icons.play_circle_filled,
-                              color: hasWatchedAllAds ? const Color(0xFF059669) : Colors.amber.shade800,
-                              size: 22,
-                            ),
+                            const Icon(Icons.info_outline, color: Color(0xFFB45309), size: 22),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    hasWatchedAllAds
-                                        ? 'Ads Requirement Completed! 🎉'
-                                        : 'Watch $requiredAds Rewarded ${requiredAds == 1 ? "Ad" : "Ads"} to Enter',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
-                                      color: hasWatchedAllAds ? const Color(0xFF065F46) : Colors.amber.shade900,
-                                    ),
+                                    'Watch 3 Ads = 1 🟡 Ad Coin',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF92400E)),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
-                                    hasWatchedAllAds
-                                        ? 'You can now confirm and lock your slot!'
-                                        : 'Progress: $_adsWatched of $requiredAds ads watched',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: hasWatchedAllAds ? const Color(0xFF047857) : Colors.amber.shade800,
-                                    ),
+                                    'Progress: $adsWatchedSinceCoin/3 Ads watched towards next coin.',
+                                    style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
                                   ),
                                 ],
                               ),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: hasWatchedAllAds ? const Color(0xFFD1FAE5) : Colors.amber.shade200,
-                                borderRadius: BorderRadius.circular(8),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFB45309),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                               ),
+                              onPressed: _isWatchingAd ? null : _watchAdToEarnCoin,
                               child: Text(
-                                '$_adsWatched / $requiredAds',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 11,
-                                  color: hasWatchedAllAds ? const Color(0xFF065F46) : Colors.amber.shade900,
-                                ),
+                                _isWatchingAd ? '...' : '🎬 WATCH AD',
+                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                               ),
                             ),
                           ],
                         ),
                       ),
+                    ],
 
                     if (errorText != null) ...[
                       const SizedBox(height: 8),
@@ -542,7 +565,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
               ),
             ),
 
-            // Bottom Buttons
+            // Bottom Action Buttons
             Container(
               padding: const EdgeInsets.all(16),
               decoration: const BoxDecoration(
@@ -560,17 +583,17 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: selectedSlot != null
+                        backgroundColor: (selectedSlot != null && hasEnoughCoins)
                             ? AppTheme.primaryAmber
-                            : Colors.grey.shade300,
-                        foregroundColor: selectedSlot != null
+                            : (!hasEnoughCoins ? Colors.amber.shade700 : Colors.grey.shade300),
+                        foregroundColor: (selectedSlot != null && hasEnoughCoins)
                             ? Colors.black
-                            : Colors.grey.shade600,
+                            : (!hasEnoughCoins ? Colors.white : Colors.grey.shade600),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: (selectedSlot != null && !isSubmitting && !_isWatchingAd)
-                          ? _handleJoinOrWatchAd
+                          ? (hasEnoughCoins ? _executeJoin : _watchAdToEarnCoin)
                           : null,
                       child: Text(
                         selectedSlot == null
@@ -579,12 +602,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                 ? 'PLAYING AD...'
                                 : isSubmitting
                                     ? 'LOCKING SLOT...'
-                                    : (!hasWatchedAllAds
-                                        ? '🎬 WATCH AD (${_adsWatched + 1}/$requiredAds) & JOIN'
-                                        : 'CONFIRM & LOCK SLOT #$selectedSlot'),
+                                    : (!hasEnoughCoins
+                                        ? '🎬 WATCH AD ($adsWatchedSinceCoin/3) TO EARN COIN'
+                                        : (feeCoins == 0
+                                            ? 'CONFIRM & LOCK SLOT #$selectedSlot (FREE)'
+                                            : 'CONFIRM & LOCK SLOT #$selectedSlot (🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"})')),
                         style: AppTheme.gamingTitle(
-                          fontSize: 14,
-                          color: Colors.black,
+                          fontSize: 13,
+                          color: (selectedSlot != null && hasEnoughCoins) ? Colors.black : Colors.white,
                           isItalic: false,
                         ),
                       ),

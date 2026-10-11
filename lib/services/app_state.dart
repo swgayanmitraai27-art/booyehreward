@@ -499,47 +499,23 @@ class AppState extends ChangeNotifier {
     double balAfter = 0.0;
     String walletUsed = '';
 
-    // DEDUCT ENTRY FEE OR CONFIRM ADS WATCHED
-    if (match.matchType == MatchType.free) {
-      balBefore = user.wallet.winningCash;
-      balAfter = user.wallet.winningCash;
-      walletUsed = 'WATCH_ADS';
-    } else {
-      // PAID MATCH: Smart Priority Deduction
-      final fee = match.entryFee;
-      if (user.wallet.totalPlayableCash < fee) {
+    // DEDUCT ENTRY FEE IN 🟡 AD COINS
+    final requiredAdCoins = match.entryFee.toInt();
+    if (requiredAdCoins > 0) {
+      if (user.wallet.adCoins < requiredAdCoins) {
         return {
           'success': false,
-          'message': 'Insufficient Balance! Entry fee is ₹${fee.toInt()}.'
+          'message': 'Insufficient Ad Coins! You need $requiredAdCoins 🟡 Ad Coins to join.'
         };
       }
-
-      double remaining = fee;
-      balBefore = user.wallet.totalPlayableCash;
-
-      // 1. Deduct from 🎁 Bonus Cash
-      if (user.wallet.bonusCash > 0) {
-        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
-        user.wallet.bonusCash -= deduct;
-        remaining -= deduct;
-      }
-
-      // 2. Deduct from 💵 Deposit Cash
-      if (remaining > 0 && user.wallet.depositCash > 0) {
-        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
-        user.wallet.depositCash -= deduct;
-        remaining -= deduct;
-      }
-
-      // 3. Deduct from 🏆 Winning Cash
-      if (remaining > 0 && user.wallet.winningCash > 0) {
-        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
-        user.wallet.winningCash -= deduct;
-        remaining -= deduct;
-      }
-
-      balAfter = user.wallet.totalPlayableCash;
-      walletUsed = 'REAL_CASH';
+      balBefore = user.wallet.adCoins.toDouble();
+      user.wallet.adCoins -= requiredAdCoins;
+      balAfter = user.wallet.adCoins.toDouble();
+      walletUsed = 'AD_COINS';
+    } else {
+      balBefore = user.wallet.adCoins.toDouble();
+      balAfter = balBefore;
+      walletUsed = 'FREE';
     }
 
     final participant = MatchParticipant(
@@ -548,7 +524,7 @@ class AppState extends ChangeNotifier {
       inGameUid: user.inGameUid ?? inGameUid,
       slotNumber: chosenSlot,
       paidWith: walletUsed,
-      amountPaid: match.matchType == MatchType.free ? 0 : match.entryFee,
+      amountPaid: match.entryFee,
       joinedAt: DateTime.now(),
     );
 
@@ -556,25 +532,23 @@ class AppState extends ChangeNotifier {
     match.filledSlots += 1;
     user.stats.matchesPlayed += 1;
 
-    if (match.matchType != MatchType.free) {
-      transactions.insert(
-        0,
-        TransactionModel(
-          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.matchEntryFee,
-          walletAffected: WalletType.depositCash,
-          amount: -match.entryFee,
-          currency: 'INR',
-          balanceBefore: balBefore,
-          balanceAfter: balAfter,
-          status: 'SUCCESS',
-          description: 'Joined ${match.title} (Slot #$chosenSlot)',
-          createdAt: DateTime.now(),
-        ),
+    if (requiredAdCoins > 0) {
+      final newTxn = TransactionModel(
+        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+        userId: user.uid,
+        userName: user.displayName,
+        type: TransactionType.matchEntryFee,
+        walletAffected: WalletType.adCoins,
+        amount: -match.entryFee,
+        currency: 'AD_COINS',
+        balanceBefore: balBefore,
+        balanceAfter: balAfter,
+        status: 'SUCCESS',
+        description: 'Joined ${match.title} (Slot #$chosenSlot)',
+        createdAt: DateTime.now(),
       );
-      _syncTransaction(transactions.first);
+      transactions.insert(0, newTxn);
+      _syncTransaction(newTxn);
     }
 
     _syncUser();
@@ -618,50 +592,23 @@ class AppState extends ChangeNotifier {
     double balAfter = 0.0;
     String walletUsed = '';
 
-    // DEDUCT ENTRY FEE (Free vs Paid Smart Priority)
-    if (match.matchType == MatchType.free) {
-      if (user.wallet.adCoins < match.entryFee) {
+    // DEDUCT ENTRY FEE IN 🟡 AD COINS
+    final requiredAdCoins = match.entryFee.toInt();
+    if (requiredAdCoins > 0) {
+      if (user.wallet.adCoins < requiredAdCoins) {
         return {
           'success': false,
-          'message': 'Insufficient Ad Coins! You need ${match.entryFee.toInt()} 🟡 Ad Coins.'
+          'message': 'Insufficient Ad Coins! You need $requiredAdCoins 🟡 Ad Coins.'
         };
       }
       balBefore = user.wallet.adCoins.toDouble();
-      user.wallet.adCoins -= match.entryFee.toInt();
+      user.wallet.adCoins -= requiredAdCoins;
       balAfter = user.wallet.adCoins.toDouble();
       walletUsed = 'AD_COINS';
     } else {
-      final fee = match.entryFee;
-      if (user.wallet.totalPlayableCash < fee) {
-        return {
-          'success': false,
-          'message': 'Please watch the required video ads to enter.'
-        };
-      }
-
-      double remaining = fee;
-      balBefore = user.wallet.totalPlayableCash;
-
-      if (user.wallet.bonusCash > 0) {
-        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
-        user.wallet.bonusCash -= deduct;
-        remaining -= deduct;
-      }
-
-      if (remaining > 0 && user.wallet.depositCash > 0) {
-        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
-        user.wallet.depositCash -= deduct;
-        remaining -= deduct;
-      }
-
-      if (remaining > 0 && user.wallet.winningCash > 0) {
-        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
-        user.wallet.winningCash -= deduct;
-        remaining -= deduct;
-      }
-
-      balAfter = user.wallet.totalPlayableCash;
-      walletUsed = 'REAL_CASH';
+      balBefore = user.wallet.adCoins.toDouble();
+      balAfter = balBefore;
+      walletUsed = 'FREE';
     }
 
     // Find next available slot
@@ -778,50 +725,23 @@ class AppState extends ChangeNotifier {
     double balAfter = 0.0;
     String walletUsed = '';
 
-    // DEDUCT ENTRY FEE (Free vs Paid Smart Priority)
-    if (match.matchType == MatchType.free) {
-      if (user.wallet.adCoins < match.entryFee) {
+    // DEDUCT ENTRY FEE IN 🟡 AD COINS
+    final requiredAdCoins = match.entryFee.toInt();
+    if (requiredAdCoins > 0) {
+      if (user.wallet.adCoins < requiredAdCoins) {
         return {
           'success': false,
-          'message': 'Insufficient Ad Coins! You need ${match.entryFee.toInt()} 🟡 Ad Coins.'
+          'message': 'Insufficient Ad Coins! You need $requiredAdCoins 🟡 Ad Coins.'
         };
       }
       balBefore = user.wallet.adCoins.toDouble();
-      user.wallet.adCoins -= match.entryFee.toInt();
+      user.wallet.adCoins -= requiredAdCoins;
       balAfter = user.wallet.adCoins.toDouble();
       walletUsed = 'AD_COINS';
     } else {
-      final fee = match.entryFee;
-      if (user.wallet.totalPlayableCash < fee) {
-        return {
-          'success': false,
-          'message': 'Please watch the required video ads to enter.'
-        };
-      }
-
-      double remaining = fee;
-      balBefore = user.wallet.totalPlayableCash;
-
-      if (user.wallet.bonusCash > 0) {
-        final deduct = user.wallet.bonusCash >= remaining ? remaining : user.wallet.bonusCash;
-        user.wallet.bonusCash -= deduct;
-        remaining -= deduct;
-      }
-
-      if (remaining > 0 && user.wallet.depositCash > 0) {
-        final deduct = user.wallet.depositCash >= remaining ? remaining : user.wallet.depositCash;
-        user.wallet.depositCash -= deduct;
-        remaining -= deduct;
-      }
-
-      if (remaining > 0 && user.wallet.winningCash > 0) {
-        final deduct = user.wallet.winningCash >= remaining ? remaining : user.wallet.winningCash;
-        user.wallet.winningCash -= deduct;
-        remaining -= deduct;
-      }
-
-      balAfter = user.wallet.totalPlayableCash;
-      walletUsed = 'REAL_CASH';
+      balBefore = user.wallet.adCoins.toDouble();
+      balAfter = balBefore;
+      walletUsed = 'FREE';
     }
 
     // Find next available slot
@@ -2007,18 +1927,18 @@ class AppState extends ChangeNotifier {
       return b.matchesWon.compareTo(a.matchesWon);
     });
 
-    // 6. Assign Ranks and Top 3 Prizes (Rank 1: ₹50, Rank 2: ₹30, Rank 3: ₹20)
+    // 6. Assign Ranks and Top 3 Prizes (Rank 1: 200 Coins, Rank 2: 150 Coins, Rank 3: 100 Coins)
     final List<LeaderboardEntry> rankedList = [];
     for (int i = 0; i < rawList.length; i++) {
       final item = rawList[i];
       final rank = i + 1;
       double prize = 0.0;
       if (rank == 1) {
-        prize = 50.0;
+        prize = 200.0;
       } else if (rank == 2) {
-        prize = 30.0;
+        prize = 150.0;
       } else if (rank == 3) {
-        prize = 20.0;
+        prize = 100.0;
       }
 
       rankedList.add(
@@ -2260,7 +2180,7 @@ class AppState extends ChangeNotifier {
     };
   }
 
-  /// Admin 1-Click Distribute ₹100 Weekly Championship Prizes (Rank 1: ₹50, Rank 2: ₹30, Rank 3: ₹20)
+  /// Admin 1-Click Distribute 450 🪙 Weekly Championship Coins (Rank 1: 200 Coins, Rank 2: 150 Coins, Rank 3: 100 Coins)
   Future<Map<String, dynamic>> adminDistributeWeeklyLeaderboardPrizes() async {
     final leaderboard = getWeeklyLeaderboard(filter: 'WEEKLY');
     final top3 = leaderboard.take(3).toList();
@@ -2315,11 +2235,11 @@ class AppState extends ChangeNotifier {
         type: TransactionType.weeklyLeaderboardReward,
         walletAffected: WalletType.winningCash,
         amount: prize,
-        currency: 'INR',
+        currency: 'COINS',
         balanceBefore: (winner.uid == user.uid) ? (user.wallet.winningCash - prize) : 0,
         balanceAfter: (winner.uid == user.uid) ? user.wallet.winningCash : prize,
         status: 'SUCCESS',
-        description: '🏆 Weekly Leaderboard Rank #${winner.rank} Championship Prize ($seasonLabel)',
+        description: '🏆 Weekly Leaderboard Rank #${winner.rank} Championship Prize (${prize.toInt()} 🪙 Coins)',
         createdAt: DateTime.now(),
         metadata: {
           'rank': winner.rank,
@@ -2337,8 +2257,8 @@ class AppState extends ChangeNotifier {
       // Create Winner In-App Notification
       final notif = AppNotification(
         id: 'notif_weekly_win_${winner.rank}_${DateTime.now().millisecondsSinceEpoch}',
-        title: '🎉 100₹ Weekly Leaderboard Reward Won!',
-        body: 'Congratulations ${winner.displayName}! You secured Rank #${winner.rank} with ${winner.points} pts in the Weekly Esports Championship! ₹${prize.toInt()} Real Cash has been credited directly to your Winning Wallet.',
+        title: '🎉 450 🪙 Weekly Leaderboard Reward Won!',
+        body: 'Congratulations ${winner.displayName}! You secured Rank #${winner.rank} with ${winner.points} pts in the Weekly Esports Championship! ${prize.toInt()} 🪙 Winning Coins have been credited directly to your Winning Wallet.',
         createdAt: DateTime.now(),
         type: NotificationType.matchResult,
         targetType: 'user',
@@ -2452,7 +2372,92 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void adminDeleteMatch(String matchId) {
+  /// Cancel match and automatically refund Ad Coins to ALL joined participants
+  Future<Map<String, dynamic>> adminCancelAndRefundMatch(String matchId) async {
+    final matchIndex = matches.indexWhere((m) => m.id == matchId);
+    if (matchIndex == -1) return {'success': false, 'message': 'Match not found'};
+    final match = matches[matchIndex];
+
+    int refundedPlayersCount = 0;
+    int totalCoinsRefunded = 0;
+
+    // Refund each participant
+    for (var p in match.participants) {
+      final refundAmount = p.amountPaid > 0 ? p.amountPaid.toInt() : match.entryFee.toInt();
+      if (refundAmount <= 0) continue;
+
+      refundedPlayersCount++;
+      totalCoinsRefunded += refundAmount;
+
+      // If active user, credit immediately
+      if (p.uid == user.uid) {
+        final balBefore = user.wallet.adCoins.toDouble();
+        user.wallet.adCoins += refundAmount;
+        final balAfter = user.wallet.adCoins.toDouble();
+        _syncUser();
+
+        final refundTxn = TransactionModel(
+          id: 'txn_refund_${DateTime.now().millisecondsSinceEpoch}_${p.uid}',
+          userId: user.uid,
+          userName: user.displayName,
+          type: TransactionType.matchRefund,
+          walletAffected: WalletType.adCoins,
+          amount: refundAmount.toDouble(),
+          currency: 'AD_COINS',
+          balanceBefore: balBefore,
+          balanceAfter: balAfter,
+          status: 'SUCCESS',
+          description: '🟡 Match Refund: "${match.title}" cancelled by Admin',
+          createdAt: DateTime.now(),
+        );
+        transactions.insert(0, refundTxn);
+        allGlobalTransactions.insert(0, refundTxn);
+        _syncTransaction(refundTxn);
+
+        final notif = AppNotification(
+          id: 'notif_refund_${DateTime.now().millisecondsSinceEpoch}',
+          title: '🟡 Match Cancelled: $refundAmount Coins Refunded',
+          body: 'Match "${match.title}" was cancelled by Admin. Your entry fee of $refundAmount 🟡 Ad Coins has been credited back to your wallet.',
+          createdAt: DateTime.now(),
+          type: NotificationType.matchResult,
+          targetType: 'user',
+          targetId: user.uid,
+        );
+        notifications.insert(0, notif);
+        allGlobalNotifications.insert(0, notif);
+      } else {
+        // Remote user credit via Firestore & VPS
+        try {
+          final doc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, p.uid);
+          if (doc != null) {
+            final targetUser = UserModel.fromJson(doc);
+            final balBefore = targetUser.wallet.adCoins.toDouble();
+            targetUser.wallet.adCoins += refundAmount;
+            final balAfter = targetUser.wallet.adCoins.toDouble();
+            await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, p.uid, targetUser.toJson());
+
+            final remoteTxn = TransactionModel(
+              id: 'txn_refund_${DateTime.now().millisecondsSinceEpoch}_${p.uid}',
+              userId: targetUser.uid,
+              userName: targetUser.displayName,
+              type: TransactionType.matchRefund,
+              walletAffected: WalletType.adCoins,
+              amount: refundAmount.toDouble(),
+              currency: 'AD_COINS',
+              balanceBefore: balBefore,
+              balanceAfter: balAfter,
+              status: 'SUCCESS',
+              description: '🟡 Match Refund: "${match.title}" cancelled by Admin',
+              createdAt: DateTime.now(),
+            );
+            allGlobalTransactions.insert(0, remoteTxn);
+            _syncTransaction(remoteTxn);
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Now remove match from matches list and sync delete
     matches.removeWhere((m) => m.id == matchId);
     _saveLocalMatchesCache();
     try {
@@ -2460,6 +2465,17 @@ class AppState extends ChangeNotifier {
     } catch (_) {}
     FirestoreRestService.deleteDocument(FirebaseConfig.matchesCollection, matchId);
     notifyListeners();
+
+    return {
+      'success': true,
+      'refundedPlayers': refundedPlayersCount,
+      'totalCoinsRefunded': totalCoinsRefunded,
+      'message': 'Match cancelled! Refunded $totalCoinsRefunded 🟡 Ad Coins to $refundedPlayersCount player(s).',
+    };
+  }
+
+  void adminDeleteMatch(String matchId) {
+    adminCancelAndRefundMatch(matchId);
   }
 
   // --- ADMIN FINANCIAL & ECONOMY ANALYTICS ---

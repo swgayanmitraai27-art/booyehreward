@@ -12,6 +12,7 @@ enum TransactionType {
   hostCommission,
   weeklyLeaderboardReward,
   referralReward,
+  matchRefund,
 }
 
 enum WalletType {

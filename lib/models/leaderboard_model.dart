@@ -12,7 +12,7 @@ class LeaderboardEntry {
   final double winningsCash;
   final int rewardCoins;
   final int points;
-  final double prizeAmount; // ₹50 for Rank 1, ₹30 for Rank 2, ₹20 for Rank 3, 0 for others
+  final double prizeAmount; // 200 Coins for Rank 1, 150 Coins for Rank 2, 100 Coins for Rank 3, 0 for others
   final bool isCurrentUser;
 
   LeaderboardEntry({

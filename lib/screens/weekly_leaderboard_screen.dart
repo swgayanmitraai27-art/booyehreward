@@ -83,19 +83,19 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildRuleItem('🏆 ₹100 Weekly Cash Prize Pool', 'Every Sunday at 11:59 PM, the Top 3 leaderboard players receive real money prizes:'),
+              _buildRuleItem('🏆 450 🪙 Weekly Coin Prize Pool', 'Every Sunday at 11:59 PM, the Top 3 leaderboard players receive Winning Coins:'),
               const SizedBox(height: 8),
-              _buildPrizeRow('🥇 Rank 1', '₹50 Real Cash', const Color(0xFFFEF3C7), const Color(0xFFD97706)),
-              _buildPrizeRow('🥈 Rank 2', '₹30 Real Cash', const Color(0xFFF1F5F9), const Color(0xFF475569)),
-              _buildPrizeRow('🥉 Rank 3', '₹20 Real Cash', const Color(0xFFFFEDD5), const Color(0xFFEA580C)),
+              _buildPrizeRow('🥇 Rank 1', '200 🪙 Winning Coins', const Color(0xFFFEF3C7), const Color(0xFFD97706)),
+              _buildPrizeRow('🥈 Rank 2', '150 🪙 Winning Coins', const Color(0xFFF1F5F9), const Color(0xFF475569)),
+              _buildPrizeRow('🥉 Rank 3', '100 🪙 Winning Coins', const Color(0xFFFFEDD5), const Color(0xFFEA580C)),
               const Divider(height: 24),
               _buildRuleItem('🎯 Scoring System', 'Points are calculated automatically from matches played this week:'),
               const SizedBox(height: 6),
               _buildScoreRow('🎯 1 Tournament Kill', '+10 Points'),
               _buildScoreRow('👑 1 Booyah (Match Win)', '+50 Points'),
-              _buildScoreRow('💰 ₹1 Cash Won in Match', '+2 Points'),
+              _buildScoreRow('🪙 1 Winning Coin Won', '+2 Points'),
               const Divider(height: 24),
-              _buildRuleItem('⚡ Automatic Wallet Credit', 'Winning prizes are credited directly to your Winning Wallet with 100% instant UPI withdrawal eligibility!'),
+              _buildRuleItem('⚡ Automatic Wallet Credit', 'Winning Coins are credited directly to your Winning Wallet with 100% instant UPI withdrawal eligibility!'),
             ],
           ),
         ),
@@ -271,7 +271,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                 ),
                 const SizedBox(height: 4),
                 const Text(
-                  'Top 3 Players Win Real Cash Payout Every Week!',
+                  'Top 3 Players Win 450 🪙 Winning Coins Every Week!',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: 12,
@@ -281,7 +281,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                 ),
                 const SizedBox(height: 14),
 
-                // ₹100 Prize Pool Badge & Countdown
+                // 450 🪙 Prize Pool Badge & Countdown
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
@@ -310,12 +310,12 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                           const Row(
                             children: [
                               Text(
-                                '₹100',
+                                '450 🪙',
                                 style: TextStyle(fontFamily: 'Inter', fontSize: 26, fontWeight: FontWeight.w900, color: Colors.white),
                               ),
                               SizedBox(width: 6),
                               Text(
-                                'REAL CASH',
+                                'WINNING COINS',
                                 style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w800, color: Color(0xFFFEF3C7)),
                               ),
                             ],
@@ -355,11 +355,11 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                 // Top 3 Prize Breakdown Strip
                 Row(
                   children: [
-                    Expanded(child: _buildPrizeBadge('🥇 1st Place', '₹50 CASH', const Color(0xFFFEF3C7), const Color(0xFFB45309))),
+                    Expanded(child: _buildPrizeBadge('🥇 1st Place', '200 🪙 COINS', const Color(0xFFFEF3C7), const Color(0xFFB45309))),
                     const SizedBox(width: 8),
-                    Expanded(child: _buildPrizeBadge('🥈 2nd Place', '₹30 CASH', const Color(0xFFF1F5F9), const Color(0xFF334155))),
+                    Expanded(child: _buildPrizeBadge('🥈 2nd Place', '150 🪙 COINS', const Color(0xFFF1F5F9), const Color(0xFF334155))),
                     const SizedBox(width: 8),
-                    Expanded(child: _buildPrizeBadge('🥉 3rd Place', '₹20 CASH', const Color(0xFFFFEDD5), const Color(0xFFC2410C))),
+                    Expanded(child: _buildPrizeBadge('🥉 3rd Place', '100 🪙 COINS', const Color(0xFFFFEDD5), const Color(0xFFC2410C))),
                   ],
                 ),
               ],
@@ -379,7 +379,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                 children: [
                   Expanded(
                     child: _buildFilterTab(
-                      label: '🔥 This Week (Live ₹100 Pool)',
+                      label: '🔥 This Week (Live 450 🪙 Pool)',
                       filterKey: 'WEEKLY',
                     ),
                   ),
@@ -411,7 +411,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                             glowColor: const Color(0xFF94A3B8),
                             crownEmoji: '🥈',
                             rankTitle: '2ND PLACE',
-                            prizeLabel: '₹30',
+                            prizeLabel: '150 🪙',
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -426,7 +426,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                       glowColor: const Color(0xFFF59E0B),
                       crownEmoji: '👑',
                       rankTitle: 'CHAMPION',
-                      prizeLabel: '₹50',
+                      prizeLabel: '200 🪙',
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -441,7 +441,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                             glowColor: const Color(0xFFF97316),
                             crownEmoji: '🥉',
                             rankTitle: '3RD PLACE',
-                            prizeLabel: '₹20',
+                            prizeLabel: '100 🪙',
                           )
                         : const SizedBox.shrink(),
                   ),
@@ -694,7 +694,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  '$prizeLabel CASH',
+                  '$prizeLabel COINS',
                   style: TextStyle(
                     fontFamily: 'Inter',
                     fontSize: is1st ? 13 : 11.5,
@@ -900,7 +900,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                           ),
                           if (isInTop3) ...[
                             const SizedBox(width: 6),
-                            const Text('🔥 (Winning Cash!)', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
+                            const Text('🔥 (Winning Coins!)', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold, color: Colors.greenAccent)),
                           ],
                         ],
                       ),
@@ -935,7 +935,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                     ),
                     if (isInTop3) ...[
                       Text(
-                        'Prize: ₹${myEntry.prizeAmount.toInt()}',
+                        'Prize: ${myEntry.prizeAmount.toInt()} 🪙 Coins',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.amber),
                       ),
                     ],
@@ -953,7 +953,7 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                   child: Text(
                     isInTop3
                         ? '🎉 Great job! Keep playing to protect your Top 3 position until Sunday!'
-                        : '⚡ Score $pointsNeeded more points to break into the Top 3 and win ₹100 cash!',
+                        : '⚡ Score $pointsNeeded more points to break into the Top 3 and win 450 🪙 Coins!',
                     style: const TextStyle(fontSize: 11, color: Color(0xFFCBD5E1), height: 1.3),
                   ),
                 ),

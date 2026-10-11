@@ -82,6 +82,16 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _tenthPrizeController = TextEditingController(text: '0');
   final TextEditingController _perKillController = TextEditingController(text: '10');
   bool _isRealCashPrizeForFree = true; // For Free Matches: Give Real Cash (₹) vs Store Coins
+  DateTime _scheduledMatchDate = DateTime.now();
+  TimeOfDay _scheduledMatchTime = TimeOfDay(hour: (DateTime.now().hour + 1) % 24, minute: 0);
+
+  String _formatScheduledTime() {
+    final hour = _scheduledMatchTime.hourOfPeriod == 0 ? 12 : _scheduledMatchTime.hourOfPeriod;
+    final minute = _scheduledMatchTime.minute.toString().padLeft(2, '0');
+    final period = _scheduledMatchTime.period == DayPeriod.am ? 'AM' : 'PM';
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${_scheduledMatchDate.day} ${months[_scheduledMatchDate.month - 1]} ${_scheduledMatchDate.year} at ${hour.toString().padLeft(2, '0')}:$minute $period';
+  }
 
   MatchType newMatchType = MatchType.paid;
   GameType newGameType = GameType.freeFire;
@@ -328,7 +338,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
-                'Distribute ₹100 Weekly Cash',
+                'Distribute 450 🪙 Weekly Coins',
                 style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
               ),
             ),
@@ -344,12 +354,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
             const SizedBox(height: 12),
             const Text(
-              'The following Top 3 players will receive real money credited directly to their Winning Wallet:',
+              'The following Top 3 players will receive Winning Coins credited directly to their Winning Wallet:',
               style: TextStyle(fontSize: 11.5, color: Color(0xFF334155)),
             ),
             const SizedBox(height: 10),
             ...top3.map((winner) {
-              final prize = winner.rank == 1 ? '₹50.00' : (winner.rank == 2 ? '₹30.00' : '₹20.00');
+              final prize = winner.rank == 1 ? '200 🪙' : (winner.rank == 2 ? '150 🪙' : '100 🪙');
               final badge = winner.rank == 1 ? '🥇' : (winner.rank == 2 ? '🥈' : '🥉');
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
@@ -388,7 +398,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             }),
             const SizedBox(height: 6),
             const Text(
-              'Total Pool: ₹100.00 Real Cash (Auto-deposited to Winning Cash balance)',
+              'Total Pool: 450 🪙 Winning Coins (Auto-deposited to Winning Coins balance)',
               style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
             ),
           ],
@@ -406,7 +416,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     backgroundColor: Color(0xFF065F46),
-                    content: Text('🎉 ₹100 Weekly Championship Prizes successfully distributed to Top 3 players!'),
+                    content: Text('🎉 450 🪙 Weekly Championship Coins successfully distributed to Top 3 players!'),
                   ),
                 );
                 setState(() {});
@@ -417,7 +427,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Distribute ₹100 Now', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('Distribute 450 🪙 Now', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -2361,7 +2371,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 12),
 
-          // 3. ENTRY ADS REQUIREMENT & TOTAL PLAYERS
+          // 3. ENTRY AD COINS & TOTAL PLAYERS
           Row(
             children: [
               Expanded(
@@ -2370,9 +2380,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   keyboardType: TextInputType.number,
                   onChanged: (v) => setState(() {}),
                   decoration: InputDecoration(
-                    labelText: 'Required Ads to Join (🎬 Count)',
-                    hintText: 'e.g. 1, 2, 3 (0 for Free)',
-                    prefixIcon: const Icon(Icons.play_circle_filled, color: Colors.amber, size: 18),
+                    labelText: 'Entry Fee in Ad Coins (🟡)',
+                    hintText: 'e.g. 1, 2, 5 (0 for Free)',
+                    prefixIcon: const Icon(Icons.monetization_on, color: Colors.amber, size: 18),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2398,30 +2408,122 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                const Text('Ad Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                const Text('Coin Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
                 ActionChip(
-                  label: const Text('0 (Direct Free)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('0 (Free)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () => setState(() => _entryFeeController.text = '0'),
                 ),
                 const SizedBox(width: 4),
                 ActionChip(
-                  label: const Text('🎬 1 Ad', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('🟡 1 Coin', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () => setState(() => _entryFeeController.text = '1'),
                 ),
                 const SizedBox(width: 4),
                 ActionChip(
-                  label: const Text('🎬 2 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('🟡 2 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () => setState(() => _entryFeeController.text = '2'),
                 ),
                 const SizedBox(width: 4),
                 ActionChip(
-                  label: const Text('🎬 3 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '3'),
+                  label: const Text('🟡 5 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '5'),
                 ),
                 const SizedBox(width: 4),
                 ActionChip(
-                  label: const Text('🎬 5 Ads', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                  onPressed: () => setState(() => _entryFeeController.text = '5'),
+                  label: const Text('🟡 10 Coins', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () => setState(() => _entryFeeController.text = '10'),
+                ),
+              ],
+            ),
+          ),
+          // 4. MATCH SCHEDULE (DATE & TIME WITH AM / PM)
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFCBD5E1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.access_time_filled, color: Color(0xFFD97706), size: 18),
+                        SizedBox(width: 6),
+                        Text(
+                          'SCHEDULE MATCH TIME (AM / PM)',
+                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade100,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        _formatScheduledTime(),
+                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Colors.amber.shade900),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () async {
+                          final pickedDate = await showDatePicker(
+                            context: context,
+                            initialDate: _scheduledMatchDate,
+                            firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                          );
+                          if (pickedDate != null) {
+                            setState(() => _scheduledMatchDate = pickedDate);
+                          }
+                        },
+                        icon: const Icon(Icons.calendar_month, size: 16),
+                        label: Text(
+                          '${_scheduledMatchDate.day}/${_scheduledMatchDate.month}/${_scheduledMatchDate.year}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () async {
+                          final pickedTime = await showTimePicker(
+                            context: context,
+                            initialTime: _scheduledMatchTime,
+                          );
+                          if (pickedTime != null) {
+                            setState(() => _scheduledMatchTime = pickedTime);
+                          }
+                        },
+                        icon: const Icon(Icons.schedule, size: 16),
+                        label: Text(
+                          '${_scheduledMatchTime.hourOfPeriod == 0 ? 12 : _scheduledMatchTime.hourOfPeriod}:${_scheduledMatchTime.minute.toString().padLeft(2, '0')} ${_scheduledMatchTime.period == DayPeriod.am ? 'AM' : 'PM'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -2923,7 +3025,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   filledSlots: 0,
                   credentials: MatchCredentials(roomId: '', roomPassword: '', isRevealed: false),
                   status: MatchStatus.upcoming,
-                  matchTime: DateTime.now().add(const Duration(hours: 1)),
+                  matchTime: DateTime(
+                    _scheduledMatchDate.year,
+                    _scheduledMatchDate.month,
+                    _scheduledMatchDate.day,
+                    _scheduledMatchTime.hour,
+                    _scheduledMatchTime.minute,
+                  ),
                   participants: [],
                 );
 
@@ -3769,11 +3877,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'WEEKLY CHAMPIONSHIP (₹100 POOL)',
+                            'WEEKLY CHAMPIONSHIP (450 🪙 POOL)',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 11.5, letterSpacing: 0.8),
                           ),
                           Text(
-                            'Top 3 Players: 🥇 ₹50 | 🥈 ₹30 | 🥉 ₹20',
+                            'Top 3 Players: 🥇 200 🪙 | 🥈 150 🪙 | 🥉 100 🪙',
                             style: TextStyle(color: Color(0xFF94A3B8), fontSize: 9.5),
                           ),
                         ],
@@ -3788,7 +3896,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text('Distribute ₹100', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                    child: const Text('Distribute 450 🪙', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
                   ),
                 ],
               ),
@@ -3799,7 +3907,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   final top3 = widget.appState.getWeeklyLeaderboard(filter: 'WEEKLY').take(3).toList();
                   return Row(
                     children: top3.map((winner) {
-                      final prize = winner.rank == 1 ? '₹50' : (winner.rank == 2 ? '₹30' : '₹20');
+                      final prize = winner.rank == 1 ? '200 🪙' : (winner.rank == 2 ? '150 🪙' : '100 🪙');
                       final crown = winner.rank == 1 ? '🥇' : (winner.rank == 2 ? '🥈' : '🥉');
                       return Expanded(
                         child: Container(
@@ -3832,7 +3940,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Text(
-                                  '$prize CASH',
+                                  '$prize COINS',
                                   style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Colors.black),
                                 ),
                               ),
@@ -5313,30 +5421,66 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Match?'),
-        content: Text('Are you sure you want to permanently delete "${match.title}" (ID: ${match.id}) from Firestore?'),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+            SizedBox(width: 8),
+            Text('Cancel & Refund Match?'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Are you sure you want to cancel "${match.title}" (ID: ${match.id})?'),
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF3C7),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFDE68A)),
+              ),
+              child: Row(
+                children: [
+                  const Text('🟡', style: TextStyle(fontSize: 18)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'All ${match.participants.length} player(s) joined will automatically receive their 🟡 Ad Coins entry fee refunded back to their wallet!',
+                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('CANCEL'),
+            child: const Text('NO, KEEP MATCH'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
               setState(() {
                 if (selectedMatchIdForResult == match.id) selectedMatchIdForResult = null;
                 if (selectedMatchIdForRoom == match.id) selectedMatchIdForRoom = null;
               });
-              widget.appState.adminDeleteMatch(match.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  backgroundColor: Colors.red,
-                  content: Text('Match "${match.title}" deleted from database.'),
-                ),
-              );
+              final res = await widget.appState.adminCancelAndRefundMatch(match.id);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF065F46),
+                    content: Text(res['message'] ?? 'Match cancelled and coins refunded!'),
+                  ),
+                );
+                setState(() {});
+              }
             },
-            child: const Text('DELETE PERMANENTLY'),
+            child: const Text('CANCEL MATCH & REFUND COINS'),
           ),
         ],
       ),
