@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
+import '../services/auth_service.dart';
 import '../services/ad_service.dart';
 import '../widgets/booyah_header.dart';
 import '../widgets/booyah_footer.dart';
@@ -32,7 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isAdmin = widget.appState.user.role == 'admin';
+    final isAdmin = widget.appState.user.role == 'admin' || AuthService.isAdminIdentifier(widget.appState.user.email, widget.appState.user.uid);
 
     final List<Widget> screens = [
       TournamentLobbyScreen(

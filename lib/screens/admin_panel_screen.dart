@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import '../services/auth_service.dart';
 import '../models/match_model.dart';
 import '../models/withdrawal_model.dart';
 import '../models/voucher_model.dart';
@@ -81,7 +84,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _ninthPrizeController = TextEditingController(text: '0');
   final TextEditingController _tenthPrizeController = TextEditingController(text: '0');
   final TextEditingController _perKillController = TextEditingController(text: '10');
-  bool _isRealCashPrizeForFree = true; // For Free Matches: Give Real Cash (₹) vs Store Coins
   DateTime _scheduledMatchDate = DateTime.now();
   TimeOfDay _scheduledMatchTime = TimeOfDay(hour: (DateTime.now().hour + 1) % 24, minute: 0);
 
@@ -93,7 +95,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     return '${_scheduledMatchDate.day} ${months[_scheduledMatchDate.month - 1]} ${_scheduledMatchDate.year} at ${hour.toString().padLeft(2, '0')}:$minute $period';
   }
 
-  MatchType newMatchType = MatchType.paid;
+  MatchType newMatchType = MatchType.free;
   GameType newGameType = GameType.freeFire;
   MatchMode newMatchMode = MatchMode.cs;
   TeamType newTeamType = TeamType.squad;
@@ -119,6 +121,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _referralSearchController = TextEditingController();
   late TextEditingController _coinRateController;
   late TextEditingController _minWithdrawCoinsController;
+  final TextEditingController _adminUserSearchController = TextEditingController();
+  String _userRoleFilter = 'all'; // 'all', 'admin', 'user'
+  String _prizeType = 'winningCoins'; // 'winningCoins' (🪙) or 'storeRewardCoins' (🎟️)
 
   @override
   void initState() {
@@ -245,8 +250,28 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     if (!mounted) return;
     setState(() => _isLoadingUsers = true);
     try {
-      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      final users = userDocs.map((d) => UserModel.fromJson(d)).toList();
+      List<UserModel> users = [];
+      // 1. Primary: Direct VPS Cloud Database (Zero Firebase Quota Limits)
+      try {
+        final vpsRes = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users")).timeout(const Duration(seconds: 8));
+        if (vpsRes.statusCode == 200) {
+          final List vpsList = jsonDecode(vpsRes.body);
+          users = vpsList.map((d) => UserModel.fromJson(Map<String, dynamic>.from(d))).toList();
+        }
+      } catch (e) {
+        debugPrint('[AdminPanel] VPS users fetch notice: $e');
+      }
+
+      // 2. Secondary fallback: Firestore
+      if (users.isEmpty) {
+        try {
+          final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
+          users = userDocs.map((d) => UserModel.fromJson(d)).toList();
+        } catch (e) {
+          debugPrint('[AdminPanel] Firestore users fetch notice: $e');
+        }
+      }
+
       users.sort((a, b) => a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()));
       if (mounted) {
         setState(() {
@@ -305,6 +330,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _referralSearchController.dispose();
     _coinRateController.dispose();
     _minWithdrawCoinsController.dispose();
+    _adminUserSearchController.dispose();
     super.dispose();
   }
 
@@ -500,7 +526,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 const SizedBox(width: 8),
                 _buildTabBtn(5, '🎁 Store Claims (${metrics['pendingVoucherClaims']})'),
                 const SizedBox(width: 8),
-                _buildTabBtn(6, '➕ Create Match (75/25 Engine)'),
+                _buildTabBtn(6, '➕ Create Match (Custom Prizes)'),
                 const SizedBox(width: 8),
                 _buildTabBtn(7, '📢 Banners & Slider (${widget.appState.banners.length})'),
                 const SizedBox(width: 8),
@@ -511,6 +537,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(10, '🎮 Tournament Modes & Covers (${widget.appState.tournamentModes.length})'),
                 const SizedBox(width: 8),
                 _buildTabBtn(11, '🎁 Referral Attribution (${widget.appState.allGlobalReferralRecords.length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(12, '👥 Manage Users & Admins (${_registeredUsers.length})'),
               ],
             ),
           ),
@@ -528,6 +556,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 9) _buildPushNotificationBroadcastSection(),
           if (activeSection == 10) _buildTournamentModesManagementSection(),
           if (activeSection == 11) _buildReferralLedgerSection(),
+          if (activeSection == 12) _buildUserRoleManagementSection(),
         ],
       ),
     );
@@ -1418,9 +1447,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final teamA = match.teamAParticipants;
     final teamB = match.teamBParticipants;
     final isPaid = match.matchType == MatchType.paid;
-    final prizePool = isPaid ? match.distributablePrizePool : match.prizePool.totalPool;
+    final isRewardCoinMatch = match.entryFeeType == EntryFeeType.adCoins || !match.prizePool.isCashPrize;
+    final isCashMatch = !isRewardCoinMatch && (isPaid || match.prizePool.isCashPrize);
+    final prizePool = (isPaid && isCashMatch) ? match.distributablePrizePool : match.prizePool.totalPool;
     final teamCount = (match.maxSlots / 2).ceil();
     final prizePerPlayer = prizePool / (teamCount > 0 ? teamCount : 1);
+    final prizeLabel = isCashMatch ? '🪙 ${prizePerPlayer.toInt()} WinCoins' : '${prizePerPlayer.toInt()} 🎟️ Reward Coins';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1438,9 +1470,12 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('75% DISTRIBUTABLE PRIZE POOL', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
                   Text(
-                    isPaid ? '₹${prizePool.toInt()} Real Cash' : '${prizePool.toInt()} 🎟️ Reward Coins',
+                    isCashMatch ? 'DISTRIBUTABLE WINCOIN POOL' : 'REWARD COIN PRIZE POOL',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
+                  ),
+                  Text(
+                    isCashMatch ? '🪙 ${prizePool.toInt()} WinCoins' : '${prizePool.toInt()} 🎟️ Reward Coins',
                     style: AppTheme.gamingNumber(fontSize: 16, color: const Color(0xFF047857)),
                   ),
                 ],
@@ -1453,7 +1488,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   border: Border.all(color: Colors.amber),
                 ),
                 child: Text(
-                  isPaid ? '₹${prizePerPlayer.toInt()} / Player' : '${prizePerPlayer.toInt()} 🎟️ / Player',
+                  isCashMatch ? '🪙 ${prizePerPlayer.toInt()} / Player' : '${prizePerPlayer.toInt()} 🎟️ / Player',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                 ),
               ),
@@ -1525,7 +1560,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: const Color(0xFF16A34A),
-                              content: Text('🎉 TEAM A Declared Winner! ₹${prizePerPlayer.toInt()} distributed to each Team A player!'),
+                              content: Text('🎉 TEAM A Declared Winner! $prizeLabel distributed to each Team A player!'),
                             ),
                           );
                         },
@@ -1598,7 +1633,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               backgroundColor: const Color(0xFF2563EB),
-                              content: Text('🎉 TEAM B Declared Winner! ₹${prizePerPlayer.toInt()} distributed to each Team B player!'),
+                              content: Text('🎉 TEAM B Declared Winner! $prizeLabel distributed to each Team B player!'),
                             ),
                           );
                         },
@@ -2184,10 +2219,6 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final entryFee = double.tryParse(_entryFeeController.text) ?? 50;
     final totalPlayers = int.tryParse(_maxSlotsController.text) ?? 8;
 
-    // 75/25 Financial Engine Calculation
-    final double totalPool = entryFee * totalPlayers;
-    final double adminCommission = totalPool * 0.25; // 25% Admin Commission
-    final double distributablePrizePool = totalPool * 0.75; // 75% Distributable Prize Pool
 
     // For BR mode: Calculate dynamic rank prizes total + per kill
     final firstPrize = double.tryParse(_firstPrizeController.text) ?? 0;
@@ -2549,15 +2580,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   ),
                 ),
                 ChoiceChip(
-                  label: const Text('💵 Real Cash (₹)', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  selected: _isRealCashPrizeForFree,
-                  onSelected: (val) => setState(() => _isRealCashPrizeForFree = true),
+                  label: const Text('🪙 WinCoins', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                  selected: _prizeType == 'winningCoins',
+                  onSelected: (val) => setState(() => _prizeType = 'winningCoins'),
                 ),
                 const SizedBox(width: 6),
                 ChoiceChip(
                   label: const Text('🎟️ Store Coins', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  selected: !_isRealCashPrizeForFree,
-                  onSelected: (val) => setState(() => _isRealCashPrizeForFree = false),
+                  selected: _prizeType == 'storeRewardCoins',
+                  onSelected: (val) => setState(() => _prizeType = 'storeRewardCoins'),
                 ),
               ],
             ),
@@ -2590,7 +2621,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     keyboardType: TextInputType.number,
                     onChanged: (v) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: _isRealCashPrizeForFree ? 'Winning Team Total Prize (₹ Cash)' : 'Winning Team Total Prize (🎟️ Coins)',
+                      labelText: _prizeType == 'winningCoins' ? 'Winning Team Total Prize (🪙 WinCoins)' : 'Winning Team Total Prize (🎟️ Store Coins)',
                       isDense: true,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -2620,7 +2651,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     children: [
                       const Text('MANUAL RANK PRIZES (TOP 1 TO 10)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
                       Text(
-                        'Total Pool: ${_isRealCashPrizeForFree ? "₹" : ""}${totalEstimatedPayout.toInt()}${!_isRealCashPrizeForFree ? " 🎟️" : ""}',
+                        'Total Pool: ${_prizeType == "winningCoins" ? "🪙 " : ""}${totalEstimatedPayout.toInt()}${_prizeType != "winningCoins" ? " 🎟️" : " Coins"}',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
                       ),
                     ],
@@ -2641,7 +2672,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 1 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 1 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2654,7 +2685,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 2 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 2 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2667,7 +2698,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 3 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 3 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2686,7 +2717,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 4 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 4 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2699,7 +2730,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 5 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 5 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2712,7 +2743,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 6 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 6 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2731,7 +2762,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 7 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 7 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2744,7 +2775,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 8 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 8 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2757,7 +2788,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 9 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 9 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2776,7 +2807,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 10 Prize (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Rank 10 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2789,7 +2820,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Per Kill (${_isRealCashPrizeForFree ? "₹" : "🎟️"})',
+                            labelText: 'Per Kill (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -2813,7 +2844,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '✓ Total Prize Pool: ${_isRealCashPrizeForFree ? "₹" : ""}${totalEstimatedPayout.toInt()}${!_isRealCashPrizeForFree ? " 🎟️" : ""} (Ranks: ${totalRankPrizes.toInt()} + Max Kills: ${maxKillCost.toInt()}). If Duo/Squad, rank prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.',
+                            '✓ Total Prize Pool: ${_prizeType == "winningCoins" ? "🪙 " : ""}${totalEstimatedPayout.toInt()}${_prizeType != "winningCoins" ? " 🎟️ Coins" : " WinCoins"} (Ranks: ${totalRankPrizes.toInt()} + Max Kills: ${maxKillCost.toInt()}). If Duo/Squad, rank prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.',
                             style: const TextStyle(fontSize: 10, color: Color(0xFF065F46), fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -2981,22 +3012,24 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         ? (newTeamType == TeamType.solo ? MatchFormat.loneWolf1v1 : MatchFormat.loneWolf2v2)
                         : (newTeamType == TeamType.duo ? MatchFormat.duo : (newTeamType == TeamType.squad ? MatchFormat.squad : MatchFormat.solo)));
 
+                final isWinCoinPrize = _prizeType == 'winningCoins';
+                final isCSorLW = (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf);
+                final finalTotalPool = isCSorLW ? firstPrize : (totalEstimatedPayout > 0 ? totalEstimatedPayout : firstPrize);
+
                 final prizePool = PrizePool(
-                  totalPool: newMatchType == MatchType.paid
-                      ? distributablePrizePool
-                      : (totalEstimatedPayout > 0 ? totalEstimatedPayout : totalPool * 0.4),
-                  perKill: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? 0 : perKill,
-                  firstPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? distributablePrizePool : firstPrize,
-                  secondPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : secondPrize,
-                  thirdPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : thirdPrize,
-                  fourthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : fourthPrize,
-                  fifthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : fifthPrize,
-                  sixthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : sixthPrize,
-                  seventhPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : seventhPrize,
-                  eighthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : eighthPrize,
-                  ninthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : ninthPrize,
-                  tenthPlace: (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf) ? null : tenthPrize,
-                  isCashPrize: newMatchType == MatchType.paid || _isRealCashPrizeForFree,
+                  totalPool: finalTotalPool,
+                  perKill: isCSorLW ? 0 : perKill,
+                  firstPlace: firstPrize,
+                  secondPlace: isCSorLW ? null : secondPrize,
+                  thirdPlace: isCSorLW ? null : thirdPrize,
+                  fourthPlace: isCSorLW ? null : fourthPrize,
+                  fifthPlace: isCSorLW ? null : fifthPrize,
+                  sixthPlace: isCSorLW ? null : sixthPrize,
+                  seventhPlace: isCSorLW ? null : seventhPrize,
+                  eighthPlace: isCSorLW ? null : eighthPrize,
+                  ninthPlace: isCSorLW ? null : ninthPrize,
+                  tenthPlace: isCSorLW ? null : tenthPrize,
+                  isCashPrize: isWinCoinPrize,
                 );
 
                 final enteredTitle = _matchTitleController.text.trim();
@@ -3017,8 +3050,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   teamType: newTeamType,
                   matchFormat: format,
                   map: newMapType,
-                  matchType: newMatchType,
-                  entryFeeType: newMatchType == MatchType.free ? EntryFeeType.adCoins : EntryFeeType.cash,
+                  matchType: MatchType.free,
+                  entryFeeType: EntryFeeType.adCoins,
                   entryFee: entryFee,
                   prizePool: prizePool,
                   maxSlots: totalPlayers,
@@ -3041,7 +3074,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.winningGreen,
-                    content: Text('Match "$finalTitle" created! 75% Pool: ₹${distributablePrizePool.toInt()} | 25% Platform Margin: ₹${adminCommission.toInt()}'),
+                    content: Text('Match "$finalTitle" created! Prize Pool: ${isWinCoinPrize ? "🪙 " : ""}${finalTotalPool.toInt()} ${isWinCoinPrize ? "WinCoins" : "🎟️ Store Coins"}'),
                   ),
                 );
               },
@@ -6776,6 +6809,347 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final minute = dt.minute.toString().padLeft(2, '0');
     final period = dt.hour >= 12 ? 'PM' : 'AM';
     return '$hour:$minute $period';
+  }
+
+  Widget _buildRoleFilterChip(String value, String label, [Color? activeColor]) {
+    final isSelected = _userRoleFilter == value;
+    final color = activeColor ?? const Color(0xFF0F172A);
+    return InkWell(
+      onTap: () => setState(() => _userRoleFilter = value),
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color : const Color(0xFFF1F5F9),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.bold,
+            color: isSelected ? Colors.white : const Color(0xFF475569),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // --- 12. 👥 MANAGE USERS & ADMIN ROLES (VPS CLOUD DATABASE) ---
+  Widget _buildUserRoleManagementSection() {
+    final search = _adminUserSearchController.text.trim().toLowerCase();
+    final allUsers = _registeredUsers;
+    final adminUsers = allUsers.where((u) => u.role == 'admin' || AuthService.isAdminIdentifier(u.email, u.uid)).toList();
+    final playerUsers = allUsers.where((u) => u.role != 'admin' && !AuthService.isAdminIdentifier(u.email, u.uid)).toList();
+
+    List<UserModel> displayList = allUsers;
+    if (_userRoleFilter == 'admin') {
+      displayList = adminUsers;
+    } else if (_userRoleFilter == 'user') {
+      displayList = playerUsers;
+    }
+
+    if (search.isNotEmpty) {
+      displayList = displayList.where((u) {
+        return u.displayName.toLowerCase().contains(search) ||
+            u.email.toLowerCase().contains(search) ||
+            u.phoneNumber.toLowerCase().contains(search) ||
+            (u.inGameName != null && u.inGameName!.toLowerCase().contains(search)) ||
+            (u.inGameUid != null && u.inGameUid!.toLowerCase().contains(search)) ||
+            u.uid.toLowerCase().contains(search);
+      }).toList();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'USER & ADMIN ROLES MANAGEMENT',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED), letterSpacing: 1.1),
+                  ),
+                  Text(
+                    'Registered Users: ${allUsers.length}',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: _fetchRegisteredUsers,
+                icon: _isLoadingUsers
+                    ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.refresh, size: 14),
+                label: const Text('Refresh VPS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Filter Chips
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildRoleFilterChip('all', 'All Users (${allUsers.length})'),
+                const SizedBox(width: 6),
+                _buildRoleFilterChip('admin', 'Admins (${adminUsers.length})', const Color(0xFF7C3AED)),
+                const SizedBox(width: 6),
+                _buildRoleFilterChip('user', 'Players (${playerUsers.length})', const Color(0xFF0F172A)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Search box
+          TextField(
+            controller: _adminUserSearchController,
+            onChanged: (_) => setState(() {}),
+            decoration: InputDecoration(
+              hintText: 'Search by Name, Email, Phone, IGN, UID...',
+              prefixIcon: const Icon(Icons.search, size: 18),
+              suffixIcon: _adminUserSearchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _adminUserSearchController.clear();
+                        setState(() {});
+                      },
+                    )
+                  : null,
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          if (_isLoadingUsers && allUsers.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (displayList.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text('No users found matching search query.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: displayList.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (ctx, i) {
+                final u = displayList[i];
+                final isUserAdmin = u.role == 'admin' || AuthService.isAdminIdentifier(u.email, u.uid);
+                final isMaster = AuthService.isMasterAdmin(u.email, u.uid);
+
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 2),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Avatar
+                      CircleAvatar(
+                        radius: 18,
+                        backgroundColor: isUserAdmin ? const Color(0xFF7C3AED) : const Color(0xFFE2E8F0),
+                        child: Text(
+                          u.displayName.isNotEmpty ? u.displayName[0].toUpperCase() : 'U',
+                          style: TextStyle(
+                            color: isUserAdmin ? Colors.white : const Color(0xFF0F172A),
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      // Details
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    u.displayName,
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: isUserAdmin ? const Color(0xFF7C3AED) : const Color(0xFFF1F5F9),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    isUserAdmin ? '🛡️ ADMIN' : '🎮 PLAYER',
+                                    style: TextStyle(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: isUserAdmin ? Colors.white : const Color(0xFF475569),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              '${u.email} • ${u.phoneNumber}',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                            ),
+                            Row(
+                              children: [
+                                Text(
+                                  'IGN: ${u.inGameName ?? "N/A"} (${u.inGameUid ?? "N/A"})',
+                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '🟡 ${u.wallet.adCoins} Coins',
+                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFFD97706), fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Action Button
+                      if (isMaster)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFF59E0B)),
+                          ),
+                          child: const Text('⭐ MASTER', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
+                        )
+                      else if (isUserAdmin)
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFEE2E2),
+                            foregroundColor: const Color(0xFFDC2626),
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => _confirmToggleUserRole(u, makeAdmin: false),
+                          child: const Text('Demote', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
+                        )
+                      else
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF7C3AED),
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          onPressed: () => _confirmToggleUserRole(u, makeAdmin: true),
+                          icon: const Icon(Icons.shield, size: 11),
+                          label: const Text('Make Admin', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmToggleUserRole(UserModel targetUser, {required bool makeAdmin}) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(makeAdmin ? '🛡️ Promote to Admin?' : 'Revoke Admin Role?'),
+        content: Text(
+          makeAdmin
+              ? 'Are you sure you want to promote "${targetUser.displayName}" (${targetUser.email}) to Admin?\n\nThey will get full access to the Admin Panel, Match Creation, Result Declaration, and Room Publishing.'
+              : 'Are you sure you want to demote "${targetUser.displayName}" back to a regular Player?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: makeAdmin ? const Color(0xFF7C3AED) : Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoadingUsers = true);
+              targetUser.role = makeAdmin ? 'admin' : 'user';
+
+              if (makeAdmin) {
+                await AuthService.addAdmin(targetUser.email, targetUser.uid);
+              } else {
+                await AuthService.removeAdmin(targetUser.email, targetUser.uid);
+              }
+
+              // Update on VPS Cloud Database
+              try {
+                await http.post(
+                  Uri.parse("https://vps.swgayanbhumi.in/api/users"),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode(targetUser.toJson()),
+                ).timeout(const Duration(seconds: 6));
+              } catch (e) {
+                debugPrint('[AdminPanel] VPS user role update notice: $e');
+              }
+
+              // Update on Firestore
+              try {
+                await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, targetUser.uid, targetUser.toJson());
+              } catch (_) {}
+
+              await _fetchRegisteredUsers();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: makeAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0F172A),
+                    content: Text(
+                      makeAdmin
+                          ? '🎉 "${targetUser.displayName}" is now an ADMIN with organizer privileges!'
+                          : 'ℹ️ "${targetUser.displayName}" has been demoted to Player.',
+                    ),
+                  ),
+                );
+              }
+            },
+            child: Text(makeAdmin ? 'Yes, Make Admin' : 'Yes, Demote'),
+          ),
+        ],
+      ),
+    );
   }
 }
 

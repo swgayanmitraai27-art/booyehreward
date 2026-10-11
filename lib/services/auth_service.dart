@@ -22,7 +22,45 @@ class AuthService {
   static const String _boundDeviceEmailKey = 'booyah_bound_device_email';
   static const String _boundDeviceUidKey = 'booyah_bound_device_uid';
 
-  static bool isAdminIdentifier(String email, [String? uid]) {
+  static final Set<String> _dynamicAdminEmails = {};
+  static final Set<String> _dynamicAdminUids = {};
+  static bool _dynamicAdminsLoaded = false;
+
+  static Future<void> loadDynamicAdmins() async {
+    if (_dynamicAdminsLoaded) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final emails = prefs.getStringList('booyah_promoted_admin_emails') ?? [];
+      final uids = prefs.getStringList('booyah_promoted_admin_uids') ?? [];
+      _dynamicAdminEmails.addAll(emails.map((e) => e.toLowerCase().trim()));
+      _dynamicAdminUids.addAll(uids.map((u) => u.trim()));
+      _dynamicAdminsLoaded = true;
+    } catch (_) {}
+  }
+
+  static Future<void> addAdmin(String email, [String? uid]) async {
+    final cleanEmail = email.trim().toLowerCase();
+    _dynamicAdminEmails.add(cleanEmail);
+    if (uid != null && uid.isNotEmpty) _dynamicAdminUids.add(uid.trim());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('booyah_promoted_admin_emails', _dynamicAdminEmails.toList());
+      await prefs.setStringList('booyah_promoted_admin_uids', _dynamicAdminUids.toList());
+    } catch (_) {}
+  }
+
+  static Future<void> removeAdmin(String email, [String? uid]) async {
+    final cleanEmail = email.trim().toLowerCase();
+    _dynamicAdminEmails.remove(cleanEmail);
+    if (uid != null && uid.isNotEmpty) _dynamicAdminUids.remove(uid.trim());
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList('booyah_promoted_admin_emails', _dynamicAdminEmails.toList());
+      await prefs.setStringList('booyah_promoted_admin_uids', _dynamicAdminUids.toList());
+    } catch (_) {}
+  }
+
+  static bool isMasterAdmin(String email, [String? uid]) {
     final cleanEmail = email.trim().toLowerCase();
     const adminEmails = {
       'admin@booyah.com',
@@ -39,6 +77,14 @@ class AuthService {
     };
     if (adminEmails.contains(cleanEmail)) return true;
     if (uid != null && adminUids.contains(uid)) return true;
+    return false;
+  }
+
+  static bool isAdminIdentifier(String email, [String? uid]) {
+    if (isMasterAdmin(email, uid)) return true;
+    final cleanEmail = email.trim().toLowerCase();
+    if (_dynamicAdminEmails.contains(cleanEmail)) return true;
+    if (uid != null && _dynamicAdminUids.contains(uid.trim())) return true;
     return false;
   }
 

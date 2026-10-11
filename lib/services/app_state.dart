@@ -429,11 +429,10 @@ class AppState extends ChangeNotifier {
 
   List<MatchModel> get filteredMatches {
     final list = matches.where((m) {
-      // If Real Cash mode is disabled (Safe Review Mode), HIDE all paid matches
-      if (!isRealCashModeEnabled && m.matchType != MatchType.free) return false;
-
-      // 1. Free / Paid Filter
+      // 1. WinCoin / Reward Coin / Free / Paid Filter
       final filter = selectedFilter.toUpperCase();
+      if ((filter == 'WIN_COIN' || filter == 'WINCOIN') && !m.prizePool.isCashPrize) return false;
+      if ((filter == 'REWARD_COIN' || filter == 'REWARDCOIN') && m.prizePool.isCashPrize) return false;
       if (filter == 'FREE' && m.matchType != MatchType.free) return false;
       if (filter == 'PAID' && m.matchType != MatchType.paid) return false;
 
@@ -1258,7 +1257,7 @@ class AppState extends ChangeNotifier {
     );
   }
 
-  // Helper to credit prize to other players' Firestore user wallets and create transactions
+  // Helper to credit prize to other players' VPS & Firestore user wallets and create transactions
   Future<void> _creditWinningToParticipant({
     required String uid,
     required String inGameName,
@@ -1270,9 +1269,35 @@ class AppState extends ChangeNotifier {
   }) async {
     if (uid.isEmpty || uid == user.uid) return;
     try {
-      final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uid);
-      if (userDoc != null && userDoc.isNotEmpty) {
-        final targetUser = UserModel.fromJson(userDoc);
+      UserModel? targetUser;
+
+      // 1. Fetch user from VPS backend first (primary database)
+      try {
+        final vpsRes = await http.get(Uri.parse("$vpsApiUrl/users/$uid")).timeout(const Duration(seconds: 5));
+        if (vpsRes.statusCode == 200) {
+          final data = jsonDecode(vpsRes.body);
+          final userJson = data['user'] ?? data;
+          if (userJson is Map<String, dynamic>) {
+            targetUser = UserModel.fromJson(userJson);
+          }
+        }
+      } catch (e) {
+        debugPrint('[AppState] VPS user fetch error for $uid: $e');
+      }
+
+      // 2. Fallback to Firestore if not found on VPS
+      if (targetUser == null) {
+        try {
+          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uid);
+          if (userDoc != null && userDoc.isNotEmpty) {
+            targetUser = UserModel.fromJson(userDoc);
+          }
+        } catch (e) {
+          debugPrint('[AppState] Firestore user fetch error for $uid: $e');
+        }
+      }
+
+      if (targetUser != null) {
         final double balBefore = isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble();
         if (isPaid) {
           targetUser.wallet.winningCash += amount;
@@ -1282,9 +1307,24 @@ class AppState extends ChangeNotifier {
           targetUser.stats.totalRewardCoinsWon += amount.toInt();
         }
         targetUser.stats.totalKills += kills;
+        targetUser.stats.matchesPlayed += 1;
         if (rank == 1) targetUser.stats.matchesWon += 1;
 
-        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, uid, targetUser.toJson());
+        // 3. Save to VPS Cloud Database immediately
+        try {
+          await http.post(
+            Uri.parse("$vpsApiUrl/users"),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(targetUser.toJson()),
+          ).timeout(const Duration(seconds: 5));
+        } catch (e) {
+          debugPrint('[AppState] VPS user update error for $uid: $e');
+        }
+
+        // 4. Mirror to Firestore as fallback
+        try {
+          await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, uid, targetUser.toJson());
+        } catch (_) {}
 
         final winTxn = TransactionModel(
           id: 'txn_${DateTime.now().millisecondsSinceEpoch}_$uid',
@@ -1297,11 +1337,13 @@ class AppState extends ChangeNotifier {
           balanceBefore: balBefore,
           balanceAfter: isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble(),
           status: 'SUCCESS',
-          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "₹${amount.toInt()} Winning Cash" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
+          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "${amount.toInt()} 🪙 WinCoins" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
           createdAt: DateTime.now(),
         );
         allGlobalTransactions.insert(0, winTxn);
-        await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, winTxn.id, winTxn.toJson());
+        try {
+          await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, winTxn.id, winTxn.toJson());
+        } catch (_) {}
       }
     } catch (e) {
       debugPrint('[AppState] Failed to credit winning to participant $uid: $e');
@@ -1332,10 +1374,11 @@ class AppState extends ChangeNotifier {
     final winningParticipants = (winningTeam == 'Team A') ? match.teamAParticipants : match.teamBParticipants;
     final losingParticipants = (winningTeam == 'Team A') ? match.teamBParticipants : match.teamAParticipants;
 
-    final bool isCashPrize = match.prizePool.isCashPrize || isPaid;
+    final bool isRewardCoinMatch = match.entryFeeType == EntryFeeType.adCoins || !match.prizePool.isCashPrize;
+    final bool isCashPrize = !isRewardCoinMatch && (match.prizePool.isCashPrize || isPaid);
 
-    // Distributable Prize Pool (75% for paid, totalPool for free)
-    final double totalPrizePool = isPaid ? match.distributablePrizePool : match.prizePool.totalPool;
+    // Distributable Prize Pool (75% for paid cash, totalPool for free / reward coins / custom pool)
+    final double totalPrizePool = (isPaid && isCashPrize) ? match.distributablePrizePool : match.prizePool.totalPool;
     final int winningCount = winningParticipants.isNotEmpty ? winningParticipants.length : (match.maxSlots / 2).ceil();
     final double prizePerPlayer = totalPrizePool / (winningCount > 0 ? winningCount : 1);
 
@@ -1351,6 +1394,7 @@ class AppState extends ChangeNotifier {
           user.wallet.winningCash += prizePerPlayer;
           user.stats.totalWinningsCash += prizePerPlayer;
           user.stats.matchesWon += 1;
+          user.stats.matchesPlayed += 1;
 
           final winTxn = TransactionModel(
             id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
@@ -1363,7 +1407,7 @@ class AppState extends ChangeNotifier {
             balanceBefore: balBefore,
             balanceAfter: user.wallet.winningCash,
             status: 'SUCCESS',
-            description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Winning Cash) in "${match.title}"',
+            description: '🏆 $winningTeam Winner (+${prizePerPlayer.toInt()} 🪙 WinCoins) in "${match.title}"',
             createdAt: DateTime.now(),
           );
           transactions.insert(0, winTxn);
@@ -1373,6 +1417,7 @@ class AppState extends ChangeNotifier {
           user.wallet.rewardCoins += prizePerPlayer.toInt();
           user.stats.totalRewardCoinsWon += prizePerPlayer.toInt();
           user.stats.matchesWon += 1;
+          user.stats.matchesPlayed += 1;
 
           final winTxn = TransactionModel(
             id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
@@ -1412,7 +1457,7 @@ class AppState extends ChangeNotifier {
     }
 
     // 💰 Credit 25% Host Profit Commission
-    if (isPaid && match.financialBreakdown != null) {
+    if (isPaid && isCashPrize && match.financialBreakdown != null) {
       final hostShare = match.financialBreakdown!.shares.host25;
       _creditHostCommission(match: match, commissionAmount: hostShare);
     }
@@ -1434,7 +1479,8 @@ class AppState extends ChangeNotifier {
       match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
     }
     final bool isPaid = match.matchType == MatchType.paid;
-    final bool isCashPrize = match.prizePool.isCashPrize || isPaid;
+    final bool isRewardCoinMatch = match.entryFeeType == EntryFeeType.adCoins || !match.prizePool.isCashPrize;
+    final bool isCashPrize = !isRewardCoinMatch && (match.prizePool.isCashPrize || isPaid);
 
     // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
     final double actualCollection = isPaid
@@ -1464,6 +1510,7 @@ class AppState extends ChangeNotifier {
             user.wallet.winningCash += totalPrize;
             user.stats.totalWinningsCash += totalPrize;
             user.stats.totalKills += kills;
+            user.stats.matchesPlayed += 1;
             if (rank == 1) user.stats.matchesWon += 1;
 
             final winTxn = TransactionModel(
@@ -1477,7 +1524,7 @@ class AppState extends ChangeNotifier {
               balanceBefore: balBefore,
               balanceAfter: user.wallet.winningCash,
               status: 'SUCCESS',
-              description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Cash) in "${match.title}"',
+              description: '🏆 Rank #$rank (+${totalPrize.toInt()} 🪙 WinCoins) in "${match.title}"',
               createdAt: DateTime.now(),
             );
             transactions.insert(0, winTxn);
@@ -1487,6 +1534,7 @@ class AppState extends ChangeNotifier {
             user.wallet.rewardCoins += totalPrize.toInt();
             user.stats.totalRewardCoinsWon += totalPrize.toInt();
             user.stats.totalKills += kills;
+            user.stats.matchesPlayed += 1;
             if (rank == 1) user.stats.matchesWon += 1;
 
             final winTxn = TransactionModel(
@@ -1521,7 +1569,7 @@ class AppState extends ChangeNotifier {
     }
 
     // 💰 Credit 25% Host Profit Commission
-    if (isPaid && match.financialBreakdown != null) {
+    if (isPaid && isCashPrize && match.financialBreakdown != null) {
       final hostShare = match.financialBreakdown!.shares.host25;
       _creditHostCommission(match: match, commissionAmount: hostShare);
     }
@@ -1530,6 +1578,7 @@ class AppState extends ChangeNotifier {
     _syncMatch(match);
     notifyListeners();
   }
+
 
   // --- ADMIN: RESPAWN / RESTART MATCH (FOR NEXT ROUND WITH 0 SLOTS) ---
   void adminRespawnMatch(String matchId) {
@@ -2750,19 +2799,21 @@ class AppState extends ChangeNotifier {
           }
         }
 
-        // 2. Sync Live Matches from Firestore
+        // 2. Sync Live Matches from Firestore (Fallback ONLY if matches is empty)
         try {
-          final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
-          if (matchDocs.isNotEmpty) {
-            final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
-            matches = firestoreMatches;
-            for (var m in matches) {
-              _checkAndTriggerMatchAutoStart(m);
+          if (matches.isEmpty) {
+            final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
+            if (matchDocs.isNotEmpty) {
+              final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
+              matches = firestoreMatches;
+              for (var m in matches) {
+                _checkAndTriggerMatchAutoStart(m);
+              }
+              _saveLocalMatchesCache();
             }
-            _saveLocalMatchesCache();
           }
         } catch (e) {
-          debugPrint('[AppState] Sync matches error: $e');
+          debugPrint('[AppState] Sync matches fallback notice: $e');
         }
 
         // 3. Sync Transactions
