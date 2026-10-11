@@ -63,6 +63,17 @@ class AppState extends ChangeNotifier {
   double coinToRupeeRate = 0.10; // Default: 1000 Coins = ₹100 (1 Coin = ₹0.10)
   int minWithdrawalCoins = 1000; // Minimum 1000 Winning Coins for withdrawal
 
+  // App Version & Remote Force Update System
+  static const int currentAppBuildNumber = 33;
+  static const String currentAppVersion = '1.3.3';
+  int minBuildNumber = 33;
+  String minAppVersion = '1.3.3';
+  bool isForceUpdateEnabled = false;
+  String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app';
+  String updateTitle = '⚡ App Update Required';
+  String updateMessage = 'Booyah Rewards ka naya version Play Store par live hai. Kripya continue karne ke liye update karein!';
+  bool get isUpdateRequired => !kIsWeb && isForceUpdateEnabled && (currentAppBuildNumber < minBuildNumber);
+
   bool isLiveSyncing = false;
   bool isAuthenticated = false;
   bool isLoadingAuth = true;
@@ -2742,6 +2753,24 @@ class AppState extends ChangeNotifier {
               }
               if (cfg['lwBannerUrl'] != null && cfg['lwBannerUrl'].toString().isNotEmpty) {
                 lwBannerUrl = cfg['lwBannerUrl'].toString();
+              }
+              if (cfg['minBuildNumber'] != null) {
+                minBuildNumber = (cfg['minBuildNumber'] as num).toInt();
+              }
+              if (cfg['minAppVersion'] != null) {
+                minAppVersion = cfg['minAppVersion'].toString();
+              }
+              if (cfg['isForceUpdateEnabled'] != null) {
+                isForceUpdateEnabled = cfg['isForceUpdateEnabled'] == true || cfg['isForceUpdateEnabled'].toString() == 'true';
+              }
+              if (cfg['playStoreUrl'] != null && cfg['playStoreUrl'].toString().isNotEmpty) {
+                playStoreUrl = cfg['playStoreUrl'].toString();
+              }
+              if (cfg['updateTitle'] != null && cfg['updateTitle'].toString().isNotEmpty) {
+                updateTitle = cfg['updateTitle'].toString();
+              }
+              if (cfg['updateMessage'] != null && cfg['updateMessage'].toString().isNotEmpty) {
+                updateMessage = cfg['updateMessage'].toString();
               }
             }
 

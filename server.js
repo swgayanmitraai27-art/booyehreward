@@ -81,7 +81,13 @@ let db = {
     brBannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     csBannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     lwBannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-    appVersion: '2.2.4',
+    appVersion: '1.3.3',
+    minAppVersion: '1.3.3',
+    minBuildNumber: 33,
+    isForceUpdateEnabled: true,
+    playStoreUrl: 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app',
+    updateTitle: '⚡ App Update Required',
+    updateMessage: 'Booyah Rewards ka naya version Play Store par live hai. Kripya tournaments me bina kisi problem ke continue karne ke liye app ko update karein!',
     minWithdrawalAmount: 30,
     upiQRPaymentUrl: 'upi://pay?pa=7307222384@ybl&pn=BooyahRewards&cu=INR',
     razorpayKeyId: 'rzp_live_default_key',
@@ -863,6 +869,18 @@ app.post('/api/users', (req, res) => {
 
   saveDB();
   res.json({ success: true, user: db.users[user.uid] });
+});
+
+app.delete('/api/users/:uid', (req, res) => {
+  const { uid } = req.params;
+  if (!uid) return res.status(400).json({ success: false, message: 'UID required' });
+  if (db.users[uid]) {
+    delete db.users[uid];
+    saveDB();
+    broadcast('USER_DELETED', { uid });
+    return res.json({ success: true, message: 'User deleted successfully' });
+  }
+  res.status(404).json({ success: false, message: 'User not found' });
 });
 
 // 11. Payments & Webhooks

@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -59,6 +60,19 @@ void main() async {
   runApp(const BooyahRewardsApp());
 }
 
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+    PointerDeviceKind.touch,
+    PointerDeviceKind.mouse,
+    PointerDeviceKind.trackpad,
+    PointerDeviceKind.stylus,
+    PointerDeviceKind.unknown,
+  };
+}
+
 class BooyahRewardsApp extends StatefulWidget {
   const BooyahRewardsApp({super.key});
 
@@ -92,6 +106,7 @@ class _BooyahRewardsAppState extends State<BooyahRewardsApp> {
     return MaterialApp(
       title: 'Booyah Rewards - Esports Tournaments (Free & Paid)',
       debugShowCheckedModeBanner: false,
+      scrollBehavior: const AppScrollBehavior(),
       theme: AppTheme.lightTheme,
       home: SplashScreen(appState: _appState),
     );

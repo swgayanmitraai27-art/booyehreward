@@ -255,8 +255,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       try {
         final vpsRes = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users")).timeout(const Duration(seconds: 8));
         if (vpsRes.statusCode == 200) {
-          final List vpsList = jsonDecode(vpsRes.body);
-          users = vpsList.map((d) => UserModel.fromJson(Map<String, dynamic>.from(d))).toList();
+          final decoded = jsonDecode(vpsRes.body);
+          final List vpsList = (decoded is List)
+              ? decoded
+              : ((decoded is Map && decoded['users'] is List) ? decoded['users'] : []);
+          users = vpsList
+              .whereType<Map>()
+              .map((d) => UserModel.fromJson(Map<String, dynamic>.from(d)))
+              .toList();
         }
       } catch (e) {
         debugPrint('[AdminPanel] VPS users fetch notice: $e');
@@ -466,6 +472,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final metrics = widget.appState.adminFinancialMetrics;
 
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -539,6 +546,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(11, '🎁 Referral Attribution (${widget.appState.allGlobalReferralRecords.length})'),
                 const SizedBox(width: 8),
                 _buildTabBtn(12, '👥 Manage Users & Admins (${_registeredUsers.length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(13, '📜 Completed Matches (${widget.appState.matches.where((m) => m.status == MatchStatus.completed).length})'),
               ],
             ),
           ),
@@ -557,6 +566,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 10) _buildTournamentModesManagementSection(),
           if (activeSection == 11) _buildReferralLedgerSection(),
           if (activeSection == 12) _buildUserRoleManagementSection(),
+          if (activeSection == 13) _buildCompletedMatchesSection(),
         ],
       ),
     );
@@ -1344,10 +1354,51 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   // --- 2. RESULT DECLARATION (CS TEAM A/B vs BR DYNAMIC) ---
   // ==========================================
   Widget _buildResultDeclarationSection() {
-    final matches = widget.appState.matches;
-    final selectedMatch = matches.firstWhere(
-      (m) => m.id == (selectedMatchIdForResult ?? matches.first.id),
-      orElse: () => matches.first,
+    final pendingMatches = widget.appState.matches.where((m) => m.status != MatchStatus.completed).toList();
+    if (pendingMatches.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.check_circle_outline, color: Color(0xFF16A34A), size: 52),
+              const SizedBox(height: 12),
+              const Text(
+                'Sabhi Matches ke Results Declare ho chuke hain! 🎉',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Abhi koi pending match nahi hai jiska result declare karna ho.',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: () => setState(() => activeSection = 13),
+                icon: const Icon(Icons.history, size: 16),
+                label: const Text('View Completed Matches', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final selectedMatch = pendingMatches.firstWhere(
+      (m) => m.id == (selectedMatchIdForResult ?? pendingMatches.first.id),
+      orElse: () => pendingMatches.first,
     );
     final isFree = selectedMatch.matchType == MatchType.free;
     final isCSorLW = selectedMatch.isTeamBasedMode;
@@ -1396,10 +1447,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   isExpanded: true,
                   decoration: InputDecoration(
                     isDense: true,
-                    labelText: 'Select Match to Declare Results',
+                    labelText: 'Select Pending Match to Declare Results',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  items: matches.map((m) {
+                  items: pendingMatches.map((m) {
                     return DropdownMenuItem(
                       value: m.id,
                       child: Text(
@@ -1826,10 +1877,39 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
   // --- 2. ROOM ID & PASSWORD PUBLISHER ---
   Widget _buildRoomPublisherSection() {
-    final matches = widget.appState.matches;
-    final selectedMatch = matches.firstWhere(
-      (m) => m.id == (selectedMatchIdForRoom ?? matches.first.id),
-      orElse: () => matches.first,
+    final roomMatches = widget.appState.matches.where((m) => m.status != MatchStatus.completed).toList();
+    if (roomMatches.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+        ),
+        child: const Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.vpn_key_off, color: Colors.grey, size: 52),
+              SizedBox(height: 12),
+              Text(
+                'No Upcoming/Ongoing Matches',
+                style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Sabhi matches complete ho chuke hain. Naye matches create hone par yahan Room ID publish kar sakte hain.',
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final selectedMatch = roomMatches.firstWhere(
+      (m) => m.id == (selectedMatchIdForRoom ?? roomMatches.first.id),
+      orElse: () => roomMatches.first,
     );
 
     return Container(
@@ -1850,10 +1930,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             isExpanded: true,
             decoration: InputDecoration(
               isDense: true,
-              labelText: 'Select Match',
+              labelText: 'Select Active Match to Publish Room',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            items: matches.map((m) {
+            items: roomMatches.map((m) {
               return DropdownMenuItem(
                 value: m.id,
                 child: Text(m.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
@@ -1862,7 +1942,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             onChanged: (val) {
               setState(() {
                 selectedMatchIdForRoom = val;
-                final m = matches.firstWhere((item) => item.id == val);
+                final m = roomMatches.firstWhere((item) => item.id == val);
                 _roomIdController.text = m.credentials.roomId;
                 _roomPassController.text = m.credentials.roomPassword;
               });
@@ -6841,6 +6921,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final allUsers = _registeredUsers;
     final adminUsers = allUsers.where((u) => u.role == 'admin' || AuthService.isAdminIdentifier(u.email, u.uid)).toList();
     final playerUsers = allUsers.where((u) => u.role != 'admin' && !AuthService.isAdminIdentifier(u.email, u.uid)).toList();
+    final totalAdCoins = allUsers.fold<int>(0, (sum, u) => sum + u.wallet.adCoins);
+    final totalRewardCoins = allUsers.fold<int>(0, (sum, u) => sum + u.wallet.rewardCoins);
 
     List<UserModel> displayList = allUsers;
     if (_userRoleFilter == 'admin') {
@@ -6881,8 +6963,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF7C3AED), letterSpacing: 1.1),
                   ),
                   Text(
-                    'Registered Users: ${allUsers.length}',
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    'Registered Users: ${allUsers.length}  •  🟡 $totalAdCoins Coins  •  🎟️ $totalRewardCoins',
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                   ),
                 ],
               ),
@@ -6988,12 +7070,13 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // Row 1: Name + Role Badge
                             Row(
                               children: [
                                 Flexible(
                                   child: Text(
                                     u.displayName,
-                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5),
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: Color(0xFF0F172A)),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -7015,69 +7098,345 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              '${u.email} • ${u.phoneNumber}',
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-                            ),
-                            Row(
+                            const SizedBox(height: 3),
+                            // Row 2: Phone Number (Prominently displayed) & Email
+                            Wrap(
+                              crossAxisAlignment: WrapCrossAlignment.center,
+                              spacing: 6,
+                              runSpacing: 2,
                               children: [
-                                Text(
-                                  'IGN: ${u.inGameName ?? "N/A"} (${u.inGameUid ?? "N/A"})',
-                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(5),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.phone_android, size: 11, color: Color(0xFF2563EB)),
+                                      const SizedBox(width: 3),
+                                      Text(
+                                        u.phoneNumber.isNotEmpty ? u.phoneNumber : 'No Phone',
+                                        style: const TextStyle(
+                                          fontSize: 10.5,
+                                          fontWeight: FontWeight.w900,
+                                          color: Color(0xFF1D4ED8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const SizedBox(width: 8),
                                 Text(
-                                  '🟡 ${u.wallet.adCoins} Coins',
-                                  style: const TextStyle(fontSize: 9.5, color: Color(0xFFD97706), fontWeight: FontWeight.bold),
+                                  u.email,
+                                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 3),
+                            // Row 3: IGN & Free Fire UID
+                            Text(
+                              'IGN: ${u.inGameName != null && u.inGameName!.isNotEmpty ? u.inGameName : "N/A"}  •  UID: ${u.inGameUid != null && u.inGameUid!.isNotEmpty ? u.inGameUid : "N/A"}',
+                              style: const TextStyle(fontSize: 9.5, color: Color(0xFF059669), fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 3),
+                            // Row 4: All Coins & Cash Breakdown
+                            Wrap(
+                              spacing: 6,
+                              runSpacing: 2,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFEF3C7),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '🟡 Ad Coins: ${u.wallet.adCoins}',
+                                    style: const TextStyle(fontSize: 9.5, color: Color(0xFFB45309), fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEDE9FE),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '🎟️ Reward Coins: ${u.wallet.rewardCoins}',
+                                    style: const TextStyle(fontSize: 9.5, color: Color(0xFF6D28D9), fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                                if (u.wallet.winningCash > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDCFCE7),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '🏆 Win: ₹${u.wallet.winningCash.toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 9.5, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
+                                if (u.wallet.depositCash > 0)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      '💵 Dep: ₹${u.wallet.depositCash.toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 9.5, color: Color(0xFF334155), fontWeight: FontWeight.bold),
+                                    ),
+                                  ),
                               ],
                             ),
                           ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Action Button
-                      if (isMaster)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFF59E0B)),
+                      // Action Buttons
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 16, color: Color(0xFF2563EB)),
+                            tooltip: 'Edit Name & Details',
+                            constraints: const BoxConstraints(),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            onPressed: () => _showEditUserDialog(u),
                           ),
-                          child: const Text('⭐ MASTER', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
-                        )
-                      else if (isUserAdmin)
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFEE2E2),
-                            foregroundColor: const Color(0xFFDC2626),
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () => _confirmToggleUserRole(u, makeAdmin: false),
-                          child: const Text('Demote', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
-                        )
-                      else
-                        ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF7C3AED),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                          ),
-                          onPressed: () => _confirmToggleUserRole(u, makeAdmin: true),
-                          icon: const Icon(Icons.shield, size: 11),
-                          label: const Text('Make Admin', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
-                        ),
+                          if (!isMaster)
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                              tooltip: 'Delete User Account',
+                              constraints: const BoxConstraints(),
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              onPressed: () => _confirmDeleteUser(u),
+                            ),
+                          const SizedBox(width: 4),
+                          if (isMaster)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: const Color(0xFFF59E0B)),
+                              ),
+                              child: const Text('⭐ MASTER', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
+                            )
+                          else if (isUserAdmin)
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEE2E2),
+                                foregroundColor: const Color(0xFFDC2626),
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () => _confirmToggleUserRole(u, makeAdmin: false),
+                              child: const Text('Demote', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            )
+                          else
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF7C3AED),
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () => _confirmToggleUserRole(u, makeAdmin: true),
+                              icon: const Icon(Icons.shield, size: 11),
+                              label: const Text('Make Admin', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            ),
+                        ],
+                      ),
                     ],
                   ),
                 );
               },
             ),
+        ],
+      ),
+    );
+  }
+
+  void _showEditUserDialog(UserModel targetUser) {
+    final nameCtrl = TextEditingController(text: targetUser.displayName);
+    final ignCtrl = TextEditingController(text: targetUser.inGameName ?? '');
+    final igUidCtrl = TextEditingController(text: targetUser.inGameUid ?? '');
+    final phoneCtrl = TextEditingController(text: targetUser.phoneNumber);
+    final adCoinsCtrl = TextEditingController(text: targetUser.wallet.adCoins.toString());
+    final rewardCoinsCtrl = TextEditingController(text: targetUser.wallet.rewardCoins.toString());
+    final winningCashCtrl = TextEditingController(text: targetUser.wallet.winningCash.toInt().toString());
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.edit, color: Color(0xFF2563EB), size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Edit: ${targetUser.displayName}',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameCtrl,
+                decoration: const InputDecoration(labelText: 'Display Name', isDense: true, border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: ignCtrl,
+                decoration: const InputDecoration(labelText: 'In-Game Name (IGN)', isDense: true, border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: igUidCtrl,
+                decoration: const InputDecoration(labelText: 'Free Fire UID', isDense: true, border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: phoneCtrl,
+                decoration: const InputDecoration(labelText: 'Phone Number', isDense: true, border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: adCoinsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: '🟡 Ad Coins', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: TextField(
+                      controller: rewardCoinsCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: '🎟️ Reward Coins', isDense: true, border: OutlineInputBorder()),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: winningCashCtrl,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(labelText: '🪙 WinCash / WinCoins', isDense: true, border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoadingUsers = true);
+              targetUser.displayName = nameCtrl.text.trim().isNotEmpty ? nameCtrl.text.trim() : targetUser.displayName;
+              targetUser.inGameName = ignCtrl.text.trim();
+              targetUser.inGameUid = igUidCtrl.text.trim();
+              targetUser.phoneNumber = phoneCtrl.text.trim();
+              targetUser.wallet.adCoins = int.tryParse(adCoinsCtrl.text.trim()) ?? targetUser.wallet.adCoins;
+              targetUser.wallet.rewardCoins = int.tryParse(rewardCoinsCtrl.text.trim()) ?? targetUser.wallet.rewardCoins;
+              targetUser.wallet.winningCash = double.tryParse(winningCashCtrl.text.trim()) ?? targetUser.wallet.winningCash;
+
+              // Save to VPS
+              try {
+                await http.post(
+                  Uri.parse("https://vps.swgayanbhumi.in/api/users"),
+                  headers: {'Content-Type': 'application/json'},
+                  body: jsonEncode(targetUser.toJson()),
+                ).timeout(const Duration(seconds: 6));
+              } catch (_) {}
+
+              // Save to Firestore
+              try {
+                await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, targetUser.uid, targetUser.toJson());
+              } catch (_) {}
+
+              await _fetchRegisteredUsers();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: const Color(0xFF16A34A),
+                    content: Text('✅ User "${targetUser.displayName}" updated successfully on VPS!'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Save Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmDeleteUser(UserModel targetUser) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
+            SizedBox(width: 8),
+            Text('Delete User Permanently?'),
+          ],
+        ),
+        content: Text(
+          'Are you sure you want to permanently delete user "${targetUser.displayName}" (${targetUser.email})?\n\n'
+          'Their account, wallet, and records will be deleted from VPS Cloud Database.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              setState(() => _isLoadingUsers = true);
+
+              // Delete on VPS
+              try {
+                await http.delete(
+                  Uri.parse("https://vps.swgayanbhumi.in/api/users/${targetUser.uid}"),
+                ).timeout(const Duration(seconds: 6));
+              } catch (_) {}
+
+              // Delete on Firestore
+              try {
+                await FirestoreRestService.deleteDocument(FirebaseConfig.usersCollection, targetUser.uid);
+              } catch (_) {}
+
+              await _fetchRegisteredUsers();
+
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: Colors.red.shade800,
+                    content: Text('🗑️ User "${targetUser.displayName}" has been permanently deleted.'),
+                  ),
+                );
+              }
+            },
+            child: const Text('Yes, Delete Permanently'),
+          ),
         ],
       ),
     );
@@ -7151,5 +7510,159 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
       ),
     );
   }
+
+  // --- 13. COMPLETED MATCHES & HISTORY SECTION ---
+  Widget _buildCompletedMatchesSection() {
+    final completedMatches = widget.appState.matches.where((m) => m.status == MatchStatus.completed).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'ESPORTS MATCH HISTORY & WINNERS',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF047857), letterSpacing: 1.1),
+                  ),
+                  Text(
+                    'Completed Matches: ${completedMatches.length}',
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh Matches',
+                onPressed: () => setState(() {}),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          if (completedMatches.isEmpty)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(32),
+                child: Text('No completed matches yet. Once results are declared, finished matches appear here.', style: TextStyle(color: Colors.grey, fontSize: 12)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: completedMatches.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 12),
+              itemBuilder: (ctx, i) {
+                final m = completedMatches[i];
+                final isFree = m.matchType == MatchType.free;
+                final winners = m.participants.where((p) => p.isWinner || (p.rank != null && p.rank == 1)).toList();
+
+                return Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              m.title,
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDCFCE7),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: const Text('COMPLETED 🏆', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF16A34A))),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        'Mode: ${m.mode.name.toUpperCase()} • ${m.teamType.name.toUpperCase()} • Map: ${m.map.name.toUpperCase()} • Slots: ${m.filledSlots}/${m.maxSlots}',
+                        style: const TextStyle(fontSize: 10.5, color: Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(
+                            isFree ? 'Prize: ${m.prizePool.totalPool.toInt()} 🎟️ Store Coins' : 'Prize: 🪙 ${m.prizePool.firstPlace.toInt()} WinCoins',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
+                          ),
+                          if (m.credentials.roomId.isNotEmpty) ...[
+                            const SizedBox(width: 12),
+                            Text(
+                              'Room ID: ${m.credentials.roomId}',
+                              style: const TextStyle(fontSize: 10, color: Color(0xFF2563EB), fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (winners.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.emoji_events, size: 16, color: Color(0xFFD97706)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  'Winner: ${winners.map((w) => "${w.inGameName} (UID: ${w.inGameUid})").join(", ")}',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(foregroundColor: Colors.red, padding: const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () => _confirmDeleteMatch(context, m),
+                            icon: const Icon(Icons.delete_forever, size: 14),
+                            label: const Text('Delete Record', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
 }
+
 
