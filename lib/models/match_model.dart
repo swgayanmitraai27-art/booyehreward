@@ -374,6 +374,7 @@ class MatchModel {
   String id;
   String title;
   String? bannerImage;
+  String? get bannerUrl => bannerImage;
   GameType gameType;
   MatchMode mode; // br, cs, loneWolf
   TeamType teamType; // solo, duo, squad
@@ -498,16 +499,19 @@ class MatchModel {
   }
 
   double getTeamRankPrize(int rank) {
-    if (rank == 1 && prizePool.firstPlace > 0) return prizePool.firstPlace;
-    if (rank == 2 && prizePool.secondPlace != null && prizePool.secondPlace! > 0) return prizePool.secondPlace!;
-    if (rank == 3 && prizePool.thirdPlace != null && prizePool.thirdPlace! > 0) return prizePool.thirdPlace!;
-    if (rank == 4 && prizePool.fourthPlace != null && prizePool.fourthPlace! > 0) return prizePool.fourthPlace!;
-    if (rank == 5 && prizePool.fifthPlace != null && prizePool.fifthPlace! > 0) return prizePool.fifthPlace!;
-    if (rank == 6 && prizePool.sixthPlace != null && prizePool.sixthPlace! > 0) return prizePool.sixthPlace!;
-    if (rank == 7 && prizePool.seventhPlace != null && prizePool.seventhPlace! > 0) return prizePool.seventhPlace!;
-    if (rank == 8 && prizePool.eighthPlace != null && prizePool.eighthPlace! > 0) return prizePool.eighthPlace!;
-    if (rank == 9 && prizePool.ninthPlace != null && prizePool.ninthPlace! > 0) return prizePool.ninthPlace!;
-    if (rank == 10 && prizePool.tenthPlace != null && prizePool.tenthPlace! > 0) return prizePool.tenthPlace!;
+    if (prizePool.firstPlace > 0) {
+      if (rank == 1) return prizePool.firstPlace;
+      if (rank == 2) return prizePool.secondPlace ?? 0.0;
+      if (rank == 3) return prizePool.thirdPlace ?? 0.0;
+      if (rank == 4) return prizePool.fourthPlace ?? 0.0;
+      if (rank == 5) return prizePool.fifthPlace ?? 0.0;
+      if (rank == 6) return prizePool.sixthPlace ?? 0.0;
+      if (rank == 7) return prizePool.seventhPlace ?? 0.0;
+      if (rank == 8) return prizePool.eighthPlace ?? 0.0;
+      if (rank == 9) return prizePool.ninthPlace ?? 0.0;
+      if (rank == 10) return prizePool.tenthPlace ?? 0.0;
+      return 0.0;
+    }
     return rankPrizePool * getRankPercentage(rank);
   }
 

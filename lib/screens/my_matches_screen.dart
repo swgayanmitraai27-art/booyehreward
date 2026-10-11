@@ -244,7 +244,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
                   child: Text(
                     match.status == MatchStatus.completed
                         ? DateFormat('dd MMM, hh:mm a').format(match.completedAt ?? match.matchTime)
-                        : (match.status == MatchStatus.upcoming ? '⚡ AUTO-START ON FULL' : match.status.name.toUpperCase()),
+                        : (match.status == MatchStatus.upcoming ? '🕒 ${DateFormat('dd MMM, hh:mm a').format(match.matchTime)}' : match.status.name.toUpperCase()),
                     style: TextStyle(
                       fontFamily: 'Rajdhani',
                       fontSize: 11,

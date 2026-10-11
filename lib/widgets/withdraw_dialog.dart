@@ -153,7 +153,7 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        '1 Coin = ₹${rate.toStringAsFixed(2)} Cash (1000 Coins = ₹${(1000 * rate).toInt()})',
+                        '1 Coin = ₹${rate.toStringAsFixed(0)} Real Cash (1:1 Ratio)',
                         style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w600, color: Color(0xFFB45309)),
                       ),
                     ],

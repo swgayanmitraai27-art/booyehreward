@@ -1977,18 +1977,34 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
-                if (_roomIdController.text.trim().isEmpty) {
+              onPressed: () async {
+                final rId = _roomIdController.text.trim();
+                final rPass = _roomPassController.text.trim();
+                if (rId.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Room ID')));
                   return;
                 }
                 widget.appState.adminPublishRoomCredentials(
                   selectedMatch.id,
-                  _roomIdController.text.trim(),
-                  _roomPassController.text.trim(),
+                  rId,
+                  rPass,
                 );
+                // Also trigger dynamic personalized notification to VPS
+                try {
+                  await http.post(
+                    Uri.parse('https://vps.swgayanbhumi.in/api/notifications/broadcast-personalized-match'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode({
+                      'matchId': selectedMatch.id,
+                      'notificationType': 'room_release',
+                      'customTitleTemplate': '🔑 {name}, \'${selectedMatch.title}\' की रूम ID आ गई!',
+                      'customBodyTemplate': 'Room ID: $rId | Pass: $rPass\nFree Fire में तुरंत रूम जॉइन करें, मैच 10 मिनट में शुरू हो रहा है!',
+                    }),
+                  );
+                } catch (_) {}
+                if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(backgroundColor: AppTheme.winningGreen, content: Text('Room Credentials Published to all participants!')),
+                  const SnackBar(backgroundColor: AppTheme.winningGreen, content: Text('Room Credentials Published & Auto-Alert Sent to Players!')),
                 );
               },
               icon: const Icon(Icons.send, size: 16),
@@ -5782,7 +5798,100 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   child: Text('${m.title} (${m.participants.length} Players)', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                 );
               }).toList(),
-              onChanged: (val) => setState(() => _notifSelectedMatchId = val),
+              onChanged: (val) {
+                setState(() {
+                  _notifSelectedMatchId = val;
+                  final sel = matches.firstWhere((m) => m.id == val, orElse: () => matches.first);
+                  _notifTitleController.text = '🔥 {name}, अभी \'${sel.title}\' जॉइन करें!';
+                  _notifBodyController.text = '{name}, जीतें 🪙 ${sel.prizePool.totalPool.toInt()} Coins! एंट्री सिर्फ 🟡 ${sel.entryFee.toInt()} Ad Coins। मोड: ${sel.mode.name.toUpperCase()} Solo। अभी स्लॉट बुक करें!';
+                  _notifImageUrlController.text = sel.bannerUrl ?? '';
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+
+            // One-click Auto Fill Buttons for Match
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: [
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFFEF3C7),
+                    foregroundColor: const Color(0xFFB45309),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.flash_on, size: 14),
+                  label: const Text('Auto-Fill Booking Alert (Hindi)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    final sel = matches.firstWhere((m) => m.id == _notifSelectedMatchId, orElse: () => matches.first);
+                    setState(() {
+                      _notifTitleController.text = '🔥 {name}, अभी \'${sel.title}\' जॉइन करें!';
+                      _notifBodyController.text = '{name}, जीतें 🪙 ${sel.prizePool.totalPool.toInt()} Coins! एंट्री सिर्फ 🟡 ${sel.entryFee.toInt()} Ad Coins। मोड: ${sel.mode.name.toUpperCase()} Solo। अभी स्लॉट बुक करें!';
+                      _notifImageUrlController.text = sel.bannerUrl ?? '';
+                    });
+                  },
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEFF6FF),
+                    foregroundColor: const Color(0xFF1D4ED8),
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.vpn_key, size: 14),
+                  label: const Text('Auto-Fill Room ID Alert (Hindi)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    final sel = matches.firstWhere((m) => m.id == _notifSelectedMatchId, orElse: () => matches.first);
+                    setState(() {
+                      _notifTitleController.text = '🔑 {name}, \'${sel.title}\' की रूम ID और पासवर्ड आ गया!';
+                      _notifBodyController.text = 'Room ID: ${sel.credentials.roomId.isNotEmpty ? sel.credentials.roomId : "LIVE_NOW"} | Pass: ${sel.credentials.roomPassword.isNotEmpty ? sel.credentials.roomPassword : "1234"}\nFree Fire में तुरंत रूम जॉइन करें, मैच 10 मिनट में शुरू हो रहा है!';
+                      _notifImageUrlController.text = sel.bannerUrl ?? '';
+                    });
+                  },
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: const Icon(Icons.send_and_archive, size: 14),
+                  label: const Text('🚀 1-Click Send With User Names (All Users)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                  onPressed: () async {
+                    final targetMatchId = _notifSelectedMatchId ?? (matches.isNotEmpty ? matches.first.id : '');
+                    if (targetMatchId.isEmpty) return;
+                    try {
+                      final res = await http.post(
+                        Uri.parse('https://vps.swgayanbhumi.in/api/notifications/broadcast-personalized-match'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({
+                          'matchId': targetMatchId,
+                          'customTitleTemplate': _notifTitleController.text.trim().isNotEmpty ? _notifTitleController.text.trim() : null,
+                          'customBodyTemplate': _notifBodyController.text.trim().isNotEmpty ? _notifBodyController.text.trim() : null,
+                        }),
+                      );
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            backgroundColor: Color(0xFF16A34A),
+                            content: Text('✅ Dispatched personalized notification with individual user names & banner to ALL registered users!'),
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      }
+                    }
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 12),
           ],
@@ -5960,7 +6069,53 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             child: Row(
               children: [
                 ActionChip(
-                  label: const Text('🔥 Mega Tournament', style: TextStyle(fontSize: 10.5)),
+                  backgroundColor: const Color(0xFFFEF3C7),
+                  label: const Text('🇮🇳 🔥 400 कॉइन्स BR सोलो', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '🔥 मेगा BR सोलो टूर्नामेंट - 400 कॉइन्स प्राइज़!';
+                      _notifBodyController.text = 'कल 48 प्लेयर्स का BR सोलो मैच है! सिर्फ 10 Ad Coins से अपना स्लॉट अभी बुक करें और जीतें 400 विनिंग कॉइन्स! जल्दी करें, सीट्स सीमित हैं!';
+                      _notifImageUrlController.text = 'https://vps.swgayanbhumi.in/uploads/banner_1791739318242_update_banner.jpg';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  backgroundColor: const Color(0xFFEFF6FF),
+                  label: const Text('🇮🇳 ⚡ 10 Coins स्लॉट बुक', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '⚡ जल्दी करें! सिर्फ 10 Ad Coins में स्लॉट बुक करें!';
+                      _notifBodyController.text = 'फ्री फायर BR सोलो मैच के स्लॉट्स तेज़ी से भर रहे हैं। Ad देखकर 10 Coins कमाएं और तुरंत मैच में रजिस्टर करें!';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  backgroundColor: const Color(0xFFDCFCE7),
+                  label: const Text('🇮🇳 🔑 रूम ID रिलीज', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '🔑 कस्टम रूम ID और पासवर्ड आ गया है!';
+                      _notifBodyController.text = 'आपका फ्री फायर मैच 10 मिनट में शुरू हो रहा है। ऐप खोलें और रूम ID व पासवर्ड कॉपी करके गेम में जॉइन करें!';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  backgroundColor: const Color(0xFFEDE9FE),
+                  label: const Text('🇮🇳 📲 ऐप अपडेट अलर्ट', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF6D28D9))),
+                  onPressed: () {
+                    setState(() {
+                      _notifTitleController.text = '📲 Booyah Rewards ऐप अपडेट करें!';
+                      _notifBodyController.text = 'Google Play Store पर नया वर्शन उपलब्ध है। बिना किसी लैग के मैच खेलने के लिए अभी अपडेट करें!';
+                      _notifImageUrlController.text = 'https://vps.swgayanbhumi.in/uploads/banner_1791739318242_update_banner.jpg';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('🔥 Mega Tournament (EN)', style: TextStyle(fontSize: 10.5)),
                   onPressed: () {
                     setState(() {
                       _notifTitleController.text = '🔥 Sunday Mega Esports Cup!';
@@ -5970,21 +6125,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ),
                 const SizedBox(width: 6),
                 ActionChip(
-                  label: const Text('🔑 Room ID Released', style: TextStyle(fontSize: 10.5)),
+                  label: const Text('🔑 Room ID Released (EN)', style: TextStyle(fontSize: 10.5)),
                   onPressed: () {
                     setState(() {
                       _notifTitleController.text = '🔑 Room ID & Pass Released!';
                       _notifBodyController.text = 'Your match Room ID is live. Open app & join Free Fire room immediately!';
-                    });
-                  },
-                ),
-                const SizedBox(width: 6),
-                ActionChip(
-                  label: const Text('🎁 10% Deposit Bonus', style: TextStyle(fontSize: 10.5)),
-                  onPressed: () {
-                    setState(() {
-                      _notifTitleController.text = '🎁 10% Extra Deposit Cashback!';
-                      _notifBodyController.text = 'Add cash via Razorpay UPI today and get 10% instant Bonus Cash!';
                     });
                   },
                 ),

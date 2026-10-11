@@ -472,6 +472,85 @@ app.get('/api/matches', (req, res) => {
   res.json({ success: true, matches: db.matches });
 });
 
+function refundMatchParticipants(match) {
+  if (!match || !Array.isArray(match.participants) || match.participants.length === 0) return;
+  console.log(`[Refund] Processing refund for match #${match.matchNumber || match.id} (${match.participants.length} players)`);
+  for (const p of match.participants) {
+    const user = db.users[p.uid];
+    if (!user) continue;
+    if (!user.wallet) user.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+    if (!user.wallets) user.wallets = user.wallet;
+
+    const refundAmt = Number(p.amountPaid) || Number(match.entryFee) || 0;
+    const isAdCoins = p.paidWith === 'AD_COINS' || match.matchType === 'free';
+
+    if (isAdCoins) {
+      user.wallet.adCoins = (user.wallet.adCoins || 0) + refundAmt;
+      user.wallets.adCoins = user.wallet.adCoins;
+
+      const txn = {
+        id: `txn_ref_${Date.now()}_${(p.uid || '').substring(0, 5)}`,
+        userId: p.uid,
+        userName: user.displayName || user.inGameName,
+        amount: refundAmt,
+        currency: 'COINS',
+        type: 'refund',
+        walletAffected: 'adCoins',
+        title: '🟡 Match Refund: Ad Coins Returned',
+        description: `Match #${match.matchNumber || match.title} cancelled by admin. Entry refund.`,
+        status: 'success',
+        createdAt: new Date().toISOString()
+      };
+      if (!db.transactions) db.transactions = [];
+      db.transactions.unshift(txn);
+
+      if (!db.notifications) db.notifications = [];
+      db.notifications.unshift({
+        id: `notif_ref_${Date.now()}_${(p.uid || '').substring(0, 5)}`,
+        title: '🟡 Ad Coins Refunded!',
+        body: `मुकाबला #${match.matchNumber || match.title} रद्द हो गया है। आपके ${refundAmt} Ad Coins वापस आपके वॉलेट में रिफंड कर दिए गए हैं।`,
+        createdAt: new Date().toISOString(),
+        type: 'matchResult',
+        targetType: 'user',
+        targetId: p.uid
+      });
+    } else {
+      user.wallet.depositCash = (user.wallet.depositCash || 0) + refundAmt;
+      user.wallets.depositCash = user.wallet.depositCash;
+
+      const txn = {
+        id: `txn_ref_${Date.now()}_${(p.uid || '').substring(0, 5)}`,
+        userId: p.uid,
+        userName: user.displayName || user.inGameName,
+        amount: refundAmt,
+        currency: 'INR',
+        type: 'refund',
+        walletAffected: 'depositCash',
+        title: '💵 Match Refund: Entry Cash Returned',
+        description: `Match #${match.matchNumber || match.title} cancelled by admin. Entry refund.`,
+        status: 'success',
+        createdAt: new Date().toISOString()
+      };
+      if (!db.transactions) db.transactions = [];
+      db.transactions.unshift(txn);
+
+      if (!db.notifications) db.notifications = [];
+      db.notifications.unshift({
+        id: `notif_ref_${Date.now()}_${(p.uid || '').substring(0, 5)}`,
+        title: '💵 Cash Entry Refunded!',
+        body: `मुकाबला #${match.matchNumber || match.title} रद्द हो गया है। आपके ₹${refundAmt} Deposit Cash आपके वॉलेट में वापस रिफंड कर दिए गए हैं।`,
+        createdAt: new Date().toISOString(),
+        type: 'matchResult',
+        targetType: 'user',
+        targetId: p.uid
+      });
+    }
+    if (user.stats && user.stats.matchesPlayed > 0) {
+      user.stats.matchesPlayed -= 1;
+    }
+  }
+}
+
 app.post('/api/matches', (req, res) => {
   const match = {
     ...req.body,
@@ -482,6 +561,33 @@ app.post('/api/matches', (req, res) => {
     registeredTeams: req.body.registeredTeams || []
   };
   db.matches.unshift(match);
+
+  // Auto-broadcast personalized notification to all users in Hindi
+  try {
+    const bannerUrl = match.bannerUrl || 'https://vps.swgayanbhumi.in/uploads/banner_1791739318242_update_banner.jpg';
+    const titleText = match.title || 'Free Fire महा-मुकाबला';
+    const entryText = match.entryFee > 0 ? `${match.entryFee} Coins/₹` : 'FREE';
+    const prizeText = match.prizePool?.totalPool || 400;
+
+    for (const u of Object.values(db.users || {})) {
+      const uName = u.displayName || u.inGameName || 'खिलाड़ी';
+      if (!db.notifications) db.notifications = [];
+      db.notifications.unshift({
+        id: `notif_m_${Date.now()}_${(u.uid || '').substring(0, 5)}`,
+        title: `🎮 ${uName}, नया मुकाबला तैयार है!`,
+        body: `${titleText} में ₹${prizeText} जीतें! सिर्फ ${entryText} देकर अभी अपनी सीट बुक करें! ⚡`,
+        imageUrl: bannerUrl,
+        matchId: match.id,
+        type: 'matchCreated',
+        targetType: 'user',
+        targetId: u.uid,
+        createdAt: new Date().toISOString()
+      });
+    }
+  } catch(e) {
+    console.error('[Match Notification Error]:', e);
+  }
+
   saveDB();
   broadcast('MATCH_CREATED', match);
   res.json({ success: true, match });
@@ -499,6 +605,11 @@ app.put('/api/matches/:id', (req, res) => {
 
   const prevStatus = db.matches[index].status;
   db.matches[index] = { ...db.matches[index], ...req.body };
+
+  if (prevStatus !== 'cancelled' && db.matches[index].status === 'cancelled') {
+    refundMatchParticipants(db.matches[index]);
+  }
+
   saveDB();
   broadcast('MATCH_UPDATED', db.matches[index]);
 
@@ -511,6 +622,10 @@ app.put('/api/matches/:id', (req, res) => {
 
 app.delete('/api/matches/:id', (req, res) => {
   const { id } = req.params;
+  const match = db.matches.find(m => m.id === id);
+  if (match) {
+    refundMatchParticipants(match);
+  }
   db.matches = db.matches.filter(m => m.id !== id);
   saveDB();
   broadcast('MATCH_DELETED', { id });
@@ -928,28 +1043,92 @@ app.post('/api/payments/webhook', (req, res) => {
     const payment = event.payload?.payment?.entity;
     const amount = (payment?.amount || 0) / 100;
     const notes = payment?.notes || {};
-    const uid = notes.uid || notes.userId;
+    const uid = notes.uid || notes.userId || notes.user_id;
 
     if (uid && db.users[uid]) {
-      db.users[uid].wallets.depositCash = (db.users[uid].wallets.depositCash || 0) + amount;
+      const user = db.users[uid];
+      if (!user.wallet) user.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+      if (!user.wallets) user.wallets = user.wallet;
+
+      const bonusAmt = (amount * 0.10);
+      user.wallet.depositCash = (user.wallet.depositCash || 0) + amount;
+      user.wallet.bonusCash = (user.wallet.bonusCash || 0) + bonusAmt;
+      user.wallets.depositCash = user.wallet.depositCash;
+      user.wallets.bonusCash = user.wallet.bonusCash;
+
       const txn = {
-        id: `txn_rzp_${payment.id}`,
+        id: `txn_rzp_${payment.id || Date.now()}`,
         userId: uid,
+        userName: user.displayName || user.inGameName,
         amount,
         type: 'deposit',
         walletAffected: 'depositCash',
         title: 'Razorpay Instant UPI Deposit',
-        description: `Payment ID: ${payment.id}`,
+        description: `Payment ID: ${payment.id} (+₹${bonusAmt.toFixed(0)} Extra Bonus Cash)`,
         status: 'success',
         createdAt: new Date().toISOString()
       };
+      if (!db.transactions) db.transactions = [];
       db.transactions.unshift(txn);
+
+      if (!db.notifications) db.notifications = [];
+      db.notifications.unshift({
+        id: `notif_dep_${Date.now()}`,
+        title: '💵 Deposit Successful!',
+        body: `₹${amount} added to your Deposit Cash wallet (+₹${bonusAmt.toFixed(0)} Extra Bonus Cash)!`,
+        createdAt: new Date().toISOString(),
+        type: 'deposit',
+        targetType: 'user',
+        targetId: uid
+      });
+
       saveDB();
       broadcast('TRANSACTION_UPDATED', txn);
-      console.log(`[Webhook] Credited ₹${amount} to user ${uid}`);
+      broadcast('USER_UPDATED', user);
+      console.log(`[Webhook] Credited ₹${amount} (+₹${bonusAmt.toFixed(0)} bonus) to user ${uid}`);
     }
   }
   res.json({ status: 'ok' });
+});
+
+// Transactions direct endpoints
+app.get('/api/transactions', (req, res) => {
+  res.json({ success: true, transactions: db.transactions || [] });
+});
+
+app.post('/api/transactions', (req, res) => {
+  const txn = req.body;
+  if (!txn || !txn.id) return res.status(400).json({ success: false, message: 'Invalid transaction' });
+  if (!db.transactions) db.transactions = [];
+  const idx = db.transactions.findIndex(t => t.id === txn.id);
+  if (idx !== -1) {
+    db.transactions[idx] = { ...db.transactions[idx], ...txn };
+  } else {
+    db.transactions.unshift(txn);
+  }
+  saveDB();
+  broadcast('TRANSACTION_UPDATED', txn);
+  res.json({ success: true, transaction: txn });
+});
+
+// Voucher Claims direct endpoints
+app.get('/api/voucher-claims', (req, res) => {
+  res.json({ success: true, claims: db.voucherClaims || [] });
+});
+
+app.post('/api/voucher-claims', (req, res) => {
+  const claim = req.body;
+  if (!claim || !claim.id) return res.status(400).json({ success: false, message: 'Invalid claim' });
+  if (!db.voucherClaims) db.voucherClaims = [];
+  const idx = db.voucherClaims.findIndex(c => c.id === claim.id);
+  if (idx !== -1) {
+    db.voucherClaims[idx] = { ...db.voucherClaims[idx], ...claim };
+  } else {
+    db.voucherClaims.unshift(claim);
+  }
+  saveDB();
+  broadcast('VOUCHER_CLAIMED', claim);
+  res.json({ success: true, claim });
 });
 
 // 12. Withdrawals
@@ -1013,6 +1192,69 @@ app.post('/api/notifications', (req, res) => {
   saveDB();
   broadcast('NOTIFICATION_RECEIVED', notif);
   res.json({ success: true, notification: notif });
+});
+
+// Dynamic Personalized Notification Broadcast with User's Name & Match Details
+app.post('/api/notifications/broadcast-personalized-match', (req, res) => {
+  const { matchId, customTitleTemplate, customBodyTemplate, notificationType } = req.body;
+  const match = (db.matches || []).find(m => m.id === matchId);
+  if (!match) return res.status(404).json({ success: false, message: 'Match not found' });
+
+  const usersList = Object.values(db.users || {});
+  const now = new Date().toISOString();
+  let count = 0;
+
+  usersList.forEach(u => {
+    const userName = u.displayName || u.inGameName || 'Player';
+    const isRoomIdRelease = notificationType === 'room_release' || (match.credentials && match.credentials.roomId);
+
+    let defaultTitle = `🔥 ${userName}, अभी '${match.title}' जॉइन करें!`;
+    let defaultBody = `${userName}, जीतें 🪙 ${match.prizePool ? (match.prizePool.totalPool || 400) : 400} Coins! एंट्री सिर्फ 🟡 ${match.entryFee} Ad Coins। मोड: ${(match.mode || 'BR').toUpperCase()} Solo। अभी स्लॉट बुक करें!`;
+
+    if (isRoomIdRelease && notificationType === 'room_release') {
+      defaultTitle = `🔑 ${userName}, '${match.title}' की रूम ID और पासवर्ड आ गया!`;
+      defaultBody = `Room ID: ${match.credentials.roomId} | Pass: ${match.credentials.roomPassword}\nजल्दी से Free Fire में रूम जॉइन करें, मैच 10 मिनट में शुरू हो रहा है!`;
+    }
+
+    const title = customTitleTemplate 
+      ? customTitleTemplate.replace(/\{name\}/g, userName).replace(/\{match_title\}/g, match.title)
+      : defaultTitle;
+    
+    const body = customBodyTemplate
+      ? customBodyTemplate
+          .replace(/\{name\}/g, userName)
+          .replace(/\{match_title\}/g, match.title)
+          .replace(/\{entry\}/g, match.entryFee)
+          .replace(/\{prize\}/g, match.prizePool ? (match.prizePool.totalPool || 400) : '400')
+          .replace(/\{mode\}/g, (match.mode || 'BR').toUpperCase())
+          .replace(/\{room_id\}/g, match.credentials?.roomId || '')
+          .replace(/\{room_pass\}/g, match.credentials?.roomPassword || '')
+      : defaultBody;
+
+    const userNotif = {
+      id: `notif_${u.uid}_${Date.now()}_${count}`,
+      title: title,
+      body: body,
+      imageUrl: match.bannerUrl,
+      targetType: 'user',
+      targetId: u.uid,
+      matchId: match.id,
+      type: isRoomIdRelease ? 'matchCredentials' : 'matchAlert',
+      createdAt: now
+    };
+
+    if (!db.notifications) db.notifications = [];
+    db.notifications.unshift(userNotif);
+    count++;
+  });
+
+  if (db.notifications.length > 500) {
+    db.notifications = db.notifications.slice(0, 500);
+  }
+
+  saveDB();
+  broadcast('NOTIFICATION_RECEIVED', { type: 'PERSONALIZED_MATCH_BROADCAST', matchId, count });
+  res.json({ success: true, count, message: `Dispatched personalized notification to ${count} users with their individual names!` });
 });
 
 // Health check

@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/match_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
@@ -860,10 +862,16 @@ class TournamentLobbyScreen extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.bolt, color: Colors.amber, size: 12),
-                          const SizedBox(width: 3),
+                          Icon(
+                            match.status == MatchStatus.upcoming ? Icons.schedule : Icons.bolt,
+                            color: Colors.amber,
+                            size: 12,
+                          ),
+                          const SizedBox(width: 4),
                           Text(
-                            match.status == MatchStatus.upcoming ? 'AUTO-START ON FULL' : match.status.name.toUpperCase(),
+                            match.status == MatchStatus.upcoming
+                                ? DateFormat('dd MMM, hh:mm a').format(match.matchTime)
+                                : match.status.name.toUpperCase(),
                             style: const TextStyle(
                               fontFamily: 'Rajdhani',
                               fontSize: 10.5,
@@ -887,6 +895,10 @@ class TournamentLobbyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Live Kickoff Countdown Ticker Widget
+                LiveCountdownTimerWidget(match: match),
+                const SizedBox(height: 10),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -1256,6 +1268,123 @@ class TournamentLobbyScreen extends StatelessWidget {
               fontSize: 12,
               fontWeight: isBold ? FontWeight.w900 : FontWeight.w800,
               color: textColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LiveCountdownTimerWidget extends StatefulWidget {
+  final MatchModel match;
+
+  const LiveCountdownTimerWidget({super.key, required this.match});
+
+  @override
+  State<LiveCountdownTimerWidget> createState() => _LiveCountdownTimerWidgetState();
+}
+
+class _LiveCountdownTimerWidgetState extends State<LiveCountdownTimerWidget> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final match = widget.match;
+    final now = DateTime.now();
+    final diff = match.matchTime.difference(now);
+    final isPast = diff.isNegative;
+
+    String countdownText;
+    Color statusColor = AppTheme.primaryAmber;
+    IconData statusIcon = Icons.timer_outlined;
+
+    if (match.status == MatchStatus.ongoing) {
+      countdownText = '⚔️ MATCH IS LIVE IN ROOM!';
+      statusColor = Colors.green;
+      statusIcon = Icons.sensors;
+    } else if (match.status == MatchStatus.completed) {
+      countdownText = '🏆 MATCH COMPLETED';
+      statusColor = const Color(0xFF64748B);
+      statusIcon = Icons.emoji_events;
+    } else if (match.status == MatchStatus.cancelled) {
+      countdownText = '❌ MATCH CANCELLED (COINS REFUNDED)';
+      statusColor = Colors.red;
+      statusIcon = Icons.cancel;
+    } else if (isPast || match.status == MatchStatus.roomFilling) {
+      countdownText = '🚀 KICKOFF TIME REACHED • ROOM ID SHARING!';
+      statusColor = Colors.amber;
+      statusIcon = Icons.bolt;
+    } else {
+      final hours = diff.inHours;
+      final minutes = diff.inMinutes % 60;
+      final seconds = diff.inSeconds % 60;
+      if (hours > 0) {
+        countdownText = '⏳ Starts in: ${hours}h ${minutes.toString().padLeft(2, '0')}m ${seconds.toString().padLeft(2, '0')}s';
+      } else {
+        countdownText = '⏳ Starts in: ${minutes.toString().padLeft(2, '0')}m ${seconds.toString().padLeft(2, '0')}s';
+      }
+      if (diff.inMinutes < 15) {
+        statusColor = const Color(0xFFF97316); // Orange alert for under 15 mins
+      }
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusColor.withAlpha(120), width: 1),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Icon(statusIcon, size: 14, color: statusColor),
+              const SizedBox(width: 6),
+              Text(
+                countdownText,
+                style: TextStyle(
+                  fontFamily: 'Rajdhani',
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: statusColor.withAlpha(30),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: statusColor.withAlpha(80)),
+            ),
+            child: Text(
+              DateFormat('hh:mm a').format(match.matchTime),
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 9.5,
+                fontWeight: FontWeight.w900,
+                color: statusColor,
+              ),
             ),
           ),
         ],

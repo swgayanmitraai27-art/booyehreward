@@ -60,8 +60,8 @@ class AppState extends ChangeNotifier {
   
   String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
   bool isRealCashModeEnabled = false; // Default: Play Store Review Safe Mode (OFF)
-  double coinToRupeeRate = 0.10; // Default: 1000 Coins = ₹100 (1 Coin = ₹0.10)
-  int minWithdrawalCoins = 1000; // Minimum 1000 Winning Coins for withdrawal
+  double coinToRupeeRate = 1.0; // 1 Coin = ₹1.00 Real Cash (1:1 Ratio)
+  int minWithdrawalCoins = 30; // Minimum 30 Winning Coins (₹30) for instant UPI withdrawal
 
   // App Version & Remote Force Update System
   static const int currentAppBuildNumber = 33;
@@ -3161,7 +3161,6 @@ class AppState extends ChangeNotifier {
         body: jsonEncode(user.toJson()),
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
-    await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, user.uid, user.toJson());
   }
 
   Future<void> _syncMatch(MatchModel m) async {
@@ -3172,19 +3171,36 @@ class AppState extends ChangeNotifier {
         body: jsonEncode(m.toJson()),
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
-    await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
   }
 
   Future<void> _syncTransaction(TransactionModel txn) async {
-    await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, txn.id, txn.toJson());
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/transactions"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(txn.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   Future<void> _syncWithdrawal(WithdrawalModel w) async {
-    await FirestoreRestService.setDocument('skillwinner_withdrawals', w.id, w.toJson());
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/withdrawals"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(w.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   Future<void> _syncVoucherClaim(VoucherClaim claim) async {
-    await FirestoreRestService.setDocument('skillwinner_voucher_claims', claim.id, claim.toJson());
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/voucher-claims"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(claim.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
   }
 
   void _saveLocalReferralsCache() {
