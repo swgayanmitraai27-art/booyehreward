@@ -41,6 +41,7 @@ class AppState extends ChangeNotifier {
   List<WeeklyDistributionRecord> weeklyDistributions = [];
   List<ReferralRecord> referralRecords = [];
   List<ReferralRecord> allGlobalReferralRecords = [];
+  List<UserModel> allGlobalUsers = [];
   List<BannerModel> banners = [];
   static const String vpsBaseUrl = 'https://vps.swgayanbhumi.in';
   static const String vpsApiUrl = '$vpsBaseUrl/api';
@@ -61,13 +62,19 @@ class AppState extends ChangeNotifier {
   String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
   bool isRealCashModeEnabled = false; // Default: Play Store Review Safe Mode (OFF)
   double coinToRupeeRate = 1.0; // 1 Coin = ₹1.00 Real Cash (1:1 Ratio)
-  int minWithdrawalCoins = 10; // Minimum 10 Winning Coins (₹10) for instant UPI withdrawal
+  int minWithdrawalCoins = 50; // Minimum 50 Winning Coins (₹50) for instant UPI withdrawal
+
+  // Dynamic Weekly Leaderboard Prize Pool (Configured from Admin Panel)
+  double weeklyRank1Prize = 200.0;
+  double weeklyRank2Prize = 150.0;
+  double weeklyRank3Prize = 100.0;
+  double get weeklyTotalPrizePool => weeklyRank1Prize + weeklyRank2Prize + weeklyRank3Prize;
 
   // App Version & Remote Force Update System
-  static const int currentAppBuildNumber = 33;
-  static const String currentAppVersion = '1.3.3';
-  int minBuildNumber = 33;
-  String minAppVersion = '1.3.3';
+  static const int currentAppBuildNumber = 34;
+  static const String currentAppVersion = '1.3.4';
+  int minBuildNumber = 34;
+  String minAppVersion = '1.3.4';
   bool isForceUpdateEnabled = false;
   String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app';
   String updateTitle = '⚡ App Update Required';
@@ -440,6 +447,11 @@ class AppState extends ChangeNotifier {
 
   List<MatchModel> get filteredMatches {
     final list = matches.where((m) {
+      // 0. If Real Cash Mode is disabled (Safe Mode), NEVER show Paid/Cash matches
+      if (!isRealCashModeEnabled && (m.matchType == MatchType.paid || m.entryFeeType == EntryFeeType.cash || m.prizePool.isCashPrize)) {
+        return false;
+      }
+
       // 1. WinCoin / Reward Coin / Free / Paid Filter
       final filter = selectedFilter.toUpperCase();
       if ((filter == 'WIN_COIN' || filter == 'WINCOIN') && !m.prizePool.isCashPrize) return false;
@@ -1191,6 +1203,22 @@ class AppState extends ChangeNotifier {
     if (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling) {
       match.status = MatchStatus.ongoing;
     }
+
+    // AUTOMATIC 25% HOST PROFIT COMMISSION:
+    // When room ID & Password are published for a paid tournament,
+    // platform profit (Collection - Prize Pool) 25% is immediately credited to host's wallet!
+    if (match.matchType == MatchType.paid && !match.hostCommissionPaid) {
+      final int count = match.participants.isNotEmpty ? match.participants.length : match.maxSlots;
+      final double totalCollection = match.entryFee * count;
+      final double prizePoolTotal = match.prizePool.totalPool;
+      double platformProfit = totalCollection - prizePoolTotal;
+      if (platformProfit <= 0) {
+        platformProfit = totalCollection * 0.25; // fallback 25% platform margin
+      }
+      final double commissionAmount = (platformProfit * 0.25).clamp(1.0, 5000.0);
+      _creditHostCommission(match: match, commissionAmount: commissionAmount);
+    }
+
     _syncMatch(match);
     _notificationService.sendMatchAlert(
       matchId: matchId,
@@ -2037,11 +2065,11 @@ class AppState extends ChangeNotifier {
       final rank = i + 1;
       double prize = 0.0;
       if (rank == 1) {
-        prize = 200.0;
+        prize = weeklyRank1Prize;
       } else if (rank == 2) {
-        prize = 150.0;
+        prize = weeklyRank2Prize;
       } else if (rank == 3) {
-        prize = 100.0;
+        prize = weeklyRank3Prize;
       }
 
       rankedList.add(
@@ -2406,6 +2434,29 @@ class AppState extends ChangeNotifier {
     };
   }
 
+  Future<void> adminUpdateWeeklyPrizes({
+    required double rank1,
+    required double rank2,
+    required double rank3,
+  }) async {
+    weeklyRank1Prize = rank1;
+    weeklyRank2Prize = rank2;
+    weeklyRank3Prize = rank3;
+    notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/config"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'weeklyRank1Prize': rank1,
+          'weeklyRank2Prize': rank2,
+          'weeklyRank3Prize': rank3,
+        }),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+  }
+
   // Legacy fallback
   void adminDeclareMatchWinners({
     required String matchId,
@@ -2600,7 +2651,26 @@ class AppState extends ChangeNotifier {
         .where((w) => w.status == WithdrawalStatus.completed)
         .fold(0.0, (sum, w) => sum + w.amount);
 
-    double netCashMargin = totalCashEntryFees - totalCashPrizesWon;
+    double totalHostCommissions = allGlobalTransactions
+        .where((t) => t.type == TransactionType.hostCommission)
+        .fold(0.0, (sum, t) => sum + t.amount);
+    for (var m in matches) {
+      if (m.hostCommissionPaid && m.hostCommissionAmount > 0) {
+        if (!allGlobalTransactions.any((t) => t.description.contains('#${m.id}'))) {
+          totalHostCommissions += m.hostCommissionAmount;
+        }
+      }
+    }
+
+    double totalUserWinningLiabilities = allGlobalUsers.isNotEmpty
+        ? allGlobalUsers.fold(0.0, (sum, u) => sum + u.wallet.winningCash)
+        : user.wallet.winningCash;
+
+    double totalUserDepositLiabilities = allGlobalUsers.isNotEmpty
+        ? allGlobalUsers.fold(0.0, (sum, u) => sum + u.wallet.depositCash)
+        : user.wallet.depositCash;
+
+    double netCashMargin = totalCashEntryFees - totalCashPrizesWon - totalHostCommissions;
 
     // 🟡 FREE MATCHES (AD-BASED) METRICS
     int freeMatchesCount = 0;
@@ -2648,6 +2718,9 @@ class AppState extends ChangeNotifier {
       'totalWinnersCount': totalWinnersCount,
       'totalPaidOut': totalPaidOut,
       'totalMatches': matches.length,
+      'totalHostCommissions': totalHostCommissions,
+      'totalUserWinningLiabilities': totalUserWinningLiabilities,
+      'totalUserDepositLiabilities': totalUserDepositLiabilities,
       'combinedNetProfit': netCashMargin + netAdMargin,
 
       // Paid Matches Specific
@@ -2772,11 +2845,20 @@ class AppState extends ChangeNotifier {
               }
               if (cfg['minWithdrawalCoins'] != null) {
                 final m = (cfg['minWithdrawalCoins'] as num).toInt();
-                if (m > 0 && m <= 100) {
+                if (m > 0 && m <= 500) {
                   minWithdrawalCoins = m;
                 } else {
-                  minWithdrawalCoins = 10;
+                  minWithdrawalCoins = 50;
                 }
+              }
+              if (cfg['weeklyRank1Prize'] != null) {
+                weeklyRank1Prize = (cfg['weeklyRank1Prize'] as num).toDouble();
+              }
+              if (cfg['weeklyRank2Prize'] != null) {
+                weeklyRank2Prize = (cfg['weeklyRank2Prize'] as num).toDouble();
+              }
+              if (cfg['weeklyRank3Prize'] != null) {
+                weeklyRank3Prize = (cfg['weeklyRank3Prize'] as num).toDouble();
               }
               if (cfg['brBannerUrl'] != null && cfg['brBannerUrl'].toString().isNotEmpty) {
                 brBannerUrl = cfg['brBannerUrl'].toString();
@@ -2836,6 +2918,16 @@ class AppState extends ChangeNotifier {
               allGlobalTransactions = parsed;
               transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
               _saveLocalTxnCache();
+            }
+
+            // 9. All Users from VPS (For Admin Financial Dashboard & Liabilities)
+            if (data['allUsers'] is List) {
+              try {
+                final parsedUsers = (data['allUsers'] as List).map((u) => UserModel.fromJson(Map<String, dynamic>.from(u))).toList();
+                if (parsedUsers.isNotEmpty) {
+                  allGlobalUsers = parsedUsers;
+                }
+              } catch (_) {}
             }
 
             backendSyncSuccess = true;

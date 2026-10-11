@@ -286,11 +286,6 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                 child: Row(
                   children: [
                     ActionChip(
-                      label: const Text('20 Coins (₹20)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                      onPressed: () => setState(() => _coinsController.text = '20'),
-                    ),
-                    const SizedBox(width: 4),
-                    ActionChip(
                       label: const Text('50 Coins (₹50)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                       onPressed: () => setState(() => _coinsController.text = '50'),
                     ),
@@ -308,6 +303,11 @@ class _WithdrawDialogState extends State<WithdrawDialog> {
                     ActionChip(
                       label: const Text('500 Coins (₹500)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                       onPressed: () => setState(() => _coinsController.text = '500'),
+                    ),
+                    const SizedBox(width: 4),
+                    ActionChip(
+                      label: const Text('1000 Coins (₹1000)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                      onPressed: () => setState(() => _coinsController.text = '1000'),
                     ),
                   ],
                 ),

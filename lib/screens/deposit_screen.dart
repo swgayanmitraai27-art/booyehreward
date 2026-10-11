@@ -51,8 +51,8 @@ class _DepositScreenState extends State<DepositScreen> {
   double get totalPlayableCash => currentAmount + bonusCash;
 
   Future<void> _generateOfficialRazorpayQr(double amt) async {
-    if (amt < 10) {
-      setState(() => errorMsg = 'Minimum recharge amount is ₹10.');
+    if (amt < 1) {
+      setState(() => errorMsg = 'Please enter a valid amount (Min ₹1).');
       return;
     }
     setState(() {
@@ -183,6 +183,94 @@ class _DepositScreenState extends State<DepositScreen> {
         ),
       );
     }
+  }
+
+  void _showFullscreenQrDialog() {
+    if (qrImageBytes == null) return;
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withAlpha(220),
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.of(ctx).pop(),
+              ),
+            ),
+            Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'RECHARGE ₹${currentAmount.toStringAsFixed(0)}',
+                            style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                          ),
+                          const Text(
+                            'Scan with PhonePe, GPay, Paytm or BHIM',
+                            style: TextStyle(fontFamily: 'Inter', fontSize: 11, color: Color(0xFF64748B)),
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFA7F3D0)),
+                        ),
+                        child: Text(
+                          '+₹${bonusCash.toStringAsFixed(0)} Free',
+                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF047857)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 460),
+                      color: Colors.white,
+                      child: InteractiveViewer(
+                        minScale: 1.0,
+                        maxScale: 3.5,
+                        child: Image.memory(
+                          qrImageBytes!,
+                          fit: BoxFit.contain,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    '🔍 Pinch to zoom • Screenshot leke UPI app me scan karein',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -372,7 +460,7 @@ class _DepositScreenState extends State<DepositScreen> {
           const SizedBox(height: 16),
 
           const Text(
-            'OR ENTER CUSTOM AMOUNT (MIN ₹10)',
+            'OR ENTER CUSTOM AMOUNT',
             style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),
@@ -539,49 +627,99 @@ class _DepositScreenState extends State<DepositScreen> {
                 const SizedBox(height: 16),
 
                 // QR Display Box
-                Container(
-                  width: 230,
-                  height: 230,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
-                  ),
-                  child: isQrLoading
-                      ? const Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF1D4ED8)),
-                            SizedBox(height: 12),
-                            Text(
-                              'Generating Razorpay QR...',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                            ),
-                          ],
-                        )
-                      : qrImageBytes != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.memory(
-                                qrImageBytes!,
-                                width: 220,
-                                height: 220,
-                                fit: BoxFit.contain,
+                GestureDetector(
+                  onTap: qrImageBytes != null ? _showFullscreenQrDialog : null,
+                  child: Container(
+                    width: double.infinity,
+                    constraints: const BoxConstraints(minHeight: 300, maxHeight: 420),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.5),
+                    ),
+                    child: isQrLoading
+                        ? const Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(strokeWidth: 3, color: Color(0xFF1D4ED8)),
+                              SizedBox(height: 12),
+                              Text(
+                                'Generating Razorpay QR...',
+                                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
                               ),
-                            )
-                          : Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.qr_code_2, size: 64, color: Colors.grey),
-                                const SizedBox(height: 8),
-                                ElevatedButton(
-                                  onPressed: () => _generateOfficialRazorpayQr(currentAmount),
-                                  child: const Text('Retry QR'),
-                                ),
-                              ],
-                            ),
+                            ],
+                          )
+                        : qrImageBytes != null
+                            ? Stack(
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(12),
+                                      child: Image.memory(
+                                        qrImageBytes!,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                  Positioned(
+                                    bottom: 12,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withAlpha(180),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.zoom_in, color: Colors.white, size: 16),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Tap for Fullscreen QR',
+                                            style: TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.qr_code_2, size: 64, color: Colors.grey),
+                                  const SizedBox(height: 8),
+                                  ElevatedButton(
+                                    onPressed: () => _generateOfficialRazorpayQr(currentAmount),
+                                    child: const Text('Retry QR'),
+                                  ),
+                                ],
+                              ),
+                  ),
                 ),
+                if (qrImageBytes != null) ...[
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF1D4ED8),
+                        side: const BorderSide(color: Color(0xFF1D4ED8), width: 1.5),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: _showFullscreenQrDialog,
+                      icon: const Icon(Icons.fullscreen, size: 20),
+                      label: const Text(
+                        '🔍 OPEN FULLSCREEN QR (फुल स्क्रीन देखें)',
+                        style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w900),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 16),
 
                 // Supported UPI Chips

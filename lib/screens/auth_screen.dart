@@ -31,7 +31,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
   final _signupPassController = TextEditingController();
   final _ignController = TextEditingController();
   final _uidController = TextEditingController();
-  final _levelController = TextEditingController(text: '45');
+  final _levelController = TextEditingController(); // User must enter their real level
   final _referralCodeController = TextEditingController();
   bool _signupPassObscure = true;
   bool _isSignupLoading = false;
@@ -109,7 +109,12 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
     final pass = _signupPassController.text.trim();
     final ign = _ignController.text.trim();
     final uid = _uidController.text.trim();
-    final level = int.tryParse(_levelController.text.trim()) ?? 0;
+    final levelStr = _levelController.text.trim();
+    if (levelStr.isEmpty) {
+      setState(() => _signupError = 'Please enter your Free Fire In-Game Level.');
+      return;
+    }
+    final level = int.tryParse(levelStr) ?? 0;
 
     if (name.isEmpty || phone.isEmpty || email.isEmpty || pass.isEmpty || ign.isEmpty || uid.isEmpty) {
       setState(() => _signupError = 'Please fill all mandatory fields!');
@@ -131,9 +136,36 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
       return;
     }
 
-    // STRICT LEVEL 40+ FAIR PLAY CHECK
+    // STRICT LEVEL 40+ FAIR PLAY REJECTION
     if (level < 40) {
-      setState(() => _signupError = 'Fair Play Policy: Free Fire level must be minimum 40+ to join tournaments.');
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Row(
+            children: [
+              Icon(Icons.block, color: Colors.red, size: 26),
+              SizedBox(width: 8),
+              Expanded(child: Text('Level 40+ Required', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16))),
+            ],
+          ),
+          content: Text(
+            'Aapka Free Fire level ($level) 40 se kam hai!\n\nAnti-hack & Fair Play rule ke tahat tournaments me register karne ke liye minimum level 40 hona anivarya hai. Kripya apna level badha kar wapas aayein.',
+            style: const TextStyle(fontSize: 13, height: 1.4),
+          ),
+          actions: [
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('OK, CLOSE'),
+            ),
+          ],
+        ),
+      );
+      setState(() => _signupError = 'Fair Play Rule: Level 40 se kam hai ($level). Aap register nahi kar sakte.');
       return;
     }
 

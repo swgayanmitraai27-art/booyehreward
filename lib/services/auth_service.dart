@@ -258,36 +258,56 @@ class AuthService {
         final fbData = jsonDecode(fbRes.body);
         final String uid = fbData['localId'] ?? 'usr_${DateTime.now().millisecondsSinceEpoch}';
 
-        final restoredUser = UserModel(
-          uid: uid,
-          displayName: cleanEmail.split('@').first,
-          email: cleanEmail,
-          phoneNumber: '+91 9935259374',
-          inGameName: '⚡${cleanEmail.split('@').first.toUpperCase()}⚡',
-          inGameUid: '284719284',
-          inGameLevel: 52,
-          password: password,
-          role: isAdminIdentifier(cleanEmail, uid) ? 'admin' : 'user',
-          wallet: UserWallet(
-            adCoins: 5,
-            rewardCoins: 0,
-            depositCash: 0.0,
-            winningCash: 0.0,
-          ),
-          adTracker: AdTracker(
-            adsWatchedToday: 0,
-            adsWatchedSinceLastCoin: 0,
-            dailyLimitRemaining: 30,
-          ),
-          stats: UserStats(
-            matchesPlayed: 0,
-            matchesWon: 0,
-            totalKills: 0,
-            totalWinningsCash: 0.0,
-            totalRewardCoinsWon: 0,
-            totalCoinsEarned: 5,
-          ),
-        );
+        UserModel? existingUser;
+        if (localMap.containsKey(cleanEmail)) {
+          existingUser = UserModel.fromJson(Map<String, dynamic>.from(localMap[cleanEmail]));
+        } else {
+          try {
+            final res = await http.get(Uri.parse("https://vps.swgayanbhumi.in/api/users/$uid")).timeout(const Duration(seconds: 4));
+            if (res.statusCode == 200) {
+              final d = jsonDecode(res.body);
+              if (d['success'] == true && d['user'] != null) {
+                existingUser = UserModel.fromJson(Map<String, dynamic>.from(d['user']));
+              }
+            }
+          } catch (_) {}
+        }
+
+        final restoredUser = existingUser ??
+            UserModel(
+              uid: uid,
+              displayName: cleanEmail.split('@').first,
+              email: cleanEmail,
+              phoneNumber: '+91 9935259374',
+              inGameName: '⚡${cleanEmail.split('@').first.toUpperCase()}⚡',
+              inGameUid: '284719284',
+              inGameLevel: 52,
+              password: password,
+              role: isAdminIdentifier(cleanEmail, uid) ? 'admin' : 'user',
+              wallet: UserWallet(
+                adCoins: 5,
+                rewardCoins: 0,
+                depositCash: 0.0,
+                winningCash: 0.0,
+              ),
+              adTracker: AdTracker(
+                adsWatchedToday: 0,
+                adsWatchedSinceLastCoin: 0,
+                dailyLimitRemaining: 30,
+              ),
+              stats: UserStats(
+                matchesPlayed: 0,
+                matchesWon: 0,
+                totalKills: 0,
+                totalWinningsCash: 0.0,
+                totalRewardCoinsWon: 0,
+                totalCoinsEarned: 5,
+              ),
+            );
+
+        if (existingUser != null) {
+          restoredUser.password = password;
+        }
 
         localMap[cleanEmail] = restoredUser.toJson();
         await _saveLocalUsersMap(localMap);

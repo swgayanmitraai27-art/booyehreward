@@ -81,14 +81,18 @@ let db = {
     brBannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
     csBannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
     lwBannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-    appVersion: '1.3.3',
-    minAppVersion: '1.3.3',
-    minBuildNumber: 33,
+    appVersion: '1.3.4',
+    minAppVersion: '1.3.4',
+    minBuildNumber: 34,
+    weeklyRank1Prize: 200,
+    weeklyRank2Prize: 150,
+    weeklyRank3Prize: 100,
     isForceUpdateEnabled: true,
     playStoreUrl: 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app',
     updateTitle: '⚡ App Update Required',
     updateMessage: 'Booyah Rewards ka naya version Play Store par live hai. Kripya tournaments me bina kisi problem ke continue karne ke liye app ko update karein!',
-    minWithdrawalAmount: 30,
+    minWithdrawalAmount: 50,
+    minWithdrawalCoins: 50,
     upiQRPaymentUrl: 'upi://pay?pa=7307222384@ybl&pn=BooyahRewards&cu=INR',
     razorpayKeyId: 'rzp_live_default_key',
     razorpayKeySecret: ''
@@ -373,8 +377,11 @@ app.get('/api/uploads', (req, res) => {
 
 // 3. Unified Sync Endpoint
 app.get('/api/sync', (req, res) => {
-  const { uid } = req.query;
-  const user = uid && db.users[uid] ? db.users[uid] : null;
+  const { uid, email } = req.query;
+  let user = uid && db.users[uid] ? db.users[uid] : null;
+  if (!user && email) {
+    user = Object.values(db.users || {}).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+  }
   const activeBanners = db.banners.filter(b => b.isActive);
 
   res.json({
@@ -713,7 +720,7 @@ app.post('/api/matches/:id/join', (req, res) => {
 // 6. Update Credentials (Room ID & Password)
 app.post('/api/matches/:id/credentials', (req, res) => {
   const { id } = req.params;
-  const { roomId, roomPassword, isRevealed } = req.body;
+  const { roomId, roomPassword, isRevealed, publisherUid, publisherName } = req.body;
   const match = db.matches.find(m => m.id === id);
   if (!match) return res.status(404).json({ success: false, message: 'Match not found' });
 
@@ -723,13 +730,56 @@ app.post('/api/matches/:id/credentials', (req, res) => {
     isRevealed: isRevealed !== undefined ? isRevealed : true
   };
 
+  if (publisherUid) match.roomPublishedByAdminUid = publisherUid;
+  if (publisherName) match.roomPublishedByAdminName = publisherName;
+  match.roomPublishedAt = new Date().toISOString();
+
   if (match.credentials.roomId && match.status === 'upcoming') {
     match.status = 'roomFilling';
   }
 
+  // AUTOMATIC 25% HOST PROFIT COMMISSION:
+  let hostCommissionCredited = 0;
+  const isPaid = match.matchType === 'paid' || (match.entryFee && match.entryFee > 0);
+  if (isPaid && !match.hostCommissionPaid && publisherUid) {
+    const totalCollection = (match.entryFee || 0) * ((match.participants && match.participants.length) || match.joinedCount || 0);
+    const prizeTotal = (match.prizePool && match.prizePool.totalPrize) || 0;
+    let profit = totalCollection - prizeTotal;
+    if (profit <= 0) profit = totalCollection * 0.25;
+    const commission = Math.round((profit * 0.25) * 100) / 100;
+
+    if (commission > 0) {
+      const hostUser = db.users[publisherUid];
+      if (hostUser) {
+        hostUser.wallet = hostUser.wallet || { depositCash: 0, winningCash: 0, bonusCash: 0, storeRewardCoins: 0 };
+        hostUser.wallet.winningCash = (hostUser.wallet.winningCash || 0) + commission;
+        hostUser.stats = hostUser.stats || {};
+        hostUser.stats.totalWinningsCash = (hostUser.stats.totalWinningsCash || 0) + commission;
+
+        const hostTxn = {
+          id: `txn_host_${Date.now()}_${publisherUid}`,
+          userId: publisherUid,
+          userName: publisherName || hostUser.displayName || 'Host Admin',
+          type: 'hostCommission',
+          walletAffected: 'winningCash',
+          amount: commission,
+          currency: 'INR',
+          balanceAfter: hostUser.wallet.winningCash,
+          status: 'SUCCESS',
+          description: `💰 25% Host Profit Commission for Match #${match.id} ("${match.title}")`,
+          createdAt: new Date().toISOString()
+        };
+        db.transactions.unshift(hostTxn);
+        match.hostCommissionPaid = true;
+        match.hostCommissionAmount = commission;
+        hostCommissionCredited = commission;
+      }
+    }
+  }
+
   saveDB();
-  broadcast('CREDENTIALS_UPDATED', { matchId: id, credentials: match.credentials, status: match.status });
-  res.json({ success: true, credentials: match.credentials });
+  broadcast('CREDENTIALS_UPDATED', { matchId: id, credentials: match.credentials, status: match.status, hostCommissionCredited });
+  res.json({ success: true, credentials: match.credentials, hostCommissionCredited });
 });
 
 // 7. Declare Match Winners & Distribute Prizes
@@ -930,11 +980,28 @@ app.post('/api/users', (req, res) => {
   const user = req.body;
   if (!user.uid) return res.status(400).json({ success: false, message: 'UID required' });
 
-  db.users[user.uid] = {
-    ...db.users[user.uid],
+  const existing = db.users[user.uid] || Object.values(db.users).find(u => u.email && u.email.toLowerCase() === (user.email || '').toLowerCase());
+
+  let preservedWallet = user.wallet;
+  if (existing && existing.wallet) {
+    const inW = user.wallet || {};
+    preservedWallet = {
+      adCoins: Math.max(existing.wallet.adCoins || 0, inW.adCoins || 0),
+      rewardCoins: Math.max(existing.wallet.rewardCoins || 0, inW.rewardCoins || 0),
+      depositCash: Math.max(existing.wallet.depositCash || 0, inW.depositCash || 0),
+      winningCash: Math.max(existing.wallet.winningCash || 0, inW.winningCash || 0),
+      bonusCash: Math.max(existing.wallet.bonusCash || 0, inW.bonusCash || 0),
+    };
+  }
+
+  const mergedUser = {
+    ...existing,
     ...user,
+    wallet: preservedWallet || user.wallet || { adCoins: 5, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 },
     lastSeen: new Date().toISOString()
   };
+
+  db.users[user.uid] = mergedUser;
 
   // Automated Referral Attribution for older client builds
   try {

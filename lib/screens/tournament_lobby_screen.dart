@@ -151,9 +151,9 @@ class TournamentLobbyScreen extends StatelessWidget {
                       ),
                       onPressed: () => onTabChange(2),
                       icon: const Text('🏆', style: TextStyle(fontSize: 12)),
-                      label: const Text(
-                        '₹100 Ranks',
-                        style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900),
+                      label: Text(
+                        appState.isRealCashModeEnabled ? '₹100 Ranks' : 'Leaderboard',
+                        style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900),
                       ),
                     ),
                   ],
@@ -208,9 +208,9 @@ class TournamentLobbyScreen extends StatelessWidget {
                                 color: const Color(0xFFFEF3C7),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text(
-                                '₹100 WEEKLY CASH POOL',
-                                style: TextStyle(
+                              child: Text(
+                                appState.isRealCashModeEnabled ? '₹100 WEEKLY CASH POOL' : 'WEEKLY REWARDS POOL',
+                                style: const TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 8.5,
                                   fontWeight: FontWeight.w900,
@@ -235,9 +235,11 @@ class TournamentLobbyScreen extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
-                        const Text(
-                          'Top 3 Players win ₹50, ₹30, ₹20 Cash! Check your live rank.',
-                          style: TextStyle(fontSize: 10.5, color: Color(0xFFCBD5E1)),
+                        Text(
+                          appState.isRealCashModeEnabled
+                              ? 'Top 3 Players win ₹50, ₹30, ₹20 Cash! Check your live rank.'
+                              : 'Top 3 Players win 500, 300, 200 Reward Coins! Check your live rank.',
+                          style: const TextStyle(fontSize: 10.5, color: Color(0xFFCBD5E1)),
                         ),
                       ],
                     ),

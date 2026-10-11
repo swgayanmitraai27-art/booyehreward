@@ -122,6 +122,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _referralSearchController = TextEditingController();
   late TextEditingController _coinRateController;
   late TextEditingController _minWithdrawCoinsController;
+  late TextEditingController _weeklyRank1Controller;
+  late TextEditingController _weeklyRank2Controller;
+  late TextEditingController _weeklyRank3Controller;
   final TextEditingController _adminUserSearchController = TextEditingController();
   String _userRoleFilter = 'all'; // 'all', 'admin', 'user'
   String _prizeType = 'winningCoins'; // 'winningCoins' (🪙) or 'storeRewardCoins' (🎟️)
@@ -135,6 +138,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _lwCategoryBannerController.text = widget.appState.lwCategoryBanner;
     _coinRateController = TextEditingController(text: widget.appState.coinToRupeeRate.toString());
     _minWithdrawCoinsController = TextEditingController(text: widget.appState.minWithdrawalCoins.toString());
+    _weeklyRank1Controller = TextEditingController(text: widget.appState.weeklyRank1Prize.toInt().toString());
+    _weeklyRank2Controller = TextEditingController(text: widget.appState.weeklyRank2Prize.toInt().toString());
+    _weeklyRank3Controller = TextEditingController(text: widget.appState.weeklyRank3Prize.toInt().toString());
     _fetchRegisteredUsers();
   }
 
@@ -337,6 +343,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _referralSearchController.dispose();
     _coinRateController.dispose();
     _minWithdrawCoinsController.dispose();
+    _weeklyRank1Controller.dispose();
+    _weeklyRank2Controller.dispose();
+    _weeklyRank3Controller.dispose();
     _adminUserSearchController.dispose();
     super.dispose();
   }
@@ -369,10 +378,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               child: const Icon(Icons.emoji_events, color: Color(0xFFD97706), size: 24),
             ),
             const SizedBox(width: 10),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Distribute 450 🪙 Weekly Coins',
-                style: TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                'Distribute ${widget.appState.weeklyTotalPrizePool.toInt()} 🪙 Weekly Coins',
+                style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
               ),
             ),
           ],
@@ -392,7 +401,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
             const SizedBox(height: 10),
             ...top3.map((winner) {
-              final prize = winner.rank == 1 ? '200 🪙' : (winner.rank == 2 ? '150 🪙' : '100 🪙');
+              final prize = winner.rank == 1 
+                  ? '${widget.appState.weeklyRank1Prize.toInt()} 🪙' 
+                  : (winner.rank == 2 
+                      ? '${widget.appState.weeklyRank2Prize.toInt()} 🪙' 
+                      : '${widget.appState.weeklyRank3Prize.toInt()} 🪙');
               final badge = winner.rank == 1 ? '🥇' : (winner.rank == 2 ? '🥈' : '🥉');
               return Container(
                 margin: const EdgeInsets.only(bottom: 6),
@@ -430,9 +443,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               );
             }),
             const SizedBox(height: 6),
-            const Text(
-              'Total Pool: 450 🪙 Winning Coins (Auto-deposited to Winning Coins balance)',
-              style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
+            Text(
+              'Total Pool: ${widget.appState.weeklyTotalPrizePool.toInt()} 🪙 Winning Coins (Auto-deposited to Winning Coins balance)',
+              style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFFD97706)),
             ),
           ],
         ),
@@ -447,9 +460,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               await widget.appState.adminDistributeWeeklyLeaderboardPrizes();
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    backgroundColor: Color(0xFF065F46),
-                    content: Text('🎉 450 🪙 Weekly Championship Coins successfully distributed to Top 3 players!'),
+                  SnackBar(
+                    backgroundColor: const Color(0xFF065F46),
+                    content: Text('🎉 ${widget.appState.weeklyTotalPrizePool.toInt()} 🪙 Weekly Championship Coins successfully distributed to Top 3 players!'),
                   ),
                 );
                 setState(() {});
@@ -460,7 +473,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('Distribute 450 🪙 Now', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('Distribute ${widget.appState.weeklyTotalPrizePool.toInt()} 🪙 Now', style: const TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -786,6 +799,37 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'HOST COMMISSIONS',
+                value: '₹${((metrics['totalHostCommissions'] ?? 0) as num).toInt()}',
+                subtitle: '25% Profit to Hosts',
+                color: const Color(0xFFA78BFA),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'USER BALANCES',
+                value: '₹${(((metrics['totalUserWinningLiabilities'] ?? 0) as num) + ((metrics['totalUserDepositLiabilities'] ?? 0) as num)).toInt()}',
+                subtitle: 'Winning + Deposit Held',
+                color: const Color(0xFFFBBF24),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'COMPLETED UPI',
+                value: '₹${(metrics['totalPaidOut'] as num).toInt()}',
+                subtitle: 'Transferred to Bank',
+                color: const Color(0xFF10B981),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -838,8 +882,39 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               child: _buildMetricCard(
                 title: '25% PLATFORM COMM.',
                 value: '₹${(metrics['netCashMargin'] as num).toInt()}',
-                subtitle: '25% Platform Margin',
+                subtitle: 'Net Platform Margin',
                 color: const Color(0xFF34D399),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'HOST 25% PROFIT',
+                value: '₹${((metrics['totalHostCommissions'] ?? 0) as num).toInt()}',
+                subtitle: 'Credited to Room Publishers',
+                color: const Color(0xFFA78BFA),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'USER WINNINGS HELD',
+                value: '₹${((metrics['totalUserWinningLiabilities'] ?? 0) as num).toInt()}',
+                subtitle: 'Withdrawable in Wallets',
+                color: const Color(0xFFF59E0B),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'DEPOSIT BALANCES',
+                value: '₹${((metrics['totalUserDepositLiabilities'] ?? 0) as num).toInt()}',
+                subtitle: 'Playable Inflow Held',
+                color: const Color(0xFF60A5FA),
               ),
             ),
           ],
@@ -1990,6 +2065,20 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   rId,
                   rPass,
                 );
+                // Also sync credentials directly to VPS with publisher UID for 25% profit credit
+                try {
+                  await http.post(
+                    Uri.parse('https://vps.swgayanbhumi.in/api/matches/${selectedMatch.id}/credentials'),
+                    headers: {'Content-Type': 'application/json'},
+                    body: jsonEncode({
+                      'roomId': rId,
+                      'roomPassword': rPass,
+                      'publisherUid': widget.appState.user.uid,
+                      'publisherName': widget.appState.user.displayName,
+                    }),
+                  );
+                } catch (_) {}
+
                 // Also trigger dynamic personalized notification to VPS
                 try {
                   await http.post(
@@ -2005,7 +2094,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 } catch (_) {}
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(backgroundColor: AppTheme.winningGreen, content: Text('Room Credentials Published & Auto-Alert Sent to Players!')),
+                  SnackBar(
+                    backgroundColor: AppTheme.winningGreen,
+                    content: Text(
+                      selectedMatch.matchType == MatchType.paid
+                          ? '🎉 Credentials Published! 25% Host Commission Credited to Your Wallet.'
+                          : 'Room Credentials Published & Auto-Alert Sent to Players!',
+                    ),
+                  ),
                 );
               },
               icon: const Icon(Icons.send, size: 16),
@@ -2821,34 +2917,58 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           ),
           const SizedBox(height: 14),
 
-          // Match Prize Type Selector
+          // Auto Prize Type Indicator (Paid = WinCoins, Free = Reward Coins)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             decoration: BoxDecoration(
-              color: Colors.amber.shade50,
+              color: newMatchType == MatchType.paid ? const Color(0xFFEFF6FF) : Colors.amber.shade50,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.amber.shade300),
+              border: Border.all(
+                color: newMatchType == MatchType.paid ? const Color(0xFF93C5FD) : Colors.amber.shade300,
+              ),
             ),
             child: Row(
               children: [
-                const Icon(Icons.emoji_events, color: Colors.amber, size: 20),
+                Icon(
+                  Icons.emoji_events,
+                  color: newMatchType == MatchType.paid ? const Color(0xFF1D4ED8) : const Color(0xFFD97706),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    'Match Prize Type:',
-                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF92400E)),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        newMatchType == MatchType.paid ? 'PRIZE CURRENCY: 🪙 WINCOINS (REAL CASH)' : 'PRIZE CURRENCY: 🎟️ REWARD STORE COINS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900,
+                          color: newMatchType == MatchType.paid ? const Color(0xFF1E40AF) : const Color(0xFF92400E),
+                        ),
+                      ),
+                      Text(
+                        newMatchType == MatchType.paid
+                            ? 'Paid matches automatically distribute withdrawable WinCoins to winners.'
+                            : 'Free matches automatically distribute Store Reward Coins for voucher redemptions.',
+                        style: TextStyle(
+                          fontSize: 9.5,
+                          color: newMatchType == MatchType.paid ? const Color(0xFF3B82F6) : const Color(0xFFB45309),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                ChoiceChip(
-                  label: const Text('🪙 WinCoins', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  selected: _prizeType == 'winningCoins',
-                  onSelected: (val) => setState(() => _prizeType = 'winningCoins'),
-                ),
-                const SizedBox(width: 6),
-                ChoiceChip(
-                  label: const Text('🎟️ Store Coins', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
-                  selected: _prizeType == 'storeRewardCoins',
-                  onSelected: (val) => setState(() => _prizeType = 'storeRewardCoins'),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: newMatchType == MatchType.paid ? const Color(0xFF1D4ED8) : Colors.amber.shade600,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    newMatchType == MatchType.paid ? '🪙 AUTO WINCOINS' : '🎟️ AUTO REWARD COINS',
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white),
+                  ),
                 ),
               ],
             ),
@@ -2920,6 +3040,119 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   const Text(
                     '💡 Enter prizes for as many ranks as you want (e.g. Top 3, Top 5, or Top 10). Leave unused ranks as 0.',
                     style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 8),
+
+                  // Quick Presets: Top 1, Top 3, Top 5, Top 10, Clear
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        ActionChip(
+                          avatar: const Icon(Icons.looks_one, size: 14, color: Color(0xFFD97706)),
+                          label: const Text('👑 Top 1 Winner', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFFEF3C7),
+                          side: const BorderSide(color: Color(0xFFFDE68A)),
+                          onPressed: () {
+                            setState(() {
+                              _secondPrizeController.text = '0';
+                              _thirdPrizeController.text = '0';
+                              _fourthPrizeController.text = '0';
+                              _fifthPrizeController.text = '0';
+                              _sixthPrizeController.text = '0';
+                              _seventhPrizeController.text = '0';
+                              _eighthPrizeController.text = '0';
+                              _ninthPrizeController.text = '0';
+                              _tenthPrizeController.text = '0';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          avatar: const Icon(Icons.military_tech, size: 14, color: Color(0xFF2563EB)),
+                          label: const Text('🏆 Top 3 Podiums', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFEFF6FF),
+                          side: const BorderSide(color: Color(0xFFBFDBFE)),
+                          onPressed: () {
+                            setState(() {
+                              if (_secondPrizeController.text == '0' || _secondPrizeController.text.isEmpty) {
+                                _secondPrizeController.text = '150';
+                              }
+                              if (_thirdPrizeController.text == '0' || _thirdPrizeController.text.isEmpty) {
+                                _thirdPrizeController.text = '100';
+                              }
+                              _fourthPrizeController.text = '0';
+                              _fifthPrizeController.text = '0';
+                              _sixthPrizeController.text = '0';
+                              _seventhPrizeController.text = '0';
+                              _eighthPrizeController.text = '0';
+                              _ninthPrizeController.text = '0';
+                              _tenthPrizeController.text = '0';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          avatar: const Icon(Icons.star, size: 14, color: Color(0xFF059669)),
+                          label: const Text('🎖️ Top 5', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFECFDF5),
+                          side: const BorderSide(color: Color(0xFFA7F3D0)),
+                          onPressed: () {
+                            setState(() {
+                              if (_secondPrizeController.text == '0' || _secondPrizeController.text.isEmpty) _secondPrizeController.text = '120';
+                              if (_thirdPrizeController.text == '0' || _thirdPrizeController.text.isEmpty) _thirdPrizeController.text = '80';
+                              if (_fourthPrizeController.text == '0' || _fourthPrizeController.text.isEmpty) _fourthPrizeController.text = '50';
+                              if (_fifthPrizeController.text == '0' || _fifthPrizeController.text.isEmpty) _fifthPrizeController.text = '50';
+                              _sixthPrizeController.text = '0';
+                              _seventhPrizeController.text = '0';
+                              _eighthPrizeController.text = '0';
+                              _ninthPrizeController.text = '0';
+                              _tenthPrizeController.text = '0';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          avatar: const Icon(Icons.leaderboard, size: 14, color: Color(0xFF7C3AED)),
+                          label: const Text('🏅 Top 10', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFF5F3FF),
+                          side: const BorderSide(color: Color(0xFFDDD6FE)),
+                          onPressed: () {
+                            setState(() {
+                              if (_secondPrizeController.text == '0' || _secondPrizeController.text.isEmpty) _secondPrizeController.text = '100';
+                              if (_thirdPrizeController.text == '0' || _thirdPrizeController.text.isEmpty) _thirdPrizeController.text = '70';
+                              if (_fourthPrizeController.text == '0' || _fourthPrizeController.text.isEmpty) _fourthPrizeController.text = '50';
+                              if (_fifthPrizeController.text == '0' || _fifthPrizeController.text.isEmpty) _fifthPrizeController.text = '40';
+                              if (_sixthPrizeController.text == '0' || _sixthPrizeController.text.isEmpty) _sixthPrizeController.text = '30';
+                              if (_seventhPrizeController.text == '0' || _seventhPrizeController.text.isEmpty) _seventhPrizeController.text = '20';
+                              if (_eighthPrizeController.text == '0' || _eighthPrizeController.text.isEmpty) _eighthPrizeController.text = '20';
+                              if (_ninthPrizeController.text == '0' || _ninthPrizeController.text.isEmpty) _ninthPrizeController.text = '10';
+                              if (_tenthPrizeController.text == '0' || _tenthPrizeController.text.isEmpty) _tenthPrizeController.text = '10';
+                            });
+                          },
+                        ),
+                        const SizedBox(width: 6),
+                        ActionChip(
+                          avatar: const Icon(Icons.clear_all, size: 14, color: Color(0xFFDC2626)),
+                          label: const Text('Clear (Ranks 2-10)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                          backgroundColor: const Color(0xFFFEF2F2),
+                          side: const BorderSide(color: Color(0xFFFECACA)),
+                          onPressed: () {
+                            setState(() {
+                              _secondPrizeController.text = '0';
+                              _thirdPrizeController.text = '0';
+                              _fourthPrizeController.text = '0';
+                              _fifthPrizeController.text = '0';
+                              _sixthPrizeController.text = '0';
+                              _seventhPrizeController.text = '0';
+                              _eighthPrizeController.text = '0';
+                              _ninthPrizeController.text = '0';
+                              _tenthPrizeController.text = '0';
+                            });
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 10),
 
@@ -3274,7 +3507,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         ? (newTeamType == TeamType.solo ? MatchFormat.loneWolf1v1 : MatchFormat.loneWolf2v2)
                         : (newTeamType == TeamType.duo ? MatchFormat.duo : (newTeamType == TeamType.squad ? MatchFormat.squad : MatchFormat.solo)));
 
-                final isWinCoinPrize = _prizeType == 'winningCoins';
+                final isWinCoinPrize = newMatchType == MatchType.paid;
                 final isCSorLW = (newMatchMode == MatchMode.cs || newMatchMode == MatchMode.loneWolf);
                 final finalTotalPool = isCSorLW ? firstPrize : (totalEstimatedPayout > 0 ? totalEstimatedPayout : firstPrize);
 
@@ -3282,15 +3515,15 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   totalPool: finalTotalPool,
                   perKill: isCSorLW ? 0 : perKill,
                   firstPlace: firstPrize,
-                  secondPlace: isCSorLW ? null : secondPrize,
-                  thirdPlace: isCSorLW ? null : thirdPrize,
-                  fourthPlace: isCSorLW ? null : fourthPrize,
-                  fifthPlace: isCSorLW ? null : fifthPrize,
-                  sixthPlace: isCSorLW ? null : sixthPrize,
-                  seventhPlace: isCSorLW ? null : seventhPrize,
-                  eighthPlace: isCSorLW ? null : eighthPrize,
-                  ninthPlace: isCSorLW ? null : ninthPrize,
-                  tenthPlace: isCSorLW ? null : tenthPrize,
+                  secondPlace: (isCSorLW || secondPrize <= 0) ? null : secondPrize,
+                  thirdPlace: (isCSorLW || thirdPrize <= 0) ? null : thirdPrize,
+                  fourthPlace: (isCSorLW || fourthPrize <= 0) ? null : fourthPrize,
+                  fifthPlace: (isCSorLW || fifthPrize <= 0) ? null : fifthPrize,
+                  sixthPlace: (isCSorLW || sixthPrize <= 0) ? null : sixthPrize,
+                  seventhPlace: (isCSorLW || seventhPrize <= 0) ? null : seventhPrize,
+                  eighthPlace: (isCSorLW || eighthPrize <= 0) ? null : eighthPrize,
+                  ninthPlace: (isCSorLW || ninthPrize <= 0) ? null : ninthPrize,
+                  tenthPlace: (isCSorLW || tenthPrize <= 0) ? null : tenthPrize,
                   isCashPrize: isWinCoinPrize,
                 );
 
@@ -5559,19 +5792,131 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: () async {
-                      final rate = double.tryParse(_coinRateController.text.trim()) ?? 0.10;
-                      final minCoins = int.tryParse(_minWithdrawCoinsController.text.trim()) ?? 1000;
+                      final rate = double.tryParse(_coinRateController.text.trim()) ?? 1.0;
+                      final minCoins = int.tryParse(_minWithdrawCoinsController.text.trim()) ?? 50;
                       await widget.appState.adminUpdateCoinRate(rate, minCoins: minCoins);
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           backgroundColor: AppTheme.winningGreen,
-                          content: Text('Winning Coin Rate updated: 1000 Coins = ₹${(1000 * rate).toInt()} (Min $minCoins Coins)!'),
+                          content: Text('Coin Rate updated: 1 Coin = ₹${rate.toStringAsFixed(1)} (Min $minCoins Coins)!'),
                         ),
                       );
                     },
                     icon: const Icon(Icons.check_circle, size: 16),
                     label: const Text('SAVE COIN RATE TO VPS & APP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // --- 🏆 WEEKLY LEADERBOARD CHAMPIONSHIP PRIZE POOL SETTINGS ---
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: const Color(0xFFFDE68A)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.amber.withAlpha(15),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.emoji_events, color: Color(0xFFD97706), size: 20),
+                        SizedBox(width: 8),
+                        Text('WEEKLY LEADERBOARD PRIZES', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF92400E))),
+                      ],
+                    ),
+                    Text(
+                      'Total Pool: ${widget.appState.weeklyTotalPrizePool.toInt()} 🪙',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Set how many Winning Coins are awarded to Top 3 players on the weekly leaderboard.',
+                  style: TextStyle(fontSize: 11, color: Color(0xFF78350F)),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _weeklyRank1Controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: '🥇 Rank 1 (Coins)',
+                          isDense: true,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _weeklyRank2Controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: '🥈 Rank 2 (Coins)',
+                          isDense: true,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _weeklyRank3Controller,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: '🥉 Rank 3 (Coins)',
+                          isDense: true,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFD97706),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () async {
+                      final r1 = double.tryParse(_weeklyRank1Controller.text.trim()) ?? 200.0;
+                      final r2 = double.tryParse(_weeklyRank2Controller.text.trim()) ?? 150.0;
+                      final r3 = double.tryParse(_weeklyRank3Controller.text.trim()) ?? 100.0;
+                      await widget.appState.adminUpdateWeeklyPrizes(rank1: r1, rank2: r2, rank3: r3);
+                      if (!mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppTheme.winningGreen,
+                          content: Text('Weekly Prizes Saved: Rank 1: ${r1.toInt()} 🪙, Rank 2: ${r2.toInt()} 🪙, Rank 3: ${r3.toInt()} 🪙 (Total ${(r1 + r2 + r3).toInt()} 🪙)!'),
+                        ),
+                      );
+                      setState(() {});
+                    },
+                    icon: const Icon(Icons.save, size: 16),
+                    label: const Text('SAVE WEEKLY LEADERBOARD PRIZES', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5)),
                   ),
                 ),
               ],
