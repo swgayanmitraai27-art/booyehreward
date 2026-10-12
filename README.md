@@ -1,6 +1,6 @@
 # 🏆 Booyah Rewards - Free Fire Esports Tournament Platform
-**Version:** `v2.2.0+22`  
-**Platform Support:** Android (`.apk`, `.aab`) & Web (Vercel)  
+**Version:** `v1.3.5+35`  
+**Platform Support:** Android (`.apk`, `.aab`), Shorebird OTA & Web (Vercel)  
 **Package Name:** `com.swgayanbhumi.app`  
 
 ---
@@ -117,6 +117,8 @@ flutter build web --release
 ---
 
 ## 📁 Release Artifacts
-- **Play Store AAB:** `C:\Users\Admin\Desktop\Booyah_Rewards_v2.2.0.aab`
-- **Release APK:** `C:\Users\Admin\Desktop\Booyah_Rewards_v2.2.0.apk`
+- **Play Store Release AAB:** `C:\Users\Admin\Desktop\Booyah Rewards - Copy (2)\build\app\outputs\bundle\release\app-release.aab`
+- **Shorebird App ID:** `9a2134f4-6b96-4f7e-9cd5-60850f265098` (Release: `1.3.5+35`)
+- **Instant Shorebird OTA Patch Command:** `shorebird patch --platforms=android --release-version=1.3.5+35`
 - **Live Web Deployment:** Pushed to GitHub repository [`booyehreward`](https://github.com/swgayanmitraai27-art/booyehreward.git) -> Automatic Vercel deployment.
+

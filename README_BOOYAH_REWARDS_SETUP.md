@@ -103,3 +103,53 @@ When any tournament finishes and results are declared, the backend server **auto
 ## 💬 7. Official Customer Support
 * **Telegram Channel / Support URL:** `http://t.me/booyahrewardofficial`
 * **Default Carousel Banner:** `https://i.ibb.co/W43nNfnY/Chat-GPT-Image-Oct-7-2026-10-03-53-AM-1.png`
+
+---
+
+## ⚡ 8. Shorebird Over-The-Air (OTA) Instant Code Push Architecture
+With Shorebird integration, **you never need to wait 2-3 days for Google Play Store review to fix bugs or update UI/features!** Updates can be pushed live Over-The-Air within 30 seconds directly to installed apps.
+
+* **Account:** `samshermaurya9935@gmail.com`
+* **App ID:** `9a2134f4-6b96-4f7e-9cd5-60850f265098`
+* **Base Release Version:** `1.3.5+35` (Release ID: `893515`)
+* **Shorebird Config File:** `shorebird.yaml`
+
+### How To Push Instant Live Patch (No Play Store review needed):
+Whenever you edit code, fix a bug, or change UI:
+```powershell
+shorebird patch --platforms=android --release-version=1.3.5+35
+```
+*Users' apps will seamlessly download the patch in the background and apply it on restart.*
+
+---
+
+## 📦 9. Google Play Console Release Artifacts (Version 1.3.5+35)
+* **Target Version:** `v1.3.5`
+* **Version Code:** `35`
+* **Built Signed Release App Bundle (.aab):**
+  ```text
+  C:\Users\Admin\Desktop\Booyah Rewards - Copy (2)\build\app\outputs\bundle\release\app-release.aab
+  ```
+* **Size:** ~72.2 MB (75.6 MB on disk)
+* **Signing Config:** Keystore `android/app/upload-keystore.jks` with `android/key.properties`.
+* **Play Store Upload Steps:**
+  1. Go to **Google Play Console** -> Select **Booyah Rewards**.
+  2. Navigate to **Release > Production** -> Click **Create new release**.
+  3. Upload `app-release.aab` from the path above.
+  4. Submit for review and rollout!
+
+---
+
+## 📺 10. In-App Playable YouTube Video Guide Banners
+* **Overview:** Admin can now paste any YouTube video link directly in the Admin Panel's Banner Manager.
+* **Inline Playback:** The banner dynamically embeds a custom cross-platform YouTube player (`webview_flutter` for Android, native iframe for Web).
+* **Smart Detection:** Automatically extracts YouTube video ID, fetches thumbnail, tags with a red **"USER GUIDE"** badge, and pauses carousel auto-scroll while playing.
+* **Fullscreen Support:** Dedicated fullscreen viewing modal for high quality walkthroughs.
+
+---
+
+## 🌐 11. Live Web Deployment (Vercel)
+* **GitHub Repository:** `https://github.com/swgayanmitraai27-art/booyehreward.git` (Branch: `main`)
+* **Auto-Deployment:** Automated CI/CD builds and deploys to Vercel whenever changes are pushed to `main`.
+* **Web Build Command:** `flutter build web --release --base-href /`
+
