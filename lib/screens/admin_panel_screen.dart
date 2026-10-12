@@ -56,6 +56,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _bannerTitleController = TextEditingController(text: '🔥 Official Telegram Support & Daily Updates');
   final TextEditingController _bannerImgUrlController = TextEditingController(text: 'https://i.ibb.co/W43nNfnY/Chat-GPT-Image-Oct-7-2026-10-03-53-AM-1.png');
   final TextEditingController _bannerClickUrlController = TextEditingController(text: 'http://t.me/booyahrewardofficial');
+  final TextEditingController _bannerVideoUrlController = TextEditingController();
 
   // Category Banners state
   final TextEditingController _brCategoryBannerController = TextEditingController(text: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png');
@@ -320,6 +321,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _bannerTitleController.dispose();
     _bannerImgUrlController.dispose();
     _bannerClickUrlController.dispose();
+    _bannerVideoUrlController.dispose();
     _telegramUrlController.dispose();
     _matchTitleController.dispose();
     _matchBannerUrlController.dispose();
@@ -1579,7 +1581,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final prizePool = (isPaid && isCashMatch) ? match.distributablePrizePool : match.prizePool.totalPool;
     final teamCount = (match.maxSlots / 2).ceil();
     final prizePerPlayer = prizePool / (teamCount > 0 ? teamCount : 1);
-    final prizeLabel = isCashMatch ? '🪙 ${prizePerPlayer.toInt()} WinCoins' : '${prizePerPlayer.toInt()} 🎟️ Reward Coins';
+    final prizeLabel = isCashMatch ? '₹${prizePerPlayer.toInt()} Real Cash' : '${prizePerPlayer.toInt()} 🎟️ Reward Coins';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1598,11 +1600,11 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    isCashMatch ? 'DISTRIBUTABLE WINCOIN POOL' : 'REWARD COIN PRIZE POOL',
+                    isCashMatch ? 'DISTRIBUTABLE REAL CASH POOL (₹)' : 'REWARD COIN PRIZE POOL',
                     style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF475569)),
                   ),
                   Text(
-                    isCashMatch ? '🪙 ${prizePool.toInt()} WinCoins' : '${prizePool.toInt()} 🎟️ Reward Coins',
+                    isCashMatch ? '₹${prizePool.toInt()} Real Cash' : '${prizePool.toInt()} 🎟️ Reward Coins',
                     style: AppTheme.gamingNumber(fontSize: 16, color: const Color(0xFF047857)),
                   ),
                 ],
@@ -1615,7 +1617,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   border: Border.all(color: Colors.amber),
                 ),
                 child: Text(
-                  isCashMatch ? '🪙 ${prizePerPlayer.toInt()} / Player' : '${prizePerPlayer.toInt()} 🎟️ / Player',
+                  isCashMatch ? '₹${prizePerPlayer.toInt()} Real Cash / Player' : '${prizePerPlayer.toInt()} 🎟️ / Player',
                   style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                 ),
               ),
@@ -2940,7 +2942,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        newMatchType == MatchType.paid ? 'PRIZE CURRENCY: 🪙 WINCOINS (REAL CASH)' : 'PRIZE CURRENCY: 🎟️ REWARD STORE COINS',
+                        newMatchType == MatchType.paid ? 'PRIZE CURRENCY: 💵 REAL CASH (₹)' : 'PRIZE CURRENCY: 🎟️ REWARD STORE COINS',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
@@ -2949,7 +2951,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       ),
                       Text(
                         newMatchType == MatchType.paid
-                            ? 'Paid matches automatically distribute withdrawable WinCoins to winners.'
+                            ? 'Paid matches automatically distribute withdrawable Real Cash (₹) to winners.'
                             : 'Free matches automatically distribute Store Reward Coins for voucher redemptions.',
                         style: TextStyle(
                           fontSize: 9.5,
@@ -2966,7 +2968,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    newMatchType == MatchType.paid ? '🪙 AUTO WINCOINS' : '🎟️ AUTO REWARD COINS',
+                    newMatchType == MatchType.paid ? '💵 AUTO REAL CASH (₹)' : '🎟️ AUTO REWARD COINS',
                     style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white),
                   ),
                 ),
@@ -3001,7 +3003,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     keyboardType: TextInputType.number,
                     onChanged: (v) => setState(() {}),
                     decoration: InputDecoration(
-                      labelText: _prizeType == 'winningCoins' ? 'Winning Team Total Prize (🪙 WinCoins)' : 'Winning Team Total Prize (🎟️ Store Coins)',
+                      labelText: newMatchType == MatchType.paid ? 'Winning Team Total Prize (₹ Real Cash)' : 'Winning Team Total Prize (🎟️ Store Coins)',
                       isDense: true,
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                     ),
@@ -3031,7 +3033,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     children: [
                       const Text('MANUAL RANK PRIZES (TOP 1 TO 10)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
                       Text(
-                        'Total Pool: ${_prizeType == "winningCoins" ? "🪙 " : ""}${totalEstimatedPayout.toInt()}${_prizeType != "winningCoins" ? " 🎟️" : " Coins"}',
+                        'Total Pool: ${_prizeType == "winningCoins" ? "₹" : ""}${totalEstimatedPayout.toInt()}${_prizeType != "winningCoins" ? " 🎟️" : " Real Cash"}',
                         style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
                       ),
                     ],
@@ -3165,7 +3167,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 1 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 1 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3178,7 +3180,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 2 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 2 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3191,7 +3193,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 3 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 3 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3210,7 +3212,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 4 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 4 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3223,7 +3225,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 5 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 5 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3236,7 +3238,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 6 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 6 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3255,7 +3257,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 7 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 7 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3268,7 +3270,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 8 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 8 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3281,7 +3283,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 9 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 9 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3300,7 +3302,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Rank 10 Prize (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Rank 10 Prize (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3313,7 +3315,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (v) => setState(() {}),
                           decoration: InputDecoration(
-                            labelText: 'Per Kill (${_prizeType == "winningCoins" ? "🪙" : "🎟️"})',
+                            labelText: 'Per Kill (${newMatchType == MatchType.paid ? "₹" : "🎟️"})',
                             isDense: true,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                           ),
@@ -3337,7 +3339,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
-                            '✓ Total Prize Pool: ${_prizeType == "winningCoins" ? "🪙 " : ""}${totalEstimatedPayout.toInt()}${_prizeType != "winningCoins" ? " 🎟️ Coins" : " WinCoins"} (Ranks: ${totalRankPrizes.toInt()} + Max Kills: ${maxKillCost.toInt()}). If Duo/Squad, rank prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.',
+                            '✓ Total Prize Pool: ${newMatchType == MatchType.paid ? "₹" : ""}${totalEstimatedPayout.toInt()}${newMatchType != MatchType.paid ? " 🎟️ Coins" : " Real Cash"} (Ranks: ${totalRankPrizes.toInt()} + Max Kills: ${maxKillCost.toInt()}). If Duo/Squad, rank prize is divided equally by ${newTeamType == TeamType.duo ? 2 : (newTeamType == TeamType.squad ? 4 : 1)} members.',
                             style: const TextStyle(fontSize: 10, color: Color(0xFF065F46), fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -3569,7 +3571,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     backgroundColor: AppTheme.winningGreen,
-                    content: Text('Match "$finalTitle" created! Prize Pool: ${isWinCoinPrize ? "🪙 " : ""}${finalTotalPool.toInt()} ${isWinCoinPrize ? "WinCoins" : "🎟️ Store Coins"}'),
+                    content: Text('Match "$finalTitle" created! Prize Pool: ${isWinCoinPrize ? "₹" : ""}${finalTotalPool.toInt()} ${isWinCoinPrize ? "Real Cash" : "🎟️ Store Coins"}'),
                   ),
                 );
               },
@@ -5335,6 +5337,23 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            if (banner.isVideoBanner)
+                              Container(
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.play_circle_fill, color: Colors.red, size: 12),
+                                    const SizedBox(width: 4),
+                                    Text('YouTube Guide Video', style: TextStyle(color: Colors.red.shade900, fontSize: 9.5, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -5464,6 +5483,33 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const SizedBox(height: 10),
 
           TextField(
+            controller: _bannerVideoUrlController,
+            onChanged: (val) {
+              final videoId = BannerModel.extractYouTubeId(val);
+              if (videoId != null && _bannerImgUrlController.text.trim().isEmpty) {
+                _bannerImgUrlController.text = 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+              }
+              setState(() {});
+            },
+            decoration: InputDecoration(
+              labelText: '🎥 YouTube Video URL (User Guide / Tutorial)',
+              hintText: 'e.g. https://youtube.com/watch?v=... or https://youtu.be/...',
+              helperText: BannerModel.extractYouTubeId(_bannerVideoUrlController.text) != null
+                  ? '✅ YouTube Video Detected! Video will play directly in the Lobby banner!'
+                  : 'Optional: Video will be playable directly inside the Lobby banner.',
+              helperStyle: TextStyle(
+                color: BannerModel.extractYouTubeId(_bannerVideoUrlController.text) != null
+                    ? const Color(0xFF16A34A)
+                    : const Color(0xFF64748B),
+                fontWeight: FontWeight.bold,
+              ),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              prefixIcon: const Icon(Icons.video_library_rounded, color: Colors.red),
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          TextField(
             controller: _bannerClickUrlController,
             decoration: InputDecoration(
               labelText: 'Click URL / Action Link',
@@ -5484,27 +5530,36 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
               onPressed: () async {
                 final title = _bannerTitleController.text.trim();
-                final img = _bannerImgUrlController.text.trim();
+                String img = _bannerImgUrlController.text.trim();
                 final url = _bannerClickUrlController.text.trim();
+                final videoUrl = _bannerVideoUrlController.text.trim();
+                final detectedVideoId = BannerModel.extractYouTubeId(videoUrl.isNotEmpty ? videoUrl : url);
 
-                if (title.isEmpty || img.isEmpty) {
+                // Auto-use YouTube thumbnail if image is empty but video is provided
+                if (img.isEmpty && detectedVideoId != null) {
+                  img = 'https://img.youtube.com/vi/$detectedVideoId/hqdefault.jpg';
+                }
+
+                if (title.isEmpty || (img.isEmpty && detectedVideoId == null)) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please fill title and image URL')),
+                    const SnackBar(content: Text('Please fill Title and either Image URL or YouTube Video Link')),
                   );
                   return;
                 }
 
-                final resolvedImg = await ImageUrlResolver.resolveDirectImageUrl(img);
+                final resolvedImg = img.isNotEmpty ? await ImageUrlResolver.resolveDirectImageUrl(img) : '';
 
                 final newBanner = BannerModel(
                   id: 'banner_${DateTime.now().millisecondsSinceEpoch}',
                   title: title,
-                  imageUrl: resolvedImg,
+                  imageUrl: resolvedImg.isNotEmpty ? resolvedImg : (detectedVideoId != null ? 'https://img.youtube.com/vi/$detectedVideoId/hqdefault.jpg' : ''),
                   clickUrl: url.isEmpty ? widget.appState.telegramSupportUrl : url,
+                  videoUrl: videoUrl.isNotEmpty ? videoUrl : (detectedVideoId != null ? url : null),
                   createdAt: DateTime.now(),
                 );
 
                 widget.appState.adminAddBanner(newBanner);
+                _bannerVideoUrlController.clear();
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -7993,7 +8048,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               TextField(
                 controller: winningCashCtrl,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: '🪙 WinCash / WinCoins', isDense: true, border: OutlineInputBorder()),
+                decoration: const InputDecoration(labelText: '💵 Real Winning Cash (₹)', isDense: true, border: OutlineInputBorder()),
               ),
             ],
           ),
@@ -8263,7 +8318,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                       Row(
                         children: [
                           Text(
-                            isFree ? 'Prize: ${m.prizePool.totalPool.toInt()} 🎟️ Store Coins' : 'Prize: 🪙 ${m.prizePool.firstPlace.toInt()} WinCoins',
+                            isFree ? 'Prize: ${m.prizePool.totalPool.toInt()} 🎟️ Store Coins' : 'Prize: ₹${m.prizePool.firstPlace.toInt()} Cash',
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF047857)),
                           ),
                           if (m.credentials.roomId.isNotEmpty) ...[

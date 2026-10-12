@@ -145,6 +145,26 @@ function saveDB() {
   }, 300);
 }
 
+// --- UNIFIED USER WALLET HELPER ---
+function ensureUserWallet(user) {
+  if (!user) return null;
+  if (!user.wallet && !user.wallets) {
+    user.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+    user.wallets = user.wallet;
+  } else if (!user.wallet) {
+    user.wallet = user.wallets;
+  } else if (!user.wallets) {
+    user.wallets = user.wallet;
+  }
+  user.wallet.adCoins = Number(user.wallet.adCoins || user.wallets.adCoins || 0);
+  user.wallet.rewardCoins = Number(user.wallet.rewardCoins || user.wallets.rewardCoins || 0);
+  user.wallet.depositCash = Number(user.wallet.depositCash || user.wallets.depositCash || 0);
+  user.wallet.winningCash = Number(user.wallet.winningCash || user.wallets.winningCash || 0);
+  user.wallet.bonusCash = Number(user.wallet.bonusCash || user.wallets.bonusCash || 0);
+  user.wallets = user.wallet;
+  return user.wallet;
+}
+
 // --- WEBSOCKET BROADCAST ---
 function broadcast(type, payload) {
   const message = JSON.stringify({ type, payload, timestamp: new Date().toISOString() });
@@ -381,6 +401,12 @@ app.get('/api/sync', (req, res) => {
   let user = uid && db.users[uid] ? db.users[uid] : null;
   if (!user && email) {
     user = Object.values(db.users || {}).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  // Older phone app builds check adCoins before allowing users to click slot confirm.
+  // If user has depositCash, give them at least 50 adCoins so they are never blocked by "Watch Ad" on paid matches.
+  if (user && user.wallet && (user.wallet.depositCash || 0) > 0) {
+    user.wallet.adCoins = Math.max(user.wallet.adCoins || 0, 50);
   }
   const activeBanners = db.banners.filter(b => b.isActive);
 
@@ -631,12 +657,16 @@ app.delete('/api/matches/:id', (req, res) => {
   const { id } = req.params;
   const match = db.matches.find(m => m.id === id);
   if (match) {
-    refundMatchParticipants(match);
+    if (match.status !== 'completed' && !match.isRefunded) {
+      match.isRefunded = true;
+      refundMatchParticipants(match);
+    }
+    db.matches = db.matches.filter(m => m.id !== id);
+    saveDB();
+    broadcast('MATCH_DELETED', { id });
+    return res.json({ success: true, id });
   }
-  db.matches = db.matches.filter(m => m.id !== id);
-  saveDB();
-  broadcast('MATCH_DELETED', { id });
-  res.json({ success: true, id });
+  res.status(404).json({ success: false, message: 'Match not found' });
 });
 
 app.post('/api/admin/reset_matches', (req, res) => {
@@ -661,6 +691,10 @@ app.post('/api/matches/:id/join', (req, res) => {
   const match = db.matches.find(m => m.id === id);
   if (!match) return res.status(404).json({ success: false, message: 'Match not found' });
 
+  if (match.status === 'completed' || match.status === 'cancelled') {
+    return res.status(400).json({ success: false, message: 'Match is already completed or cancelled!' });
+  }
+
   if (match.participants.some(p => p.slotNumber === slotNumber)) {
     return res.status(400).json({ success: false, message: `Slot #${slotNumber} already taken!` });
   }
@@ -669,13 +703,49 @@ app.post('/api/matches/:id/join', (req, res) => {
     return res.status(400).json({ success: false, message: 'You have already joined this match!' });
   }
 
+  const effectiveFee = Number(amountPaid) || Number(match.entryFee) || 0;
+  const user = db.users[uid];
+  if (user) {
+    const wallet = ensureUserWallet(user);
+    if (paidWith === 'AD_COINS') {
+      if ((wallet.adCoins || 0) < effectiveFee) {
+        return res.status(400).json({ success: false, message: 'Insufficient Ad Coins balance!' });
+      }
+      wallet.adCoins = Math.max(0, (wallet.adCoins || 0) - effectiveFee);
+    } else {
+      const totalCash = (wallet.bonusCash || 0) + (wallet.depositCash || 0) + (wallet.winningCash || 0);
+      if (totalCash < effectiveFee) {
+        return res.status(400).json({ success: false, message: 'Insufficient Cash balance!' });
+      }
+      let remaining = effectiveFee;
+      if (wallet.bonusCash >= remaining) {
+        wallet.bonusCash -= remaining;
+        remaining = 0;
+      } else {
+        remaining -= wallet.bonusCash;
+        wallet.bonusCash = 0;
+        if (wallet.depositCash >= remaining) {
+          wallet.depositCash -= remaining;
+          remaining = 0;
+        } else {
+          remaining -= wallet.depositCash;
+          wallet.depositCash = 0;
+          wallet.winningCash = Math.max(0, wallet.winningCash - remaining);
+        }
+      }
+    }
+    user.wallets = wallet;
+    user.stats = user.stats || {};
+    user.stats.matchesPlayed = (user.stats.matchesPlayed || 0) + 1;
+  }
+
   const participant = {
     uid,
     inGameName,
     inGameUid,
     slotNumber,
     paidWith: paidWith || 'DEPOSIT_CASH',
-    amountPaid: amountPaid || match.entryFee,
+    amountPaid: effectiveFee,
     joinedAt: new Date().toISOString(),
     kills: 0,
     teamName
@@ -685,31 +755,6 @@ app.post('/api/matches/:id/join', (req, res) => {
   match.filledSlots = match.participants.length;
   if (match.filledSlots >= match.maxSlots && match.status === 'upcoming') {
     match.status = 'roomFilling';
-  }
-
-  const user = db.users[uid];
-  if (user) {
-    if (paidWith === 'AD_COINS') {
-      user.wallets.adCoins = Math.max(0, (user.wallets.adCoins || 0) - amountPaid);
-    } else {
-      let remaining = amountPaid;
-      if (user.wallets.bonusCash >= remaining) {
-        user.wallets.bonusCash -= remaining;
-        remaining = 0;
-      } else {
-        remaining -= user.wallets.bonusCash;
-        user.wallets.bonusCash = 0;
-        if (user.wallets.depositCash >= remaining) {
-          user.wallets.depositCash -= remaining;
-          remaining = 0;
-        } else {
-          remaining -= user.wallets.depositCash;
-          user.wallets.depositCash = 0;
-          user.wallets.winningCash = Math.max(0, user.wallets.winningCash - remaining);
-        }
-      }
-    }
-    user.stats.matchesPlayed = (user.stats.matchesPlayed || 0) + 1;
   }
 
   saveDB();
@@ -743,7 +788,7 @@ app.post('/api/matches/:id/credentials', (req, res) => {
   const isPaid = match.matchType === 'paid' || (match.entryFee && match.entryFee > 0);
   if (isPaid && !match.hostCommissionPaid && publisherUid) {
     const totalCollection = (match.entryFee || 0) * ((match.participants && match.participants.length) || match.joinedCount || 0);
-    const prizeTotal = (match.prizePool && match.prizePool.totalPrize) || 0;
+    const prizeTotal = (match.prizePool && (match.prizePool.totalPool || match.prizePool.totalPrize)) || 0;
     let profit = totalCollection - prizeTotal;
     if (profit <= 0) profit = totalCollection * 0.25;
     const commission = Math.round((profit * 0.25) * 100) / 100;
@@ -751,8 +796,9 @@ app.post('/api/matches/:id/credentials', (req, res) => {
     if (commission > 0) {
       const hostUser = db.users[publisherUid];
       if (hostUser) {
-        hostUser.wallet = hostUser.wallet || { depositCash: 0, winningCash: 0, bonusCash: 0, storeRewardCoins: 0 };
-        hostUser.wallet.winningCash = (hostUser.wallet.winningCash || 0) + commission;
+        const wallet = ensureUserWallet(hostUser);
+        wallet.winningCash = (wallet.winningCash || 0) + commission;
+        hostUser.wallets = wallet;
         hostUser.stats = hostUser.stats || {};
         hostUser.stats.totalWinningsCash = (hostUser.stats.totalWinningsCash || 0) + commission;
 
@@ -793,6 +839,8 @@ app.post('/api/matches/:id/declare', (req, res) => {
   match.completedAt = new Date().toISOString();
 
   let totalPrizeGiven = 0;
+  const isPaid = match.matchType === 'paid' || match.entryFeeType === 'cash' || (match.prizePool && match.prizePool.isCashPrize);
+
   if (Array.isArray(results)) {
     results.forEach(resItem => {
       const p = match.participants.find(part => part.uid === resItem.uid);
@@ -802,14 +850,44 @@ app.post('/api/matches/:id/declare', (req, res) => {
         p.prizeAwarded = resItem.prizeAwarded || 0;
         p.isWinner = (resItem.rank === 1);
 
-        if (p.prizeAwarded > 0) {
-          totalPrizeGiven += p.prizeAwarded;
-          const user = db.users[p.uid];
-          if (user) {
-            user.wallets.winningCash = (user.wallets.winningCash || 0) + p.prizeAwarded;
-            user.stats.matchesWon = (user.stats.matchesWon || 0) + (p.isWinner ? 1 : 0);
-            user.stats.totalKills = (user.stats.totalKills || 0) + p.kills;
-            user.stats.totalWinningsCash = (user.stats.totalWinningsCash || 0) + p.prizeAwarded;
+        const user = db.users[p.uid];
+        if (user) {
+          const wallet = ensureUserWallet(user);
+          if (!user.stats) user.stats = {};
+
+          user.stats.matchesWon = (user.stats.matchesWon || 0) + (p.isWinner ? 1 : 0);
+          user.stats.totalKills = (user.stats.totalKills || 0) + p.kills;
+
+          if (p.prizeAwarded > 0) {
+            totalPrizeGiven += p.prizeAwarded;
+            const balBefore = isPaid ? (wallet.winningCash || 0) : (wallet.rewardCoins || 0);
+
+            if (isPaid) {
+              wallet.winningCash = (wallet.winningCash || 0) + p.prizeAwarded;
+              user.stats.totalWinningsCash = (user.stats.totalWinningsCash || 0) + p.prizeAwarded;
+            } else {
+              wallet.rewardCoins = (wallet.rewardCoins || 0) + Math.round(p.prizeAwarded);
+              user.stats.totalRewardCoinsWon = (user.stats.totalRewardCoinsWon || 0) + Math.round(p.prizeAwarded);
+            }
+            user.wallets = wallet;
+
+            // Record transaction (compatible with Flutter TransactionModel)
+            const winTxn = {
+              id: `txn_win_${Date.now()}_${(p.uid || '').substring(0, 5)}`,
+              userId: p.uid,
+              userName: user.displayName || p.inGameName || 'Player',
+              type: isPaid ? 'matchWinningCash' : 'matchWinningRewardCoins',
+              walletAffected: isPaid ? 'winningCash' : 'rewardCoins',
+              amount: p.prizeAwarded,
+              currency: isPaid ? 'INR' : 'REWARD_COINS',
+              balanceBefore: balBefore,
+              balanceAfter: isPaid ? wallet.winningCash : wallet.rewardCoins,
+              status: 'SUCCESS',
+              description: `🏆 Rank #${p.rank || 1} (+${isPaid ? '₹' + Math.round(p.prizeAwarded) + ' Real Cash' : Math.round(p.prizeAwarded) + ' 🎟️ Coins'}) in "${match.title}"`,
+              createdAt: new Date().toISOString()
+            };
+            if (!db.transactions) db.transactions = [];
+            db.transactions.unshift(winTxn);
           }
         }
       }
@@ -998,6 +1076,7 @@ app.post('/api/users', (req, res) => {
     ...existing,
     ...user,
     wallet: preservedWallet || user.wallet || { adCoins: 5, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 },
+    wallets: preservedWallet || user.wallet || { adCoins: 5, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 },
     lastSeen: new Date().toISOString()
   };
 
@@ -1094,7 +1173,9 @@ app.post('/api/payments/approve-deposit', (req, res) => {
   txn.status = 'success';
   const user = db.users[txn.userId];
   if (user) {
-    user.wallets.depositCash = (user.wallets.depositCash || 0) + txn.amount;
+    const wallet = ensureUserWallet(user);
+    wallet.depositCash = (wallet.depositCash || 0) + txn.amount;
+    user.wallets = wallet;
   }
   saveDB();
   broadcast('TRANSACTION_UPDATED', txn);
@@ -1215,7 +1296,9 @@ app.post('/api/withdrawals', (req, res) => {
   // Deduct user winning cash
   const user = db.users[withdrawal.userId];
   if (user) {
-    user.wallets.winningCash = Math.max(0, (user.wallets.winningCash || 0) - withdrawal.amount);
+    const wallet = ensureUserWallet(user);
+    wallet.winningCash = Math.max(0, (wallet.winningCash || 0) - withdrawal.amount);
+    user.wallets = wallet;
   }
 
   saveDB();
@@ -1235,7 +1318,9 @@ app.put('/api/withdrawals/:id', (req, res) => {
   if (prevStatus === 'pending' && db.withdrawals[index].status === 'rejected') {
     const user = db.users[db.withdrawals[index].userId];
     if (user) {
-      user.wallets.winningCash = (user.wallets.winningCash || 0) + db.withdrawals[index].amount;
+      const wallet = ensureUserWallet(user);
+      wallet.winningCash = (wallet.winningCash || 0) + db.withdrawals[index].amount;
+      user.wallets = wallet;
     }
   }
 

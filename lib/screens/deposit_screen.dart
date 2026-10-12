@@ -51,8 +51,14 @@ class _DepositScreenState extends State<DepositScreen> {
   double get totalPlayableCash => currentAmount + bonusCash;
 
   Future<void> _generateOfficialRazorpayQr(double amt) async {
-    if (amt < 1) {
-      setState(() => errorMsg = 'Please enter a valid amount (Min ₹1).');
+    if (amt < 10) {
+      setState(() => errorMsg = 'Payment gateway requires minimum recharge of ₹10.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          backgroundColor: Colors.red,
+          content: Text('Payment Gateway Rule: Minimum recharge via Razorpay UPI QR is ₹10.'),
+        ),
+      );
       return;
     }
     setState(() {
@@ -460,7 +466,7 @@ class _DepositScreenState extends State<DepositScreen> {
           const SizedBox(height: 16),
 
           const Text(
-            'OR ENTER CUSTOM AMOUNT',
+            'OR ENTER CUSTOM AMOUNT (MIN ₹10)',
             style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 0.8),
           ),
           const SizedBox(height: 8),

@@ -3,6 +3,7 @@ import '../models/match_model.dart';
 import '../services/app_state.dart';
 import '../services/ad_service.dart';
 import '../theme/app_theme.dart';
+import '../screens/deposit_screen.dart';
 import 'match_rules_card.dart';
 
 class SlotPickerDialog extends StatefulWidget {
@@ -79,6 +80,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     final ign = _ignController.text.trim();
     final uid = _uidController.text.trim();
     final level = int.tryParse(_levelController.text.trim()) ?? 40;
+    final isPaid = widget.match.matchType == MatchType.paid || widget.match.entryFeeType == EntryFeeType.cash;
 
     widget.appState.updateUserProfile(
       inGameName: ign,
@@ -97,7 +99,9 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
 
     if (res['success'] == true) {
       Navigator.of(context).pop();
-      AdService.showInterstitialAd(context: context, force: true);
+      if (!isPaid) {
+        AdService.showInterstitialAd(context: context, force: true);
+      }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: const Color(0xFF065F46),
@@ -139,20 +143,19 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
         }
       },
     );
-
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted && _isWatchingAd) {
-        setState(() => _isWatchingAd = false);
-      }
-    });
   }
 
   @override
   Widget build(BuildContext context) {
     final match = widget.match;
-    final userCoins = widget.appState.user.wallet.adCoins;
-    final int feeCoins = match.entryFee.toInt();
-    final bool hasEnoughCoins = feeCoins == 0 || userCoins >= feeCoins;
+    final bool isPaidMatch = match.isCashMatch;
+    final double userCash = widget.appState.user.wallet.depositCash;
+    final int userCoins = widget.appState.user.wallet.adCoins;
+    final double fee = match.entryFee;
+    final int feeCoins = fee.toInt();
+    final bool hasEnoughBalance = isPaidMatch
+        ? (fee <= 0 || userCash >= fee)
+        : (feeCoins == 0 || userCoins >= feeCoins);
     final int adsWatchedSinceCoin = widget.appState.user.adTracker.adsWatchedSinceLastCoin;
 
     return Dialog(
@@ -166,39 +169,57 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
             // Header
             Container(
               padding: const EdgeInsets.all(16),
-              decoration: const BoxDecoration(
-                color: AppTheme.primaryAmber,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              decoration: BoxDecoration(
+                color: isPaidMatch ? const Color(0xFF0F172A) : AppTheme.primaryAmber,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Row(
                 children: [
-                  const Text('🟡', style: TextStyle(fontSize: 24)),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: isPaidMatch ? const Color(0xFF1E293B) : Colors.amber.shade200,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isPaidMatch ? '₹' : '🟡',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: isPaidMatch ? Colors.amberAccent : Colors.black,
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          feeCoins == 0 ? 'FREE DIRECT ENTRY' : 'ENTRY FEE: 🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"}',
-                          style: const TextStyle(
-                            fontSize: 10,
+                          fee <= 0
+                              ? 'FREE DIRECT ENTRY'
+                              : (isPaidMatch
+                                  ? 'ENTRY FEE: ₹${fee.toInt()} REAL CASH'
+                                  : 'ENTRY FEE: 🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"}'),
+                          style: TextStyle(
+                            fontSize: 10.5,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,
-                            color: Color(0xFF78350F),
+                            color: isPaidMatch ? const Color(0xFFFDE68A) : const Color(0xFF78350F),
                           ),
                         ),
                         Text(
                           'Choose Your Match Slot',
                           style: AppTheme.gamingTitle(
                             fontSize: 18,
-                            color: const Color(0xFF0F172A),
+                            color: isPaidMatch ? Colors.white : const Color(0xFF0F172A),
                           ),
                         ),
                       ],
                     ),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.close, color: Colors.black87),
+                    icon: Icon(Icons.close, color: isPaidMatch ? Colors.white70 : Colors.black87),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ],
@@ -212,7 +233,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Match summary & Ad Coins Wallet status
+                    // Match summary
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -223,38 +244,44 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                match.title,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w800,
-                                  fontSize: 13,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  match.title,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                '${match.matchFormat.name.toUpperCase()} • ${match.map.name.toUpperCase()} • Prize: ${match.prizePool.isCashPrize ? '₹${match.prizePool.totalPool.toInt()}' : '${match.prizePool.totalPool.toInt()} 🎟️ Coins'}',
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF64748B),
-                                  fontWeight: FontWeight.w600,
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${match.matchFormat.name.toUpperCase()} • ${match.map.name.toUpperCase()} • Prize: ${isPaidMatch ? "₹${match.prizePool.totalPool.toInt()} Real Cash" : "${match.prizePool.totalPool.toInt()} 🎟️ Coins"}',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.amber.shade100,
+                              color: isPaidMatch ? const Color(0xFFECFDF5) : Colors.amber.shade100,
                               borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: isPaidMatch ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A)),
                             ),
                             child: Text(
-                              match.entryFeeDisplay,
+                              fee <= 0 ? 'FREE' : (isPaidMatch ? '₹${fee.toInt()}' : match.entryFeeDisplay),
                               style: AppTheme.gamingNumber(
                                 fontSize: 13,
-                                color: Colors.amber.shade900,
+                                color: isPaidMatch ? const Color(0xFF047857) : Colors.amber.shade900,
                               ),
                             ),
                           ),
@@ -263,14 +290,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                     ),
                     const SizedBox(height: 12),
 
-                    // User Ad Coins Balance Bar
+                    // User Balance Bar (Real Cash for Paid Matches, Ad Coins for Free Matches)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
-                        color: hasEnoughCoins ? const Color(0xFFECFDF5) : const Color(0xFFFEF3C7),
+                        color: hasEnoughBalance ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                          color: hasEnoughCoins ? const Color(0xFFA7F3D0) : const Color(0xFFFDE68A),
+                          color: hasEnoughBalance ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
                         ),
                       ),
                       child: Row(
@@ -279,39 +306,43 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                           Row(
                             children: [
                               Text(
-                                '🟡 Your Ad Coins:',
+                                isPaidMatch ? '💵 Deposit Cash:' : '🟡 Your Ad Coins:',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
-                                  color: hasEnoughCoins ? const Color(0xFF065F46) : const Color(0xFF92400E),
+                                  color: hasEnoughBalance ? const Color(0xFF065F46) : (isPaidMatch ? Colors.red.shade900 : const Color(0xFF92400E)),
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Text(
-                                '$userCoins 🟡',
+                                isPaidMatch ? '₹${userCash.toStringAsFixed(1)}' : '$userCoins 🟡',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w900,
-                                  color: hasEnoughCoins ? const Color(0xFF047857) : const Color(0xFFB45309),
+                                  color: hasEnoughBalance ? const Color(0xFF047857) : (isPaidMatch ? Colors.red.shade700 : const Color(0xFFB45309)),
                                 ),
                               ),
                             ],
                           ),
-                          if (!hasEnoughCoins)
+                          if (!hasEnoughBalance)
                             InkWell(
                               onTap: () {
                                 Navigator.of(context).pop();
-                                widget.onEarnCoinsClick();
+                                if (isPaidMatch) {
+                                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => DepositScreen(appState: widget.appState)));
+                                } else {
+                                  widget.onEarnCoinsClick();
+                                }
                               },
                               child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                                 decoration: BoxDecoration(
-                                  color: Colors.amber.shade900,
-                                  borderRadius: BorderRadius.circular(6),
+                                  color: isPaidMatch ? const Color(0xFF1D4ED8) : Colors.amber.shade900,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
-                                  'EARN COINS',
-                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white),
+                                child: Text(
+                                  isPaidMatch ? '➕ RECHARGE' : 'EARN COINS',
+                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Colors.white),
                                 ),
                               ),
                             ),
@@ -338,7 +369,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                           style: TextStyle(
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
-                            color: selectedSlot != null ? Colors.amber.shade800 : Colors.grey,
+                            color: selectedSlot != null ? (isPaidMatch ? const Color(0xFF047857) : Colors.amber.shade800) : Colors.grey,
                           ),
                         ),
                       ],
@@ -383,14 +414,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                 color: isTaken
                                     ? const Color(0xFFE2E8F0)
                                     : isSelected
-                                        ? AppTheme.primaryAmber
+                                        ? (isPaidMatch ? const Color(0xFF0F172A) : AppTheme.primaryAmber)
                                         : Colors.white,
                                 borderRadius: BorderRadius.circular(10),
                                 border: Border.all(
                                   color: isTaken
                                       ? const Color(0xFFCBD5E1)
                                       : isSelected
-                                          ? const Color(0xFFB45309)
+                                          ? (isPaidMatch ? Colors.amberAccent : const Color(0xFFB45309))
                                           : const Color(0xFF94A3B8),
                                   width: isSelected ? 2 : 1,
                                 ),
@@ -406,7 +437,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                       color: isTaken
                                           ? const Color(0xFF94A3B8)
                                           : isSelected
-                                              ? const Color(0xFF0F172A)
+                                              ? (isPaidMatch ? Colors.white : const Color(0xFF0F172A))
                                               : const Color(0xFF1E293B),
                                     ),
                                   ),
@@ -506,8 +537,8 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                     ),
                     const SizedBox(height: 12),
 
-                    // If Insufficient coins: Show Quick Watch Ad Widget
-                    if (!hasEnoughCoins) ...[
+                    // Quick Watch Ad Widget (ONLY for Free Ad-Coin Matches)
+                    if (!isPaidMatch && !hasEnoughBalance) ...[
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -523,9 +554,9 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  const Text(
                                     'Watch 3 Ads = 1 🟡 Ad Coin',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF92400E)),
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF92400E)),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -583,17 +614,24 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: (selectedSlot != null && hasEnoughCoins)
-                            ? AppTheme.primaryAmber
-                            : (!hasEnoughCoins ? Colors.amber.shade700 : Colors.grey.shade300),
-                        foregroundColor: (selectedSlot != null && hasEnoughCoins)
-                            ? Colors.black
-                            : (!hasEnoughCoins ? Colors.white : Colors.grey.shade600),
+                        backgroundColor: (selectedSlot != null && hasEnoughBalance)
+                            ? (isPaidMatch ? const Color(0xFF059669) : AppTheme.primaryAmber)
+                            : (!hasEnoughBalance ? (isPaidMatch ? const Color(0xFF1D4ED8) : Colors.amber.shade700) : Colors.grey.shade300),
+                        foregroundColor: (selectedSlot != null && hasEnoughBalance)
+                            ? (isPaidMatch ? Colors.white : Colors.black)
+                            : (!hasEnoughBalance ? Colors.white : Colors.grey.shade600),
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                       onPressed: (selectedSlot != null && !isSubmitting && !_isWatchingAd)
-                          ? (hasEnoughCoins ? _executeJoin : _watchAdToEarnCoin)
+                          ? (hasEnoughBalance
+                              ? _executeJoin
+                              : (isPaidMatch
+                                  ? () {
+                                      Navigator.of(context).pop();
+                                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => DepositScreen(appState: widget.appState)));
+                                    }
+                                  : _watchAdToEarnCoin))
                           : null,
                       child: Text(
                         selectedSlot == null
@@ -602,14 +640,18 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                 ? 'PLAYING AD...'
                                 : isSubmitting
                                     ? 'LOCKING SLOT...'
-                                    : (!hasEnoughCoins
-                                        ? '🎬 WATCH AD ($adsWatchedSinceCoin/3) TO EARN COIN'
-                                        : (feeCoins == 0
+                                    : (!hasEnoughBalance
+                                        ? (isPaidMatch
+                                            ? '➕ RECHARGE ₹${(fee - userCash).ceil()} TO LOCK SLOT'
+                                            : '🎬 WATCH AD ($adsWatchedSinceCoin/3) TO EARN COIN')
+                                        : (fee <= 0
                                             ? 'CONFIRM & LOCK SLOT #$selectedSlot (FREE)'
-                                            : 'CONFIRM & LOCK SLOT #$selectedSlot (🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"})')),
+                                            : (isPaidMatch
+                                                ? 'CONFIRM & LOCK SLOT #$selectedSlot (₹${fee.toInt()})'
+                                                : 'CONFIRM & LOCK SLOT #$selectedSlot (🟡 $feeCoins ${feeCoins == 1 ? "COIN" : "COINS"})'))),
                         style: AppTheme.gamingTitle(
                           fontSize: 13,
-                          color: (selectedSlot != null && hasEnoughCoins) ? Colors.black : Colors.white,
+                          color: (selectedSlot != null && hasEnoughBalance && !isPaidMatch) ? Colors.black : Colors.white,
                           isItalic: false,
                         ),
                       ),

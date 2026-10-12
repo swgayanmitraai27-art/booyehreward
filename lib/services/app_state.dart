@@ -71,10 +71,10 @@ class AppState extends ChangeNotifier {
   double get weeklyTotalPrizePool => weeklyRank1Prize + weeklyRank2Prize + weeklyRank3Prize;
 
   // App Version & Remote Force Update System
-  static const int currentAppBuildNumber = 34;
-  static const String currentAppVersion = '1.3.4';
-  int minBuildNumber = 34;
-  String minAppVersion = '1.3.4';
+  static const int currentAppBuildNumber = 35;
+  static const String currentAppVersion = '1.3.5';
+  int minBuildNumber = 35;
+  String minAppVersion = '1.3.5';
   bool isForceUpdateEnabled = false;
   String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app';
   String updateTitle = '⚡ App Update Required';
@@ -591,7 +591,6 @@ class AppState extends ChangeNotifier {
     _syncUser();
     _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
-    _syncTransaction(transactions.first);
 
     notifyListeners();
     return {
@@ -713,28 +712,27 @@ class AppState extends ChangeNotifier {
     match.filledSlots += 1;
     user.stats.matchesPlayed += 1;
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchEntryFee,
-        walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
-        amount: -match.entryFee,
-        currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: balAfter,
-        status: 'SUCCESS',
-        description: 'Created Team "${newTeam.teamName}" [Code: $teamCode] for ${match.title}',
-        createdAt: DateTime.now(),
-      ),
+    final teamTxn = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.matchEntryFee,
+      walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
+      amount: -match.entryFee,
+      currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
+      balanceBefore: balBefore,
+      balanceAfter: balAfter,
+      status: 'SUCCESS',
+      description: 'Created Team "${newTeam.teamName}" [Code: $teamCode] for ${match.title}',
+      createdAt: DateTime.now(),
     );
+    transactions.insert(0, teamTxn);
+    allGlobalTransactions.insert(0, teamTxn);
+    _syncTransaction(teamTxn);
 
     _syncUser();
     _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
-    _syncTransaction(transactions.first);
 
     notifyListeners();
     return {
@@ -845,28 +843,27 @@ class AppState extends ChangeNotifier {
     match.filledSlots += 1;
     user.stats.matchesPlayed += 1;
 
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchEntryFee,
-        walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
-        amount: -match.entryFee,
-        currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: balAfter,
-        status: 'SUCCESS',
-        description: 'Joined Team "${team.teamName}" [Code: ${team.teamCode}] for ${match.title}',
-        createdAt: DateTime.now(),
-      ),
+    final joinTxn = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.matchEntryFee,
+      walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
+      amount: -match.entryFee,
+      currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
+      balanceBefore: balBefore,
+      balanceAfter: balAfter,
+      status: 'SUCCESS',
+      description: 'Joined Team "${team.teamName}" [Code: ${team.teamCode}] for ${match.title}',
+      createdAt: DateTime.now(),
     );
+    transactions.insert(0, joinTxn);
+    allGlobalTransactions.insert(0, joinTxn);
+    _syncTransaction(joinTxn);
 
     _syncUser();
     _checkAndTriggerMatchAutoStart(match);
     _syncMatch(match);
-    _syncTransaction(transactions.first);
 
     notifyListeners();
     return {
@@ -1269,13 +1266,39 @@ class AppState extends ChangeNotifier {
       _syncUser();
     } else {
       try {
-        final hostDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, hostUid);
-        if (hostDoc != null && hostDoc.isNotEmpty) {
-          final hostUser = UserModel.fromJson(hostDoc);
+        UserModel? hostUser;
+        try {
+          final res = await http.get(Uri.parse("$vpsApiUrl/users/$hostUid")).timeout(const Duration(seconds: 4));
+          if (res.statusCode == 200) {
+            final data = jsonDecode(res.body);
+            final uJson = data['user'] ?? data;
+            if (uJson is Map<String, dynamic>) hostUser = UserModel.fromJson(uJson);
+          }
+        } catch (_) {}
+
+        if (hostUser == null) {
+          final hostDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, hostUid);
+          if (hostDoc != null && hostDoc.isNotEmpty) {
+            hostUser = UserModel.fromJson(hostDoc);
+          }
+        }
+
+        if (hostUser != null) {
           final double balBefore = hostUser.wallet.winningCash;
           hostUser.wallet.winningCash += commissionAmount;
           hostUser.stats.totalWinningsCash += commissionAmount;
-          await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, hostUid, hostUser.toJson());
+
+          try {
+            await http.post(
+              Uri.parse("$vpsApiUrl/users"),
+              headers: {'Content-Type': 'application/json'},
+              body: jsonEncode(hostUser.toJson()),
+            ).timeout(const Duration(seconds: 4));
+          } catch (_) {}
+
+          try {
+            await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, hostUid, hostUser.toJson());
+          } catch (_) {}
 
           final hostTxn = TransactionModel(
             id: 'txn_host_${DateTime.now().millisecondsSinceEpoch}_$hostUid',
@@ -1292,7 +1315,10 @@ class AppState extends ChangeNotifier {
             createdAt: DateTime.now(),
           );
           allGlobalTransactions.insert(0, hostTxn);
-          await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, hostTxn.id, hostTxn.toJson());
+          _syncTransaction(hostTxn);
+          try {
+            await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, hostTxn.id, hostTxn.toJson());
+          } catch (_) {}
         }
       } catch (e) {
         debugPrint('[AppState] Failed to credit host commission to $hostUid: $e');
@@ -1419,10 +1445,11 @@ class AppState extends ChangeNotifier {
           balanceBefore: balBefore,
           balanceAfter: isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble(),
           status: 'SUCCESS',
-          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "${amount.toInt()} 🪙 WinCoins" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
+          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "₹${amount.toInt()} Real Cash" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
           createdAt: DateTime.now(),
         );
         allGlobalTransactions.insert(0, winTxn);
+        _syncTransaction(winTxn);
         try {
           await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, winTxn.id, winTxn.toJson());
         } catch (_) {}
@@ -1456,8 +1483,7 @@ class AppState extends ChangeNotifier {
     final winningParticipants = (winningTeam == 'Team A') ? match.teamAParticipants : match.teamBParticipants;
     final losingParticipants = (winningTeam == 'Team A') ? match.teamBParticipants : match.teamAParticipants;
 
-    final bool isRewardCoinMatch = match.entryFeeType == EntryFeeType.adCoins || !match.prizePool.isCashPrize;
-    final bool isCashPrize = !isRewardCoinMatch && (match.prizePool.isCashPrize || isPaid);
+    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
 
     // Distributable Prize Pool (75% for paid cash, totalPool for free / reward coins / custom pool)
     final double totalPrizePool = (isPaid && isCashPrize) ? match.distributablePrizePool : match.prizePool.totalPool;
@@ -1489,7 +1515,7 @@ class AppState extends ChangeNotifier {
             balanceBefore: balBefore,
             balanceAfter: user.wallet.winningCash,
             status: 'SUCCESS',
-            description: '🏆 $winningTeam Winner (+${prizePerPlayer.toInt()} 🪙 WinCoins) in "${match.title}"',
+            description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
             createdAt: DateTime.now(),
           );
           transactions.insert(0, winTxn);
@@ -1561,8 +1587,7 @@ class AppState extends ChangeNotifier {
       match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
     }
     final bool isPaid = match.matchType == MatchType.paid;
-    final bool isRewardCoinMatch = match.entryFeeType == EntryFeeType.adCoins || !match.prizePool.isCashPrize;
-    final bool isCashPrize = !isRewardCoinMatch && (match.prizePool.isCashPrize || isPaid);
+    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
 
     // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
     final double actualCollection = isPaid
@@ -1606,7 +1631,7 @@ class AppState extends ChangeNotifier {
               balanceBefore: balBefore,
               balanceAfter: user.wallet.winningCash,
               status: 'SUCCESS',
-              description: '🏆 Rank #$rank (+${totalPrize.toInt()} 🪙 WinCoins) in "${match.title}"',
+              description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Real Cash) in "${match.title}"',
               createdAt: DateTime.now(),
             );
             transactions.insert(0, winTxn);
@@ -2388,8 +2413,8 @@ class AppState extends ChangeNotifier {
       // Create Winner In-App Notification
       final notif = AppNotification(
         id: 'notif_weekly_win_${winner.rank}_${DateTime.now().millisecondsSinceEpoch}',
-        title: '🎉 450 🪙 Weekly Leaderboard Reward Won!',
-        body: 'Congratulations ${winner.displayName}! You secured Rank #${winner.rank} with ${winner.points} pts in the Weekly Esports Championship! ${prize.toInt()} 🪙 Winning Coins have been credited directly to your Winning Wallet.',
+        title: '🎉 ₹450 Weekly Leaderboard Reward Won!',
+        body: 'Congratulations ${winner.displayName}! You secured Rank #${winner.rank} with ${winner.points} pts in the Weekly Esports Championship! ₹${prize.toInt()} Real Cash has been credited directly to your Winning Wallet.',
         createdAt: DateTime.now(),
         type: NotificationType.matchResult,
         targetType: 'user',
@@ -2467,7 +2492,10 @@ class AppState extends ChangeNotifier {
 
   // --- ADMIN: WITHDRAWAL APPROVE & REJECT ---
   void adminApproveWithdrawal(String reqId, String utrRef, String notes) {
-    final req = withdrawals.firstWhere((w) => w.id == reqId);
+    final req = allGlobalWithdrawals.firstWhere(
+      (w) => w.id == reqId,
+      orElse: () => withdrawals.firstWhere((w) => w.id == reqId),
+    );
     req.status = WithdrawalStatus.completed;
     req.payoutTxnRef = utrRef.isEmpty ? 'UTR-${DateTime.now().millisecondsSinceEpoch}' : utrRef;
     req.adminNotes = notes.isEmpty ? 'Paid via UPI Transfer' : notes;
@@ -2477,7 +2505,10 @@ class AppState extends ChangeNotifier {
   }
 
   void adminRejectWithdrawal(String reqId, String reason) {
-    final req = withdrawals.firstWhere((w) => w.id == reqId);
+    final req = allGlobalWithdrawals.firstWhere(
+      (w) => w.id == reqId,
+      orElse: () => withdrawals.firstWhere((w) => w.id == reqId),
+    );
     req.status = WithdrawalStatus.rejected;
     req.adminNotes = reason.isEmpty ? 'Invalid UPI details. Amount refunded.' : reason;
     req.processedAt = DateTime.now();
@@ -2501,6 +2532,7 @@ class AppState extends ChangeNotifier {
         createdAt: DateTime.now(),
       );
       transactions.insert(0, refTxn);
+      allGlobalTransactions.insert(0, refTxn);
       _syncTransaction(refTxn);
       _syncUser();
     }
@@ -2511,7 +2543,10 @@ class AppState extends ChangeNotifier {
 
   // --- ADMIN: DELIVER VOUCHER CODE VIA WHATSAPP ---
   void adminDeliverVoucher(String claimId, String code) {
-    final claim = voucherClaims.firstWhere((c) => c.id == claimId);
+    final claim = allGlobalVoucherClaims.firstWhere(
+      (c) => c.id == claimId,
+      orElse: () => voucherClaims.firstWhere((c) => c.id == claimId),
+    );
     claim.status = VoucherClaimStatus.delivered;
     claim.redeemCode = code.isEmpty ? 'GP-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}' : code;
     claim.deliveredAt = DateTime.now();

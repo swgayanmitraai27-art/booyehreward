@@ -305,7 +305,7 @@ class PrizePool {
       tenthPlace: json['tenthPlace'] != null
           ? ((json['tenthPlace']) as num).toDouble()
           : (json['tenth_place'] != null ? ((json['tenth_place']) as num).toDouble() : fallbackTenth),
-      isCashPrize: json['isCashPrize'] != null ? (json['isCashPrize'] == true) : (fallbackIsCashPrize ?? true),
+      isCashPrize: (json['isCashPrize'] ?? json['is_cash_prize']) != null ? ((json['isCashPrize'] ?? json['is_cash_prize']) == true) : (fallbackIsCashPrize ?? false),
     );
   }
 }
@@ -494,7 +494,7 @@ class MatchModel {
 
   // Standard Esports Percentage Distribution based on Distribution Mode (Top 3, Top 5, Top 10)
   double getRankPercentage(int rank, {String? distMode}) {
-    final mode = distMode ?? (prizePool.fifthPlace != null ? 'top5' : (prizePool.thirdPlace != null ? 'top3' : 'top10'));
+    final mode = distMode ?? (prizePool.tenthPlace != null ? 'top10' : (prizePool.fifthPlace != null ? 'top5' : 'top3'));
     if (mode == 'top3') {
       if (rank == 1) return 0.50; // 50%
       if (rank == 2) return 0.30; // 30%
@@ -599,9 +599,14 @@ class MatchModel {
   bool get isFillingRoom => status == MatchStatus.roomFilling || (isFull && status == MatchStatus.upcoming);
 
   int get requiredAds => entryFee.toInt() > 0 ? entryFee.toInt() : (entryFee > 0 ? entryFee.ceil() : 0);
-  String get entryFeeDisplay => entryFee.toInt() == 0
-      ? 'FREE'
-      : '🟡 ${entryFee.toInt()} ${entryFee.toInt() == 1 ? "Coin" : "Coins"}';
+  String get entryFeeDisplay {
+    if (entryFee <= 0) return 'FREE';
+    final isCash = entryFeeType == EntryFeeType.cash || matchType == MatchType.paid;
+    if (isCash) {
+      return '₹${entryFee.toInt()}';
+    }
+    return '🟡 ${entryFee.toInt()} ${entryFee.toInt() == 1 ? "Coin" : "Coins"}';
+  }
 
   Duration get roomCountdownRemaining {
     if (roomFillingStartedAt == null) {
@@ -725,13 +730,14 @@ class MatchModel {
       entryFeeType: entryFeeType,
       entryFee: ((json['entryFee'] ?? 0) as num).toDouble(),
       prizePool: PrizePool.fromJson(
-        json['prizePool'],
+        json['prizePool'] ?? json['prize_pool'],
         fallbackFirst: firstPrize,
         fallbackSecond: secondPrize,
         fallbackThird: thirdPrize,
         fallbackFourth: fourthPrize,
         fallbackFifth: fifthPrize,
         fallbackPerKill: perKill,
+        fallbackIsCashPrize: matchType == MatchType.paid || entryFeeType == EntryFeeType.cash,
       ),
       maxSlots: (json['maxSlots'] ?? 48) as int,
       filledSlots: (json['filledSlots'] ?? 0) as int,
