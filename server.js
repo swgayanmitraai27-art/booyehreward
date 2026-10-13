@@ -104,6 +104,17 @@ let db = {
     'LW_10': 1, 'LW_20': 1, 'LW_50': 1, 'LW_100': 1,
     'MEGA_500': 1, 'JACKPOT_1000': 1
   },
+  storeItems: [
+    {
+      id: 'store_gp_100',
+      title: '₹100 Google Play Redeem Code',
+      description: '1000 Reward Coins (Won in Free Matches) = ₹100 Google Play Redeem Code sent to your WhatsApp.',
+      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
+      iconEmoji: '🎟️',
+      rewardCoinsPrice: 1000,
+      rewardValue: '₹100 Redeem Code'
+    }
+  ],
   stats: {
     totalAdsWatched: 0,
     totalMatchesPlayed: 0,
@@ -119,6 +130,40 @@ function loadDB() {
       const data = fs.readFileSync(DB_FILE, 'utf8');
       const parsed = JSON.parse(data);
       db = { ...db, ...parsed };
+      if (!Array.isArray(db.storeItems) || db.storeItems.length === 0) {
+        db.storeItems = [
+          {
+            id: 'store_gp_100',
+            title: '₹100 Google Play Redeem Code',
+            description: '1000 Reward Coins (Won in Free Matches) = ₹100 Google Play Redeem Code sent to your WhatsApp.',
+            imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
+            iconEmoji: '🎟️',
+            rewardCoinsPrice: 1000,
+            rewardValue: '₹100 Redeem Code'
+          }
+        ];
+      } else {
+        db.storeItems = db.storeItems.filter(item =>
+          item.id !== 'store_ff_100' &&
+          item.id !== 'store_ff_210' &&
+          item.id !== 'store_gp_10' &&
+          item.id !== 'store_gp_40' &&
+          !(item.title || '').toLowerCase().includes('diamond')
+        );
+        if (db.storeItems.length === 0) {
+          db.storeItems = [
+            {
+              id: 'store_gp_100',
+              title: '₹100 Google Play Redeem Code',
+              description: '1000 Reward Coins (Won in Free Matches) = ₹100 Google Play Redeem Code sent to your WhatsApp.',
+              imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
+              iconEmoji: '🎟️',
+              rewardCoinsPrice: 1000,
+              rewardValue: '₹100 Redeem Code'
+            }
+          ];
+        }
+      }
       console.log(`[DB] Loaded successfully. Matches: ${db.matches.length}, Users: ${Object.keys(db.users).length}`);
     } else {
       console.log('[DB] No existing db.json found. Seeding initial data...');
@@ -149,7 +194,7 @@ function saveDB() {
 function ensureUserWallet(user) {
   if (!user) return null;
   if (!user.wallet && !user.wallets) {
-    user.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+    user.wallet = { adCoins: 0, referralCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
     user.wallets = user.wallet;
   } else if (!user.wallet) {
     user.wallet = user.wallets;
@@ -157,6 +202,7 @@ function ensureUserWallet(user) {
     user.wallets = user.wallet;
   }
   user.wallet.adCoins = Number(user.wallet.adCoins || user.wallets.adCoins || 0);
+  user.wallet.referralCoins = Number(user.wallet.referralCoins || user.wallets.referralCoins || 0);
   user.wallet.rewardCoins = Number(user.wallet.rewardCoins || user.wallets.rewardCoins || 0);
   user.wallet.depositCash = Number(user.wallet.depositCash || user.wallets.depositCash || 0);
   user.wallet.winningCash = Number(user.wallet.winningCash || user.wallets.winningCash || 0);
@@ -403,10 +449,8 @@ app.get('/api/sync', (req, res) => {
     user = Object.values(db.users || {}).find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
   }
 
-  // Older phone app builds check adCoins before allowing users to click slot confirm.
-  // If user has depositCash, give them at least 50 adCoins so they are never blocked by "Watch Ad" on paid matches.
-  if (user && user.wallet && (user.wallet.depositCash || 0) > 0) {
-    user.wallet.adCoins = Math.max(user.wallet.adCoins || 0, 50);
+  if (user) {
+    ensureUserWallet(user);
   }
   const activeBanners = db.banners.filter(b => b.isActive);
 
@@ -420,6 +464,8 @@ app.get('/api/sync', (req, res) => {
     referrals: db.referrals || [],
     transactions: (db.transactions || []).slice(0, 100),
     allUsers: Object.values(db.users || {}),
+    storeItems: db.storeItems || [],
+    voucherClaims: db.voucherClaims || [],
     user,
     stats: db.stats
   });
@@ -704,14 +750,24 @@ app.post('/api/matches/:id/join', (req, res) => {
   }
 
   const effectiveFee = Number(amountPaid) || Number(match.entryFee) || 0;
+  const isFreeCoinMatch = match.matchType === 'free' || match.entryFeeType === 'adCoins' || paidWith === 'AD_COINS' || paidWith === 'AD_AND_REF_COINS';
   const user = db.users[uid];
   if (user) {
     const wallet = ensureUserWallet(user);
-    if (paidWith === 'AD_COINS') {
-      if ((wallet.adCoins || 0) < effectiveFee) {
-        return res.status(400).json({ success: false, message: 'Insufficient Ad Coins balance!' });
+    if (isFreeCoinMatch) {
+      if (effectiveFee > 0) {
+        const maxRefCap = Math.floor(effectiveFee * 0.50);
+        const usableRef = Math.min(wallet.referralCoins || 0, maxRefCap);
+        const requiredAd = Math.max(0, effectiveFee - usableRef);
+        if ((wallet.adCoins || 0) < requiredAd) {
+          return res.status(400).json({
+            success: false,
+            message: `Free Match Rule: Max 50% (${maxRefCap} Coins) Referral Coins use ho sakte hain! Baaki ${requiredAd} 🟡 Ad Coins ke liye Ads dekhein.`
+          });
+        }
+        wallet.referralCoins = Math.max(0, (wallet.referralCoins || 0) - usableRef);
+        wallet.adCoins = Math.max(0, (wallet.adCoins || 0) - requiredAd);
       }
-      wallet.adCoins = Math.max(0, (wallet.adCoins || 0) - effectiveFee);
     } else {
       const totalCash = (wallet.bonusCash || 0) + (wallet.depositCash || 0) + (wallet.winningCash || 0);
       if (totalCash < effectiveFee) {
@@ -744,7 +800,7 @@ app.post('/api/matches/:id/join', (req, res) => {
     inGameName,
     inGameUid,
     slotNumber,
-    paidWith: paidWith || 'DEPOSIT_CASH',
+    paidWith: paidWith || (isFreeCoinMatch ? 'AD_COINS' : 'DEPOSIT_CASH'),
     amountPaid: effectiveFee,
     joinedAt: new Date().toISOString(),
     kills: 0,
@@ -984,29 +1040,32 @@ app.post('/api/referrals/apply', (req, res) => {
 
   // Find referrer in db.users
   let referrerUser = Object.values(db.users).find(u => (u.referralCode || '').toUpperCase() === code && u.uid !== referredUid);
+  if (!referrerUser) {
+    return res.status(400).json({ success: false, message: 'Invalid Referral Code! Please enter a valid friend code.' });
+  }
 
-  const rewardBonusCash = 10;
-  const rewardAdCoins = 10;
+  const rewardBonusCash = 0;
+  const rewardRefCoins = 5;
 
-  // Credit referred user
-  if (!referredUser.wallet) referredUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
-  referredUser.wallet.bonusCash = (referredUser.wallet.bonusCash || 0) + rewardBonusCash;
-  referredUser.wallet.adCoins = (referredUser.wallet.adCoins || 0) + rewardAdCoins;
+  // Credit referred user (5 Referral Coins, ₹0 Bonus Cash)
+  const referredWallet = ensureUserWallet(referredUser);
+  referredWallet.referralCoins = (referredWallet.referralCoins || 0) + rewardRefCoins;
+  referredUser.wallets = referredWallet;
   referredUser.referredBy = code;
 
-  // Credit referrer if found
+  // Credit referrer (5 Referral Coins, ₹0 Bonus Cash)
   if (referrerUser) {
-    if (!referrerUser.wallet) referrerUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
-    referrerUser.wallet.bonusCash = (referrerUser.wallet.bonusCash || 0) + rewardBonusCash;
-    referrerUser.wallet.adCoins = (referrerUser.wallet.adCoins || 0) + rewardAdCoins;
+    const referrerWallet = ensureUserWallet(referrerUser);
+    referrerWallet.referralCoins = (referrerWallet.referralCoins || 0) + rewardRefCoins;
+    referrerUser.wallets = referrerWallet;
     referrerUser.totalReferrals = (referrerUser.totalReferrals || 0) + 1;
-    referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + 10;
+    referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + rewardRefCoins;
 
     // Referrer notification
     db.notifications.unshift({
       id: `notif_ref_${Date.now()}`,
       title: '👥 New Friend Joined via your Referral!',
-      body: `${referredUser.displayName || 'A friend'} used your code ${code}! ₹10 Bonus Cash + 10 Ad Coins credited to your wallet.`,
+      body: `${referredUser.displayName || 'A friend'} used your code ${code}! 🎁 +5 Referral Coins credited to your wallet (50% usable in Free Matches).`,
       createdAt: new Date().toISOString(),
       type: 'matchResult',
       targetType: 'user',
@@ -1024,7 +1083,7 @@ app.post('/api/referrals/apply', (req, res) => {
     referredName: referredUser.displayName || referredUser.inGameName || 'New Player',
     createdAt: new Date().toISOString(),
     bonusCashAwarded: rewardBonusCash,
-    adCoinsAwarded: rewardAdCoins
+    adCoinsAwarded: rewardRefCoins
   };
 
   if (!db.referrals) db.referrals = [];
@@ -1035,7 +1094,7 @@ app.post('/api/referrals/apply', (req, res) => {
 
   res.json({
     success: true,
-    message: 'Referral code applied! ₹10 Bonus Cash + 10 Ad Coins credited to both wallets.',
+    message: 'Referral code applied! 🎁 +5 Referral Coins credited to both wallets (50% usable in Free Matches).',
     refRecord,
     referredUser,
     referrerUser
@@ -1064,25 +1123,27 @@ app.post('/api/users', (req, res) => {
   if (existing && existing.wallet) {
     const inW = user.wallet || {};
     preservedWallet = {
-      adCoins: Math.max(existing.wallet.adCoins || 0, inW.adCoins || 0),
-      rewardCoins: Math.max(existing.wallet.rewardCoins || 0, inW.rewardCoins || 0),
-      depositCash: Math.max(existing.wallet.depositCash || 0, inW.depositCash || 0),
-      winningCash: Math.max(existing.wallet.winningCash || 0, inW.winningCash || 0),
-      bonusCash: Math.max(existing.wallet.bonusCash || 0, inW.bonusCash || 0),
+      adCoins: inW.adCoins !== undefined ? Number(inW.adCoins) : (existing.wallet.adCoins || 0),
+      referralCoins: inW.referralCoins !== undefined ? Number(inW.referralCoins) : (existing.wallet.referralCoins || 0),
+      rewardCoins: inW.rewardCoins !== undefined ? Number(inW.rewardCoins) : (existing.wallet.rewardCoins || 0),
+      depositCash: inW.depositCash !== undefined ? Number(inW.depositCash) : (existing.wallet.depositCash || 0),
+      winningCash: inW.winningCash !== undefined ? Number(inW.winningCash) : (existing.wallet.winningCash || 0),
+      bonusCash: inW.bonusCash !== undefined ? Number(inW.bonusCash) : (existing.wallet.bonusCash || 0),
     };
   }
 
+  const defaultWallet = { adCoins: 0, referralCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
   const mergedUser = {
     ...existing,
     ...user,
-    wallet: preservedWallet || user.wallet || { adCoins: 5, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 },
-    wallets: preservedWallet || user.wallet || { adCoins: 5, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 },
+    wallet: preservedWallet || user.wallet || defaultWallet,
+    wallets: preservedWallet || user.wallet || defaultWallet,
     lastSeen: new Date().toISOString()
   };
 
   db.users[user.uid] = mergedUser;
 
-  // Automated Referral Attribution for older client builds
+  // Automated Referral Attribution for signup with referral code
   try {
     const rawRefCode = (user.referredBy || '').trim().toUpperCase();
     if (rawRefCode && rawRefCode.length >= 4) {
@@ -1091,17 +1152,17 @@ app.post('/api/users', (req, res) => {
       if (!alreadyCredited) {
         const referrerUser = Object.values(db.users).find(u => (u.referralCode || '').toUpperCase() === rawRefCode && u.uid !== user.uid);
         if (referrerUser) {
-          if (!referrerUser.wallet) referrerUser.wallet = { adCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
-          referrerUser.wallet.bonusCash = (referrerUser.wallet.bonusCash || 0) + 10;
-          referrerUser.wallet.adCoins = (referrerUser.wallet.adCoins || 0) + 10;
+          const referrerWallet = ensureUserWallet(referrerUser);
+          referrerWallet.referralCoins = (referrerWallet.referralCoins || 0) + 5;
+          referrerUser.wallets = referrerWallet;
           referrerUser.totalReferrals = (referrerUser.totalReferrals || 0) + 1;
-          referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + 10;
+          referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + 5;
 
           if (!db.notifications) db.notifications = [];
           db.notifications.unshift({
             id: `notif_ref_${Date.now()}`,
             title: '👥 New Friend Joined via your Referral!',
-            body: `${user.displayName || user.inGameName || 'A friend'} joined using your code ${rawRefCode}! ₹10 Bonus Cash + 10 Ad Coins credited.`,
+            body: `${user.displayName || user.inGameName || 'A friend'} joined using your code ${rawRefCode}! 🎁 +5 Referral Coins credited to your wallet.`,
             createdAt: new Date().toISOString(),
             type: 'matchResult',
             targetType: 'user',
@@ -1116,8 +1177,8 @@ app.post('/api/users', (req, res) => {
             referredUid: user.uid,
             referredName: user.displayName || user.inGameName || 'New Player',
             createdAt: new Date().toISOString(),
-            bonusCashAwarded: 10,
-            adCoinsAwarded: 10
+            bonusCashAwarded: 0,
+            adCoinsAwarded: 5
           };
           db.referrals.unshift(refRecord);
           broadcast('REFERRAL_APPLIED', { refRecord, referrerUser, referredUser: db.users[user.uid] });
@@ -1277,6 +1338,41 @@ app.post('/api/voucher-claims', (req, res) => {
   saveDB();
   broadcast('VOUCHER_CLAIMED', claim);
   res.json({ success: true, claim });
+});
+
+// Store Items management endpoints (Admin Add & Delete)
+app.get('/api/store-items', (req, res) => {
+  res.json({ success: true, storeItems: db.storeItems || [] });
+});
+
+app.post('/api/store-items', (req, res) => {
+  const item = req.body;
+  if (!item || !item.id || !item.title) {
+    return res.status(400).json({ success: false, message: 'Invalid store item' });
+  }
+  if (!db.storeItems) db.storeItems = [];
+  const idx = db.storeItems.findIndex(s => s.id === item.id);
+  if (idx !== -1) {
+    db.storeItems[idx] = { ...db.storeItems[idx], ...item };
+  } else {
+    db.storeItems.push(item);
+  }
+  saveDB();
+  broadcast('STORE_UPDATED', db.storeItems);
+  res.json({ success: true, storeItem: item, storeItems: db.storeItems });
+});
+
+app.delete('/api/store-items/:id', (req, res) => {
+  const { id } = req.params;
+  if (!db.storeItems) db.storeItems = [];
+  const beforeLen = db.storeItems.length;
+  db.storeItems = db.storeItems.filter(s => s.id !== id);
+  if (db.storeItems.length === beforeLen) {
+    return res.status(404).json({ success: false, message: 'Store item not found' });
+  }
+  saveDB();
+  broadcast('STORE_UPDATED', db.storeItems);
+  res.json({ success: true, deletedId: id, storeItems: db.storeItems });
 });
 
 // 12. Withdrawals

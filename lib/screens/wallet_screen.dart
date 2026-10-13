@@ -113,7 +113,7 @@ class _WalletScreenState extends State<WalletScreen> {
                       children: [
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFFDF5),
                               borderRadius: BorderRadius.circular(12),
@@ -124,26 +124,56 @@ class _WalletScreenState extends State<WalletScreen> {
                               children: [
                                 const Text(
                                   '🟡 AD COINS',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${wallet.adCoins}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
                                 ),
                                 const Text(
-                                  'Entry for Free Matches',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, color: Color(0xFF94A3B8)),
+                                  'From Watching Ads',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, color: Color(0xFF94A3B8)),
                                 ),
                               ],
                             ),
                           ),
                         ),
-                        const SizedBox(width: 10),
+                        const SizedBox(width: 8),
 
                         Expanded(
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF5F3FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFDDD6FE)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  '🎁 REF COINS',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF6D28D9)),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${wallet.referralCoins}',
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF5B21B6)),
+                                ),
+                                const Text(
+                                  'Max 50% Free Match',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, color: Color(0xFF8B5CF6)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        Expanded(
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               color: const Color(0xFFFFFDF5),
                               borderRadius: BorderRadius.circular(12),
@@ -154,16 +184,16 @@ class _WalletScreenState extends State<WalletScreen> {
                               children: [
                                 const Text(
                                   '🎟️ REWARD COINS',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${wallet.rewardCoins}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
                                 ),
                                 const Text(
-                                  'Free Match Winnings',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, color: Color(0xFF94A3B8)),
+                                  'Match Winnings',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, color: Color(0xFF94A3B8)),
                                 ),
                               ],
                             ),
@@ -184,9 +214,9 @@ class _WalletScreenState extends State<WalletScreen> {
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: widget.onGoToStore,
-                        icon: const Text('🎁', style: TextStyle(fontSize: 14)),
+                        icon: const Text('🎟️', style: TextStyle(fontSize: 14)),
                         label: const Text(
-                          'REDEEM GOOGLE PLAY & DIAMOND CODES',
+                          'REDEEM ₹100 GOOGLE PLAY CODE (MIN 1000 COINS)',
                           style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900),
                         ),
                       ),

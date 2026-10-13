@@ -151,11 +151,14 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     final bool isPaidMatch = match.isCashMatch;
     final double userCash = widget.appState.user.wallet.depositCash;
     final int userCoins = widget.appState.user.wallet.adCoins;
+    final int userRefCoins = widget.appState.user.wallet.referralCoins;
     final double fee = match.entryFee;
     final int feeCoins = fee.toInt();
+    final int usableRefCoins = isPaidMatch ? 0 : widget.appState.user.wallet.maxUsableReferralCoins(feeCoins);
+    final int requiredAdCoins = isPaidMatch ? 0 : widget.appState.user.wallet.requiredAdCoinsForFreeMatch(feeCoins);
     final bool hasEnoughBalance = isPaidMatch
         ? (fee <= 0 || userCash >= fee)
-        : (feeCoins == 0 || userCoins >= feeCoins);
+        : widget.appState.user.wallet.canAffordFreeMatch(feeCoins);
     final int adsWatchedSinceCoin = widget.appState.user.adTracker.adsWatchedSinceLastCoin;
 
     return Dialog(
@@ -290,7 +293,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                     ),
                     const SizedBox(height: 12),
 
-                    // User Balance Bar (Real Cash for Paid Matches, Ad Coins for Free Matches)
+                    // User Balance Bar (Real Cash for Paid Matches, Ad Coins + 50% Referral Coins for Free Matches)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       decoration: BoxDecoration(
@@ -300,52 +303,73 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                           color: hasEnoughBalance ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                isPaidMatch ? '💵 Deposit Cash:' : '🟡 Your Ad Coins:',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: hasEnoughBalance ? const Color(0xFF065F46) : (isPaidMatch ? Colors.red.shade900 : const Color(0xFF92400E)),
+                              Expanded(
+                                child: Wrap(
+                                  spacing: 8,
+                                  runSpacing: 4,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      isPaidMatch ? '💵 Deposit Cash: ₹${userCash.toStringAsFixed(1)}' : '🟡 Ad Coins: $userCoins',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w900,
+                                        color: hasEnoughBalance ? const Color(0xFF047857) : (isPaidMatch ? Colors.red.shade700 : const Color(0xFFB45309)),
+                                      ),
+                                    ),
+                                    if (!isPaidMatch)
+                                      Text(
+                                        '• 🎁 Referral Coins: $userRefCoins',
+                                        style: const TextStyle(
+                                          fontSize: 11.5,
+                                          fontWeight: FontWeight.w800,
+                                          color: Color(0xFF6D28D9),
+                                        ),
+                                      ),
+                                  ],
                                 ),
                               ),
-                              const SizedBox(width: 6),
-                              Text(
-                                isPaidMatch ? '₹${userCash.toStringAsFixed(1)}' : '$userCoins 🟡',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  color: hasEnoughBalance ? const Color(0xFF047857) : (isPaidMatch ? Colors.red.shade700 : const Color(0xFFB45309)),
+                              if (!hasEnoughBalance)
+                                InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).pop();
+                                    if (isPaidMatch) {
+                                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => DepositScreen(appState: widget.appState)));
+                                    } else {
+                                      widget.onEarnCoinsClick();
+                                    }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                    decoration: BoxDecoration(
+                                      color: isPaidMatch ? const Color(0xFF1D4ED8) : Colors.amber.shade900,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Text(
+                                      isPaidMatch ? '➕ RECHARGE' : 'EARN COINS',
+                                      style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Colors.white),
+                                    ),
+                                  ),
                                 ),
-                              ),
                             ],
                           ),
-                          if (!hasEnoughBalance)
-                            InkWell(
-                              onTap: () {
-                                Navigator.of(context).pop();
-                                if (isPaidMatch) {
-                                  Navigator.of(context).push(MaterialPageRoute(builder: (_) => DepositScreen(appState: widget.appState)));
-                                } else {
-                                  widget.onEarnCoinsClick();
-                                }
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: isPaidMatch ? const Color(0xFF1D4ED8) : Colors.amber.shade900,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  isPaidMatch ? '➕ RECHARGE' : 'EARN COINS',
-                                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Colors.white),
-                                ),
+                          if (!isPaidMatch && feeCoins > 0) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              '⚡ Free Match Rule: Max 50% Referral Coins usable ($usableRefCoins/$feeCoins) + Need $requiredAdCoins 🟡 Ad Coins (Have: $userCoins 🟡)',
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: hasEnoughBalance ? const Color(0xFF065F46) : Colors.red.shade800,
                               ),
                             ),
+                          ],
                         ],
                       ),
                     ),

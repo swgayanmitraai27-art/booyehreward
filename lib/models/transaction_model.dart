@@ -16,9 +16,10 @@ enum TransactionType {
 }
 
 enum WalletType {
-  adCoins,       // 🟡 Free entry
+  adCoins,       // 🟡 Free entry (earned by watching ads)
+  referralCoins, // 🎁 Referral Coins (5 per referral, max 50% usable in Free Matches)
   rewardCoins,   // 🎟️ Free match winnings (Redeem only)
-  bonusCash,     // 🎁 10% Extra Cashback / Referral Bonus (Non-withdrawable, used first)
+  bonusCash,     // 🎁 10% Extra Cashback (Non-withdrawable, used first)
   depositCash,   // 💵 Real money deposit (Non-withdrawable, match entry only)
   winningCash,   // 🏆 Real money winnings (100% UPI withdrawable)
 }

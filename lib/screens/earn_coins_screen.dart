@@ -405,7 +405,7 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
             // 🎁 REFER & EARN BONUS CARD
             ReferAndEarnCard(appState: widget.appState),
           ] else ...[
-            // Tab 2: Rewards Store (Exchange Winning Coins for Play Codes & Diamonds)
+            // Tab 2: Rewards Store (Exchange Winning/Reward Coins for Google Play Redeem Codes)
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -413,33 +413,60 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: const Color(0xFFBFDBFE)),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'YOUR REWARD COINS BALANCE',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E40AF)),
-                      ),
-                      const SizedBox(height: 2),
-                      Row(
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('🎟️', style: TextStyle(fontSize: 16)),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${user.wallet.rewardCoins} Coins',
-                            style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFF1E3A8A)),
+                          const Text(
+                            'YOUR REWARD COINS BALANCE',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF1E40AF)),
+                          ),
+                          const SizedBox(height: 2),
+                          Row(
+                            children: [
+                              const Text('🎟️', style: TextStyle(fontSize: 16)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${user.wallet.rewardCoins} Reward Coins',
+                                style: AppTheme.gamingNumber(fontSize: 20, color: const Color(0xFF1E3A8A)),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                      const Text(
+                        'Won in Free Matches\nRedeem for Play Codes',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(fontSize: 10, color: Color(0xFF3B82F6), fontWeight: FontWeight.bold),
+                      ),
                     ],
                   ),
-                  const Text(
-                    'Won in Free Matches\nRedeem for Codes & 💎',
-                    textAlign: TextAlign.right,
-                    style: TextStyle(fontSize: 10, color: Color(0xFF3B82F6), fontWeight: FontWeight.bold),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFFCD34D)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.verified_rounded, color: Color(0xFFB45309), size: 16),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Minimum Redeem: 1000 🎟️ Reward Coins = ₹100 Google Play Redeem Code',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -447,86 +474,103 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
             const SizedBox(height: 16),
 
             // Store Catalog Grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: widget.appState.storeItems.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 0.85,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemBuilder: (context, index) {
-                final item = widget.appState.storeItems[index];
-                final canRedeem = user.wallet.rewardCoins >= item.rewardCoinsPrice;
+            if (widget.appState.storeItems.isEmpty)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: const Center(
+                  child: Text(
+                    'No Redeem Codes available right now. Check back soon!',
+                    style: TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                  ),
+                ),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: widget.appState.storeItems.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.85,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemBuilder: (context, index) {
+                  final item = widget.appState.storeItems[index];
+                  final canRedeem = user.wallet.rewardCoins >= 1000 && user.wallet.rewardCoins >= item.rewardCoinsPrice;
 
-                return Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        children: [
-                          Text(item.iconEmoji, style: const TextStyle(fontSize: 32)),
-                          const SizedBox(height: 6),
-                          Text(
-                            item.title,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
-                            maxLines: 2,
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            item.description,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B)),
-                            maxLines: 2,
-                          ),
-                        ],
-                      ),
-                      Column(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(8),
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Column(
+                          children: [
+                            Text(item.iconEmoji, style: const TextStyle(fontSize: 32)),
+                            const SizedBox(height: 6),
+                            Text(
+                              item.title,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
+                              maxLines: 2,
                             ),
-                            child: Text(
-                              '${item.rewardCoinsPrice} 🎟️ Coins',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                            const SizedBox(height: 4),
+                            Text(
+                              item.description,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 9.5, color: Color(0xFF64748B)),
+                              maxLines: 2,
                             ),
-                          ),
-                          const SizedBox(height: 6),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: canRedeem ? const Color(0xFF0F172A) : Colors.grey.shade300,
-                                foregroundColor: canRedeem ? Colors.white : Colors.grey.shade600,
-                                padding: const EdgeInsets.symmetric(vertical: 6),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          ],
+                        ),
+                        Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              onPressed: canRedeem ? () => _showRedeemDialog(item) : null,
                               child: Text(
-                                canRedeem ? 'REDEEM' : 'NEED COINS',
-                                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                '${item.rewardCoinsPrice} 🎟️ Coins',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                            const SizedBox(height: 6),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: canRedeem ? const Color(0xFF0F172A) : Colors.grey.shade300,
+                                  foregroundColor: canRedeem ? Colors.white : Colors.grey.shade600,
+                                  padding: const EdgeInsets.symmetric(vertical: 6),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                onPressed: canRedeem ? () => _showRedeemDialog(item) : null,
+                                child: Text(
+                                  canRedeem ? 'REDEEM CODE' : 'MIN ${item.rewardCoinsPrice} COINS',
+                                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
           ],
         ],
       ),

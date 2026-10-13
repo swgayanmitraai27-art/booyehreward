@@ -37,19 +37,20 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
   void _shareOnWhatsApp(String code) {
     final shareText = Uri.encodeComponent(
       '🔥 Play Free Fire Tournaments & Win Real Cash on Booyah Rewards!\n\n'
-      '🎁 Use my Referral Code *${code.toUpperCase()}* and BOTH of us will get 10 Bonus Coins instantly!\n\n'
-      '👉 Join Now: https://booyehreward.vercel.app',
+      '🎁 Use my Referral Code *${code.toUpperCase()}* and BOTH of us will get 5 Referral Coins instantly!\n\n'
+      '📲 Download App from Google Play Store:\nhttps://play.google.com/store/apps/details?id=com.swgayanbhumi.app',
     );
     UrlLauncherUtil.openUrl('https://wa.me/?text=$shareText');
   }
 
   void _shareOnTelegram(String code) {
+    const playUrl = 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app';
     final shareText = Uri.encodeComponent(
       '🔥 Play Free Fire Tournaments & Win Real Cash on Booyah Rewards!\n\n'
-      '🎁 Use my Referral Code *${code.toUpperCase()}* and BOTH of us will get 10 Bonus Coins instantly!\n\n'
-      '👉 Join Now: https://booyehreward.vercel.app',
+      '🎁 Use my Referral Code *${code.toUpperCase()}* and BOTH of us will get 5 Referral Coins instantly!\n\n'
+      '📲 Download on Play Store: $playUrl',
     );
-    UrlLauncherUtil.openUrl('https://t.me/share/url?url=https://booyehreward.vercel.app&text=$shareText');
+    UrlLauncherUtil.openUrl('https://t.me/share/url?url=${Uri.encodeComponent(playUrl)}&text=$shareText');
   }
 
   Future<void> _handleApplyCode() async {
@@ -122,7 +123,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                     Text('🎁', style: TextStyle(fontSize: 12)),
                     SizedBox(width: 5),
                     Text(
-                      'REFER & EARN BONUS',
+                      'REFER & EARN COINS',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 10,
@@ -141,7 +142,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: const Text(
-                  '10 Coins Each',
+                  '5 Referral Coins Each',
                   style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF34D399)),
                 ),
               ),
@@ -151,7 +152,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
 
           // Title & Description
           const Text(
-            'Invite Friends & Both Get 10 Coins!',
+            'Invite Friends & Both Get 5 Referral Coins!',
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 16,
@@ -161,7 +162,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
           ),
           const SizedBox(height: 3),
           const Text(
-            'Share your code with friends. When they join, both of you receive 10 Bonus Cash + 10 Ad Coins for match entry.',
+            'Share your code with friends. Both get +5 Referral Coins! (Up to 50% Referral Coins usable in Free Matches + 50% Ad Coins from watching ads).',
             style: TextStyle(fontSize: 11.5, color: Color(0xFF94A3B8), height: 1.3),
           ),
           const SizedBox(height: 14),
@@ -278,10 +279,10 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                 Column(
                   children: [
                     Text(
-                      '${user.totalReferralCoins}',
+                      '${user.wallet.referralCoins}',
                       style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w900, color: Colors.amber),
                     ),
-                    const Text('Coins Earned', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
+                    const Text('Referral Coins (50% Usable)', style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
                   ],
                 ),
               ],
@@ -317,7 +318,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                       SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'No friends joined yet. Share your 6-digit code on WhatsApp to earn 10 coins for each friend!',
+                          'No friends joined yet. Share your code on WhatsApp to earn 5 Referral Coins for each friend!',
                           style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
                         ),
                       ),
@@ -370,9 +371,9 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                             borderRadius: BorderRadius.circular(6),
                             border: Border.all(color: const Color(0xFF34D399).withAlpha(80)),
                           ),
-                          child: const Text(
-                            '+10 Coins ✓',
-                            style: TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.w900, fontSize: 9.5),
+                          child: Text(
+                            '+${rec.adCoinsAwarded} Ref Coins ✓',
+                            style: const TextStyle(color: Color(0xFF34D399), fontWeight: FontWeight.w900, fontSize: 9.5),
                           ),
                         ),
                       ],
@@ -401,7 +402,7 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                   const Icon(Icons.check_circle, color: Color(0xFF34D399), size: 16),
                   const SizedBox(width: 8),
                   Text(
-                    'Referred by: ${user.referredBy} (10 Bonus Coins Claimed)',
+                    'Referred by: ${user.referredBy} (+5 Referral Coins Claimed)',
                     style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white),
                   ),
                 ],

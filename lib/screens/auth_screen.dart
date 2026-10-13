@@ -190,16 +190,17 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
 
         // Apply referral code if provided
         final refCode = _referralCodeController.text.trim();
+        Map<String, dynamic>? refRes;
         if (refCode.isNotEmpty) {
-          await widget.appState.applyReferralCode(refCode);
+          refRes = await widget.appState.applyReferralCode(refCode);
         }
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(refCode.isNotEmpty
-                ? '🎉 Account Created! 5 🟡 Signup + 10 🎁 Referral Bonus Coins Credited!'
-                : '🎉 Account Created! Welcome bonus 5 🟡 Ad Coins credited!'),
+            content: Text(refRes?['success'] == true
+                ? '🎉 Account Created! +5 🎁 Referral Coins Credited (50% usable in Free Matches)!'
+                : '🎉 Account Created! Watch Ads to earn 🟡 Ad Coins & join Free Matches!'),
             backgroundColor: AppTheme.winningGreen,
           ),
         );
@@ -553,6 +554,14 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             icon: Icons.shield_outlined,
             keyboardType: TextInputType.number,
           ),
+          const SizedBox(height: 10),
+
+          _buildInputField(
+            controller: _referralCodeController,
+            label: 'Referral Code (Optional - Both Get +5 Referral Coins)',
+            hint: 'Enter Friend\'s Referral Code',
+            icon: Icons.card_giftcard_outlined,
+          ),
           const SizedBox(height: 18),
 
           ElevatedButton(
@@ -566,7 +575,7 @@ class _AuthScreenState extends State<AuthScreen> with SingleTickerProviderStateM
             ),
             child: _isSignupLoading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                : Text('CREATE FREE ACCOUNT (+5 🟡 COINS)', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white)),
+                : Text('CREATE FREE ACCOUNT', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white)),
           ),
         ],
       ),

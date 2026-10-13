@@ -86,52 +86,16 @@ class AppState extends ChangeNotifier {
   bool isLoadingAuth = true;
   int globalTotalAdsWatched = 0;
 
-  // Rewards Store with exact rates (10 Reward Coins = ₹1 Value, Min ₹10 Play Code = 100 Coins)
+  // Rewards Store: Minimum 1000 Reward Coins = ₹100 Google Play Redeem Code (Diamonds removed; Admin can add/delete items)
   List<StoreItem> storeItems = [
     StoreItem(
-      id: 'store_gp_10',
-      title: '₹10 Google Play Redeem Code',
-      description: 'Instant Google Play code sent to your WhatsApp.',
-      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '🎟️',
-      rewardCoinsPrice: 100, // 100 Winning Coins = ₹10 Play Code
-      rewardValue: '₹10 Play Code',
-    ),
-    StoreItem(
-      id: 'store_gp_40',
-      title: '₹40 Google Play Redeem Code',
-      description: 'Use for Free Fire Special Airdrop or Crates.',
-      imageUrl: 'https://images.unsplash.com/photo-1612287233202-b2a637c3579e?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '🎟️',
-      rewardCoinsPrice: 400, // 400 Winning Coins = ₹40 Play Code
-      rewardValue: '₹40 Play Code',
-    ),
-    StoreItem(
-      id: 'store_ff_100',
-      title: '100 Free Fire Diamonds 💎',
-      description: 'Direct diamond top-up to your Free Fire Player UID.',
-      imageUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '💎',
-      rewardCoinsPrice: 400, // 400 Winning Coins = 100 Free Fire Diamonds
-      rewardValue: '100 Diamonds',
-    ),
-    StoreItem(
       id: 'store_gp_100',
-      title: '₹100 Google Play Code',
-      description: 'Purchase Free Fire Booyah Pass or Character bundles.',
+      title: '₹100 Google Play Redeem Code',
+      description: '1000 Reward Coins (Won in Free Matches) = ₹100 Google Play Redeem Code sent to your WhatsApp.',
       imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
       iconEmoji: '🎟️',
-      rewardCoinsPrice: 1000,
-      rewardValue: '₹100 Play Code',
-    ),
-    StoreItem(
-      id: 'store_ff_210',
-      title: '210 Free Fire Diamonds 💎',
-      description: 'Diamond top-up with bonus event eligibility.',
-      imageUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '💎',
-      rewardCoinsPrice: 800,
-      rewardValue: '210 Diamonds',
+      rewardCoinsPrice: 1000, // 1000 Winning/Reward Coins = ₹100 Play Code
+      rewardValue: '₹100 Redeem Code',
     ),
   ];
 
@@ -537,16 +501,21 @@ class AppState extends ChangeNotifier {
         walletUsed = 'DEPOSIT_CASH';
       } else {
         final reqCoins = fee.toInt();
-        if (user.wallet.adCoins < reqCoins) {
+        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
+        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
+
+        if (user.wallet.adCoins < adCoinsNeeded) {
+          final maxHalf = (reqCoins * 0.50).floor();
           return {
             'success': false,
-            'message': 'Insufficient Ad Coins! You need $reqCoins 🟡 Ad Coins to join.'
+            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
           };
         }
-        balBefore = user.wallet.adCoins.toDouble();
-        user.wallet.adCoins -= reqCoins;
-        balAfter = user.wallet.adCoins.toDouble();
-        walletUsed = 'AD_COINS';
+        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        user.wallet.referralCoins -= refCoinsToUse;
+        user.wallet.adCoins -= adCoinsNeeded;
+        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
       }
     } else {
       balBefore = user.wallet.adCoins.toDouble();
@@ -644,16 +613,21 @@ class AppState extends ChangeNotifier {
         walletUsed = 'DEPOSIT_CASH';
       } else {
         final reqCoins = fee.toInt();
-        if (user.wallet.adCoins < reqCoins) {
+        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
+        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
+
+        if (user.wallet.adCoins < adCoinsNeeded) {
+          final maxHalf = (reqCoins * 0.50).floor();
           return {
             'success': false,
-            'message': 'Insufficient Ad Coins! You need $reqCoins 🟡 Ad Coins to create a team.'
+            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
           };
         }
-        balBefore = user.wallet.adCoins.toDouble();
-        user.wallet.adCoins -= reqCoins;
-        balAfter = user.wallet.adCoins.toDouble();
-        walletUsed = 'AD_COINS';
+        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        user.wallet.referralCoins -= refCoinsToUse;
+        user.wallet.adCoins -= adCoinsNeeded;
+        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
       }
     } else {
       balBefore = user.wallet.adCoins.toDouble();
@@ -790,16 +764,21 @@ class AppState extends ChangeNotifier {
         walletUsed = 'DEPOSIT_CASH';
       } else {
         final reqCoins = fee.toInt();
-        if (user.wallet.adCoins < reqCoins) {
+        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
+        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
+
+        if (user.wallet.adCoins < adCoinsNeeded) {
+          final maxHalf = (reqCoins * 0.50).floor();
           return {
             'success': false,
-            'message': 'Insufficient Ad Coins! You need $reqCoins 🟡 Ad Coins.'
+            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
           };
         }
-        balBefore = user.wallet.adCoins.toDouble();
-        user.wallet.adCoins -= reqCoins;
-        balAfter = user.wallet.adCoins.toDouble();
-        walletUsed = 'AD_COINS';
+        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        user.wallet.referralCoins -= refCoinsToUse;
+        user.wallet.adCoins -= adCoinsNeeded;
+        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
+        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
       }
     } else {
       balBefore = user.wallet.adCoins.toDouble();
@@ -873,23 +852,23 @@ class AppState extends ChangeNotifier {
     };
   }
 
-  // --- REDEEM REWARD COINS FOR VOUCHERS / DIAMONDS WITH WHATSAPP NUMBER ---
+  // --- REDEEM REWARD COINS FOR REDEEM CODES WITH WHATSAPP NUMBER ---
   Map<String, dynamic> redeemStoreItem({
     required StoreItem item,
     required String whatsappNumber,
     required String inGameUid,
   }) {
-    if (user.wallet.rewardCoins < item.rewardCoinsPrice) {
+    if (user.wallet.rewardCoins < 1000 || user.wallet.rewardCoins < item.rewardCoinsPrice) {
       return {
         'success': false,
-        'message': 'Insufficient Winning Coins! You have ${user.wallet.rewardCoins} 🎟️ coins, need ${item.rewardCoinsPrice} coins.'
+        'message': 'Minimum 1000 🎟️ Reward Coins required for redemption! You have ${user.wallet.rewardCoins} 🎟️ Reward Coins, need ${item.rewardCoinsPrice} coins.'
       };
     }
 
     if (whatsappNumber.trim().length < 8) {
       return {
         'success': false,
-        'message': 'Please enter a valid WhatsApp Number so Admin can deliver your code.'
+        'message': 'Please enter a valid WhatsApp Number so Admin can deliver your Redeem Code.'
       };
     }
 
@@ -911,6 +890,7 @@ class AppState extends ChangeNotifier {
     );
 
     voucherClaims.insert(0, claim);
+    allGlobalVoucherClaims.insert(0, claim);
 
     transactions.insert(
       0,
@@ -937,30 +917,55 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     return {
       'success': true,
-      'message': '2 hours ke andar Admin aapse WhatsApp par connect karenge aur aapka code/diamonds deliver karenge.',
+      'message': '2 hours ke andar Admin aapse WhatsApp par connect karenge aur aapka Redeem Code deliver karenge.',
     };
   }
 
-  // --- ADMIN: ADD NEW ITEM TO REWARDS STORE ---
-  void adminAddStoreItem({
+  // --- ADMIN: ADD NEW ITEM TO REWARDS STORE (SYNCED WITH VPS) ---
+  Future<void> adminAddStoreItem({
     required String title,
     required String description,
     required String imageUrl,
     required int coinPrice,
     required String rewardValue,
-  }) {
+    String iconEmoji = '🎟️',
+  }) async {
     final newItem = StoreItem(
       id: 'store_${DateTime.now().millisecondsSinceEpoch}',
       title: title,
       description: description,
       imageUrl: imageUrl.isNotEmpty ? imageUrl : 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: title.toLowerCase().contains('diamond') ? '💎' : '🎟️',
+      iconEmoji: iconEmoji.isNotEmpty ? iconEmoji : '🎟️',
       rewardCoinsPrice: coinPrice,
       rewardValue: rewardValue,
     );
 
     storeItems.insert(0, newItem);
     notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse("$vpsApiUrl/store-items"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(newItem.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('[AppState] Add store item sync error: $e');
+    }
+  }
+
+  // --- ADMIN: DELETE ITEM FROM REWARDS STORE (SYNCED WITH VPS) ---
+  Future<void> adminDeleteStoreItem(String itemId) async {
+    storeItems.removeWhere((item) => item.id == itemId);
+    notifyListeners();
+
+    try {
+      await http.delete(
+        Uri.parse("$vpsApiUrl/store-items/$itemId"),
+      ).timeout(const Duration(seconds: 4));
+    } catch (e) {
+      debugPrint('[AppState] Delete store item sync error: $e');
+    }
   }
 
   // --- UNLOCK ROOM ID & PASSWORD VIA VIDEO AD GATE ---
@@ -2121,7 +2126,7 @@ class AppState extends ChangeNotifier {
     return rankedList;
   }
 
-  /// Apply referral code: credits 10 Bonus Cash + 10 Ad Coins to BOTH users
+  /// Apply referral code: credits 5 Referral Coins (0 Bonus Cash) to BOTH users (50% usable in Free Matches)
   Future<Map<String, dynamic>> applyReferralCode(String rawCode) async {
     final code = rawCode.trim().toUpperCase();
     if (code.isEmpty) {
@@ -2158,8 +2163,7 @@ class AppState extends ChangeNotifier {
             user = UserModel.fromJson(Map<String, dynamic>.from(data['referredUser']));
             await AuthService.saveUser(user);
           } else {
-            user.wallet.bonusCash += 10.0;
-            user.wallet.adCoins += 10;
+            user.wallet.referralCoins += 5;
             user.referredBy = code;
             _syncUser();
           }
@@ -2178,7 +2182,7 @@ class AppState extends ChangeNotifier {
           notifyListeners();
           return {
             'success': true,
-            'message': '🎁 Referral Code Applied! 10 Bonus Cash + 10 Ad Coins credited to both wallets!'
+            'message': '🎁 Referral Code Applied! +5 Referral Coins credited to both wallets! (50% usable in Free Matches)'
           };
         } else {
           return {
@@ -2220,31 +2224,29 @@ class AppState extends ChangeNotifier {
       }
     } catch (_) {}
 
-    // Fallback: Check standard 6-digit numeric or standard format
-    if (referrer == null && (code.length < 5)) {
+    if (referrer == null) {
       return {'success': false, 'message': 'Invalid referral code. Please verify and try again.'};
     }
 
-    // Reward: 10 Bonus Cash & 10 Ad Coins to BOTH users
-    const rewardBonusCash = 10.0;
-    const rewardAdCoins = 10;
+    // Reward: 5 Referral Coins & 0 Bonus Cash to BOTH users
+    const rewardBonusCash = 0.0;
+    const rewardRefCoins = 5;
 
-    user.wallet.bonusCash += rewardBonusCash;
-    user.wallet.adCoins += rewardAdCoins;
+    user.wallet.referralCoins += rewardRefCoins;
     user.referredBy = code;
     _syncUser();
 
     // Create persistent ReferralRecord
     final refRecord = ReferralRecord(
       id: 'ref_${DateTime.now().millisecondsSinceEpoch}',
-      referrerUid: referrer?.uid ?? 'referrer_$code',
-      referrerName: referrer?.displayName ?? (referrer?.inGameName ?? 'Inviter ($code)'),
+      referrerUid: referrer.uid,
+      referrerName: referrer.displayName.isNotEmpty ? referrer.displayName : (referrer.inGameName ?? 'Inviter ($code)'),
       referrerCode: code,
       referredUid: user.uid,
       referredName: user.displayName.isNotEmpty ? user.displayName : (user.inGameName ?? 'New Player'),
       createdAt: DateTime.now(),
       bonusCashAwarded: rewardBonusCash,
-      adCoinsAwarded: rewardAdCoins,
+      adCoinsAwarded: rewardRefCoins,
     );
     allGlobalReferralRecords.insert(0, refRecord);
     referralRecords.insert(0, refRecord);
@@ -2256,13 +2258,13 @@ class AppState extends ChangeNotifier {
       userId: user.uid,
       userName: user.displayName,
       type: TransactionType.referralReward,
-      walletAffected: WalletType.bonusCash,
-      amount: rewardBonusCash,
-      currency: 'INR',
-      balanceBefore: user.wallet.bonusCash - rewardBonusCash,
-      balanceAfter: user.wallet.bonusCash,
+      walletAffected: WalletType.referralCoins,
+      amount: rewardRefCoins.toDouble(),
+      currency: 'COINS',
+      balanceBefore: (user.wallet.referralCoins - rewardRefCoins).toDouble(),
+      balanceAfter: user.wallet.referralCoins.toDouble(),
       status: 'SUCCESS',
-      description: '🎁 Referral Welcome Bonus (Code: $code) - ₹10 Bonus + 10 Ad Coins',
+      description: '🎁 Referral Welcome Bonus (Code: $code) - +5 Referral Coins (50% usable in Free Matches)',
       createdAt: DateTime.now(),
     );
     transactions.insert(0, userTxn);
@@ -2272,8 +2274,8 @@ class AppState extends ChangeNotifier {
     // Notification for current user
     final userNotif = AppNotification(
       id: 'notif_ref_user_${DateTime.now().millisecondsSinceEpoch}',
-      title: '🎁 10 Bonus Coins Credited!',
-      body: 'Welcome! You received 10 Bonus Cash + 10 Ad Coins for applying referral code $code.',
+      title: '🎁 +5 Referral Coins Credited!',
+      body: 'Welcome! You received 5 Referral Coins for applying referral code $code. (Max 50% usable in Free Matches + 50% Ad Coins).',
       createdAt: DateTime.now(),
       type: NotificationType.matchResult,
       targetType: 'user',
@@ -2282,57 +2284,54 @@ class AppState extends ChangeNotifier {
     notifications.insert(0, userNotif);
     allGlobalNotifications.insert(0, userNotif);
 
-    // Credit referrer if located
-    if (referrer != null) {
-      referrer.wallet.bonusCash += rewardBonusCash;
-      referrer.wallet.adCoins += rewardAdCoins;
-      referrer.totalReferrals += 1;
-      referrer.totalReferralCoins += 10;
+    // Credit referrer
+    referrer.wallet.referralCoins += rewardRefCoins;
+    referrer.totalReferrals += 1;
+    referrer.totalReferralCoins += rewardRefCoins;
 
-      try {
-        await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, referrer.uid, referrer.toJson());
-        await http.post(
-          Uri.parse("$vpsApiUrl/users"),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(referrer.toJson()),
-        ).timeout(const Duration(seconds: 4));
-      } catch (_) {}
+    try {
+      await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, referrer.uid, referrer.toJson());
+      await http.post(
+        Uri.parse("$vpsApiUrl/users"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(referrer.toJson()),
+      ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
 
-      final refTxn = TransactionModel(
-        id: 'txn_ref_bonus_${referrer.uid}_${DateTime.now().millisecondsSinceEpoch}',
-        userId: referrer.uid,
-        userName: referrer.displayName,
-        type: TransactionType.referralReward,
-        walletAffected: WalletType.bonusCash,
-        amount: rewardBonusCash,
-        currency: 'INR',
-        balanceBefore: referrer.wallet.bonusCash - rewardBonusCash,
-        balanceAfter: referrer.wallet.bonusCash,
-        status: 'SUCCESS',
-        description: '👥 Referral Reward from ${user.displayName} - ₹10 Bonus + 10 Ad Coins',
-        createdAt: DateTime.now(),
-      );
-      allGlobalTransactions.insert(0, refTxn);
-      _syncTransaction(refTxn);
+    final refTxn = TransactionModel(
+      id: 'txn_ref_bonus_${referrer.uid}_${DateTime.now().millisecondsSinceEpoch}',
+      userId: referrer.uid,
+      userName: referrer.displayName,
+      type: TransactionType.referralReward,
+      walletAffected: WalletType.referralCoins,
+      amount: rewardRefCoins.toDouble(),
+      currency: 'COINS',
+      balanceBefore: (referrer.wallet.referralCoins - rewardRefCoins).toDouble(),
+      balanceAfter: referrer.wallet.referralCoins.toDouble(),
+      status: 'SUCCESS',
+      description: '👥 Referral Reward from ${user.displayName} - +5 Referral Coins (50% usable in Free Matches)',
+      createdAt: DateTime.now(),
+    );
+    allGlobalTransactions.insert(0, refTxn);
+    _syncTransaction(refTxn);
 
-      final refNotif = AppNotification(
-        id: 'notif_ref_referrer_${DateTime.now().millisecondsSinceEpoch}',
-        title: '👥 New Friend Joined via Your Referral!',
-        body: '${user.displayName} joined using your referral code. ₹10 Bonus Cash + 10 Ad Coins credited to your wallet!',
-        createdAt: DateTime.now(),
-        type: NotificationType.matchResult,
-        targetType: 'user',
-        targetId: referrer.uid,
-      );
-      allGlobalNotifications.insert(0, refNotif);
-    }
+    final refNotif = AppNotification(
+      id: 'notif_ref_referrer_${DateTime.now().millisecondsSinceEpoch}',
+      title: '👥 New Friend Joined via Your Referral!',
+      body: '${user.displayName} joined using your referral code. +5 Referral Coins credited to your wallet!',
+      createdAt: DateTime.now(),
+      type: NotificationType.matchResult,
+      targetType: 'user',
+      targetId: referrer.uid,
+    );
+    allGlobalNotifications.insert(0, refNotif);
 
     notifyListeners();
     return {
       'success': true,
-      'message': 'Success! 10 Bonus Coins & 10 Ad Coins credited to your wallet.',
+      'message': 'Success! +5 Referral Coins credited to both wallets! (50% usable in Free Matches)',
       'bonusCash': rewardBonusCash,
-      'adCoins': rewardAdCoins,
+      'adCoins': rewardRefCoins,
     };
   }
 
@@ -2962,6 +2961,23 @@ class AppState extends ChangeNotifier {
                 if (parsedUsers.isNotEmpty) {
                   allGlobalUsers = parsedUsers;
                 }
+              } catch (_) {}
+            }
+
+            // 10. Dynamic Store Items from VPS (Admin Controlled Redeem Codes)
+            if (data['storeItems'] is List) {
+              try {
+                storeItems = (data['storeItems'] as List).map((s) => StoreItem.fromJson(Map<String, dynamic>.from(s))).toList();
+              } catch (_) {}
+            }
+
+            // 11. Voucher Claims from VPS
+            if (data['voucherClaims'] is List) {
+              try {
+                final parsedClaims = (data['voucherClaims'] as List).map((c) => VoucherClaim.fromJson(Map<String, dynamic>.from(c))).toList();
+                parsedClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
+                allGlobalVoucherClaims = parsedClaims;
+                voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
               } catch (_) {}
             }
 

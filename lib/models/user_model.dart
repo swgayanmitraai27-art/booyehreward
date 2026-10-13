@@ -1,15 +1,17 @@
 class UserWallet {
   // 1. FREE-TO-PLAY ECONOMY (Ad-Based, Zero Loss)
-  int adCoins;        // 🟡 Ad Coins: Earned strictly by watching ads (Entry for Free Matches)
+  int adCoins;        // 🟡 Ad Coins: Earned strictly by watching ads (At least 50% required for Free Matches)
+  int referralCoins;  // 🎁 Referral Coins: Earned by referring friends (5 Coins each, max 50% usable in Free Matches)
   int rewardCoins;    // 🎟️ Reward Coins: Won from Free Matches (Redeemable for Google Play / FF Diamonds, NO CASH OUT)
 
   // 2. PAID ESPORTS ECONOMY (Real Money)
-  double bonusCash;   // 🎁 Bonus Cash (₹): 10% Extra Deposit Cashback & Referrals (Match Entry ONLY, Non-withdrawable)
+  double bonusCash;   // 🎁 Bonus Cash (₹): 10% Extra Deposit Cashback (Match Entry ONLY, Non-withdrawable)
   double depositCash; // 💵 Deposit Cash (₹): Added via Razorpay (Match Entry ONLY, Non-withdrawable)
   double winningCash; // 🏆 Winning Cash (₹): Won from Paid Matches (100% Withdrawable to UPI)
 
   UserWallet({
     required this.adCoins,
+    this.referralCoins = 0,
     required this.rewardCoins,
     this.bonusCash = 0.0,
     required this.depositCash,
@@ -19,8 +21,28 @@ class UserWallet {
   // Total Playable Real/Bonus Cash
   double get totalPlayableCash => bonusCash + depositCash + winningCash;
 
+  /// Max referral coins usable for a Free Match of [entryFeeCoins] (Strictly 50% max)
+  int maxUsableReferralCoins(int entryFeeCoins) {
+    if (entryFeeCoins <= 0) return 0;
+    final maxAllowed = (entryFeeCoins * 0.50).floor();
+    return referralCoins < maxAllowed ? referralCoins : maxAllowed;
+  }
+
+  /// Ad Coins required from watching ads for a Free Match of [entryFeeCoins] (Remaining 50%+)
+  int requiredAdCoinsForFreeMatch(int entryFeeCoins) {
+    if (entryFeeCoins <= 0) return 0;
+    return entryFeeCoins - maxUsableReferralCoins(entryFeeCoins);
+  }
+
+  /// Check if user can afford a Free Match (Max 50% Referral Coins + Remaining 50%+ Ad Coins)
+  bool canAffordFreeMatch(int entryFeeCoins) {
+    if (entryFeeCoins <= 0) return true;
+    return adCoins >= requiredAdCoinsForFreeMatch(entryFeeCoins);
+  }
+
   Map<String, dynamic> toJson() => {
     'adCoins': adCoins,
+    'referralCoins': referralCoins,
     'rewardCoins': rewardCoins,
     'bonusCash': bonusCash,
     'depositCash': depositCash,
@@ -29,6 +51,7 @@ class UserWallet {
 
   factory UserWallet.fromJson(Map<String, dynamic> json) => UserWallet(
     adCoins: ((json['adCoins'] ?? json['ad_coins'] ?? json['bonus_balance'] ?? json['bonus'] ?? 0) as num).toInt(),
+    referralCoins: ((json['referralCoins'] ?? json['referral_coins'] ?? 0) as num).toInt(),
     rewardCoins: ((json['rewardCoins'] ?? json['reward_coins'] ?? 0) as num).toInt(),
     bonusCash: ((json['bonusCash'] ?? json['bonus_cash'] ?? 0) as num).toDouble(),
     depositCash: ((json['depositCash'] ?? json['real_balance'] ?? json['realCash'] ?? json['real'] ?? 0) as num).toDouble(),
@@ -201,6 +224,8 @@ class UserModel {
     'total_winnings': wallet.winningCash,
     'adCoins': wallet.adCoins,
     'ad_coins': wallet.adCoins,
+    'referralCoins': wallet.referralCoins,
+    'referral_coins': wallet.referralCoins,
     'bonus_balance': wallet.adCoins,
     'rewardCoins': wallet.rewardCoins,
     'reward_coins': wallet.rewardCoins,
@@ -234,6 +259,7 @@ class UserModel {
           ? UserWallet.fromJson(json['wallet'] as Map<String, dynamic>)
           : UserWallet(
               adCoins: ((json['bonus_balance'] ?? json['ad_coins'] ?? 0) as num).toInt(),
+              referralCoins: ((json['referralCoins'] ?? json['referral_coins'] ?? 0) as num).toInt(),
               rewardCoins: ((json['reward_coins'] ?? 0) as num).toInt(),
               bonusCash: ((json['bonus_cash'] ?? 0) as num).toDouble(),
               depositCash: ((json['real_balance'] ?? json['depositCash'] ?? 0) as num).toDouble(),

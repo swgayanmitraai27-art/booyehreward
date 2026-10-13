@@ -47,10 +47,10 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _roomPassController = TextEditingController();
 
   // Store Item Creation state
-  final TextEditingController _storeTitleController = TextEditingController(text: '₹50 Google Play Redeem Code');
+  final TextEditingController _storeTitleController = TextEditingController(text: '₹100 Google Play Redeem Code');
   final TextEditingController _storeImgUrlController = TextEditingController(text: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80');
-  final TextEditingController _storeCoinPriceController = TextEditingController(text: '250');
-  final TextEditingController _storeRewardValController = TextEditingController(text: '₹50 Code');
+  final TextEditingController _storeCoinPriceController = TextEditingController(text: '1000');
+  final TextEditingController _storeRewardValController = TextEditingController(text: '₹100 Redeem Code');
 
   // Dynamic Banners state
   final TextEditingController _bannerTitleController = TextEditingController(text: '🔥 Official Telegram Support & Daily Updates');
@@ -2230,6 +2230,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     final claims = widget.appState.allGlobalVoucherClaims.isNotEmpty 
         ? widget.appState.allGlobalVoucherClaims 
         : widget.appState.voucherClaims;
+    final storeItems = widget.appState.storeItems;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -2269,14 +2270,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           color: isPending ? Colors.amber.shade100 : const Color(0xFFD1FAE5),
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: Text(isPending ? '🎁' : '✅', style: const TextStyle(fontSize: 14)),
+                        child: Text(isPending ? '🎟️' : '✅', style: const TextStyle(fontSize: 14)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('${claim.userName} • ${claim.itemTitle}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
+                            Text('${claim.userName} • ${claim.itemTitle} (${claim.rewardCoinsSpent} 🎟️)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
                             Row(
                               children: [
                                 Text('WhatsApp: ${claim.whatsappNumber}', style: const TextStyle(fontSize: 11, color: Colors.grey, fontWeight: FontWeight.bold)),
@@ -2302,7 +2303,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           ),
                           onPressed: () {
                             widget.appState.adminDeliverVoucher(claim.id, 'GP-CODE-${DateTime.now().millisecondsSinceEpoch.toString().substring(6)}');
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Voucher marked as delivered via WhatsApp!')));
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Redeem Code marked as delivered via WhatsApp!')));
                           },
                           child: const Text('MARK DELIVERED', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                         )
@@ -2323,14 +2324,144 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           const SizedBox(height: 20),
 
           const Divider(),
+          const SizedBox(height: 12),
+
+          // --- CURRENT STORE ITEMS LIST WITH DELETE OPTION ---
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '🏪 ACTIVE REWARDS STORE ITEMS (${storeItems.length})',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+              const Text(
+                'Tap 🗑️ to Delete Old Items',
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.redAccent),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
-          const Text('ADD NEW ITEM TO REWARDS STORE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+
+          if (storeItems.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Center(
+                child: Text('No store items active. Add a Redeem Code below!', style: TextStyle(fontSize: 11.5, color: Colors.grey)),
+              ),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: storeItems.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              itemBuilder: (context, index) {
+                final item = storeItems[index];
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFCBD5E1)),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(item.iconEmoji, style: const TextStyle(fontSize: 24)),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5, color: Color(0xFF0F172A)),
+                            ),
+                            Text(
+                              'Cost: ${item.rewardCoinsPrice} 🎟️ Reward Coins • Value: ${item.rewardValue}',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete Store Item',
+                        icon: const Icon(Icons.delete_forever_rounded, color: Colors.red, size: 22),
+                        onPressed: () async {
+                          await widget.appState.adminDeleteStoreItem(item.id);
+                          if (!mounted) return;
+                          setState(() {});
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.red.shade800,
+                              content: Text('🗑️ Deleted "${item.title}" from Store!'),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 10),
+          const Text('➕ ADD NEW REDEEM CODE TO REWARDS STORE', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF475569))),
+          const SizedBox(height: 8),
+
+          // Quick Presets for Store Redeem Codes
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                const Text('Quick Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                ActionChip(
+                  label: const Text('🎟️ ₹100 Play Code (1000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    setState(() {
+                      _storeTitleController.text = '₹100 Google Play Redeem Code';
+                      _storeCoinPriceController.text = '1000';
+                      _storeRewardValController.text = '₹100 Redeem Code';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('🎟️ ₹200 Play Code (2000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    setState(() {
+                      _storeTitleController.text = '₹200 Google Play Redeem Code';
+                      _storeCoinPriceController.text = '2000';
+                      _storeRewardValController.text = '₹200 Redeem Code';
+                    });
+                  },
+                ),
+                const SizedBox(width: 6),
+                ActionChip(
+                  label: const Text('🎟️ ₹500 Play Code (5000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  onPressed: () {
+                    setState(() {
+                      _storeTitleController.text = '₹500 Google Play Redeem Code';
+                      _storeCoinPriceController.text = '5000';
+                      _storeRewardValController.text = '₹500 Redeem Code';
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
           const SizedBox(height: 10),
 
           TextField(
             controller: _storeTitleController,
             decoration: InputDecoration(
-              labelText: 'Item Title (e.g. ₹50 Google Play Code or 100 Diamonds)',
+              labelText: 'Item Title (e.g. ₹100 Google Play Redeem Code)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
@@ -2339,7 +2470,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           TextField(
             controller: _storeImgUrlController,
             decoration: InputDecoration(
-              labelText: 'Image URL',
+              labelText: 'Image URL (Optional)',
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
           ),
@@ -2352,7 +2483,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   controller: _storeCoinPriceController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Price in Reward Coins',
+                    labelText: 'Price in Reward Coins (e.g. 1000)',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2362,7 +2493,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 child: TextField(
                   controller: _storeRewardValController,
                   decoration: InputDecoration(
-                    labelText: 'Reward Value',
+                    labelText: 'Reward Value (e.g. ₹100 Code)',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2380,26 +2511,30 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              onPressed: () {
+              onPressed: () async {
                 final title = _storeTitleController.text.trim();
-                final price = int.tryParse(_storeCoinPriceController.text.trim()) ?? 100;
+                final price = int.tryParse(_storeCoinPriceController.text.trim()) ?? 1000;
                 final img = _storeImgUrlController.text.trim();
                 final val = _storeRewardValController.text.trim();
 
-                widget.appState.adminAddStoreItem(
+                if (title.isEmpty) return;
+
+                await widget.appState.adminAddStoreItem(
                   title: title,
-                  description: 'Redeemable with Reward Coins. Delivery via WhatsApp in 2 hours.',
+                  description: '$price Reward Coins (Won in Free Matches) = $val sent to your WhatsApp.',
                   imageUrl: img,
                   coinPrice: price,
                   rewardValue: val,
                 );
 
+                if (!mounted) return;
+                setState(() {});
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(backgroundColor: AppTheme.winningGreen, content: Text('New product added to Rewards Store!')),
+                  const SnackBar(backgroundColor: AppTheme.winningGreen, content: Text('✅ New Redeem Code item added to Store & synced with VPS!')),
                 );
               },
               icon: const Icon(Icons.add_shopping_cart, size: 16),
-              label: Text('ADD PRODUCT TO STORE', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white, isItalic: false)),
+              label: Text('ADD REDEEM CODE TO STORE', style: AppTheme.gamingTitle(fontSize: 13, color: Colors.white, isItalic: false)),
             ),
           ),
         ],

@@ -17,8 +17,8 @@ class ReferralRecord {
     required this.referredUid,
     required this.referredName,
     required this.createdAt,
-    this.bonusCashAwarded = 10.0,
-    this.adCoinsAwarded = 10,
+    this.bonusCashAwarded = 0.0,
+    this.adCoinsAwarded = 5,
   });
 
   Map<String, dynamic> toJson() => {
@@ -43,7 +43,7 @@ class ReferralRecord {
     createdAt: json['createdAt'] != null
         ? (DateTime.tryParse(json['createdAt'])?.toLocal() ?? DateTime.now())
         : DateTime.now(),
-    bonusCashAwarded: ((json['bonusCashAwarded'] ?? 10.0) as num).toDouble(),
-    adCoinsAwarded: json['adCoinsAwarded'] ?? 10,
+    bonusCashAwarded: ((json['bonusCashAwarded'] ?? 0.0) as num).toDouble(),
+    adCoinsAwarded: ((json['adCoinsAwarded'] ?? json['referralCoinsAwarded'] ?? 5) as num).toInt(),
   );
 }
