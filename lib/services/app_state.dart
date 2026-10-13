@@ -2161,12 +2161,47 @@ class AppState extends ChangeNotifier {
         if (data['success'] == true) {
           if (data['referredUser'] != null && data['referredUser'] is Map) {
             user = UserModel.fromJson(Map<String, dynamic>.from(data['referredUser']));
-            await AuthService.saveUser(user);
-          } else {
-            user.wallet.referralCoins += 5;
-            user.referredBy = code;
-            _syncUser();
           }
+          if (user.wallet.referralCoins < 5) {
+            user.wallet.referralCoins = 5;
+          }
+          user.referredBy = code;
+          await AuthService.saveUser(user);
+          _syncUser();
+
+          // Add Welcome Referral Transaction
+          final userTxn = TransactionModel(
+            id: 'txn_ref_welcome_${DateTime.now().millisecondsSinceEpoch}',
+            userId: user.uid,
+            userName: user.displayName,
+            type: TransactionType.referralReward,
+            walletAffected: WalletType.referralCoins,
+            amount: 5.0,
+            currency: 'COINS',
+            balanceBefore: 0.0,
+            balanceAfter: user.wallet.referralCoins.toDouble(),
+            status: 'SUCCESS',
+            description: '🎁 Referral Welcome Bonus (Code: $code) - +5 Referral Coins (50% usable in Free Matches)',
+            createdAt: DateTime.now(),
+          );
+          transactions.removeWhere((t) => t.id == userTxn.id);
+          transactions.insert(0, userTxn);
+          allGlobalTransactions.insert(0, userTxn);
+          _syncTransaction(userTxn);
+
+          // Add In-App Notification
+          final userNotif = AppNotification(
+            id: 'notif_ref_user_${DateTime.now().millisecondsSinceEpoch}',
+            title: '🎁 +5 Referral Coins Credited!',
+            body: 'Welcome! You received 5 Referral Coins for applying referral code $code. (Max 50% usable in Free Matches + 50% Ad Coins).',
+            createdAt: DateTime.now(),
+            type: NotificationType.matchResult,
+            targetType: 'user',
+            targetId: user.uid,
+          );
+          notifications.removeWhere((n) => n.id == userNotif.id);
+          notifications.insert(0, userNotif);
+          allGlobalNotifications.insert(0, userNotif);
 
           if (data['refRecord'] != null && data['refRecord'] is Map) {
             final rec = ReferralRecord.fromJson(Map<String, dynamic>.from(data['refRecord']));

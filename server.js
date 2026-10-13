@@ -165,6 +165,35 @@ function loadDB() {
         }
       }
       console.log(`[DB] Loaded successfully. Matches: ${db.matches.length}, Users: ${Object.keys(db.users).length}`);
+      // Auto-Repair: ensure anyone in db.referrals has referralCoins & referredBy credited properly
+      if (Array.isArray(db.referrals)) {
+        db.referrals.forEach(ref => {
+          if (ref.referredUid && db.users[ref.referredUid]) {
+            const u = db.users[ref.referredUid];
+            const w = ensureUserWallet(u);
+            if (!u.referredBy) u.referredBy = ref.referrerCode;
+            if ((w.referralCoins || 0) < 5) {
+              w.referralCoins = Math.max(w.referralCoins || 0, 5);
+              u.wallets = w;
+              u.wallet = w;
+              u.referralCoins = w.referralCoins;
+              u.referral_coins = w.referralCoins;
+            }
+          }
+          if (ref.referrerUid && db.users[ref.referrerUid]) {
+            const u = db.users[ref.referrerUid];
+            const w = ensureUserWallet(u);
+            if ((w.referralCoins || 0) < 5) {
+              w.referralCoins = Math.max(w.referralCoins || 0, 5);
+              u.wallets = w;
+              u.wallet = w;
+              u.referralCoins = w.referralCoins;
+              u.referral_coins = w.referralCoins;
+            }
+          }
+        });
+        saveDB();
+      }
     } else {
       console.log('[DB] No existing db.json found. Seeding initial data...');
       seedInitialData();
@@ -1050,14 +1079,20 @@ app.post('/api/referrals/apply', (req, res) => {
   // Credit referred user (5 Referral Coins, ₹0 Bonus Cash)
   const referredWallet = ensureUserWallet(referredUser);
   referredWallet.referralCoins = (referredWallet.referralCoins || 0) + rewardRefCoins;
+  referredUser.wallet = referredWallet;
   referredUser.wallets = referredWallet;
+  referredUser.referralCoins = referredWallet.referralCoins;
+  referredUser.referral_coins = referredWallet.referralCoins;
   referredUser.referredBy = code;
 
   // Credit referrer (5 Referral Coins, ₹0 Bonus Cash)
   if (referrerUser) {
     const referrerWallet = ensureUserWallet(referrerUser);
     referrerWallet.referralCoins = (referrerWallet.referralCoins || 0) + rewardRefCoins;
+    referrerUser.wallet = referrerWallet;
     referrerUser.wallets = referrerWallet;
+    referrerUser.referralCoins = referrerWallet.referralCoins;
+    referrerUser.referral_coins = referrerWallet.referralCoins;
     referrerUser.totalReferrals = (referrerUser.totalReferrals || 0) + 1;
     referrerUser.totalReferralCoins = (referrerUser.totalReferralCoins || 0) + rewardRefCoins;
 
@@ -1091,6 +1126,8 @@ app.post('/api/referrals/apply', (req, res) => {
 
   saveDB();
   broadcast('REFERRAL_APPLIED', { refRecord, referrerUser, referredUser });
+  broadcast('USER_UPDATED', referredUser);
+  if (referrerUser) broadcast('USER_UPDATED', referrerUser);
 
   res.json({
     success: true,
@@ -1122,9 +1159,11 @@ app.post('/api/users', (req, res) => {
   let preservedWallet = user.wallet;
   if (existing && existing.wallet) {
     const inW = user.wallet || {};
+    const existingRefCoins = Number(existing.wallet.referralCoins || existing.wallets?.referralCoins || existing.referralCoins || 0);
+    const incomingRefCoins = inW.referralCoins !== undefined ? Number(inW.referralCoins) : 0;
     preservedWallet = {
       adCoins: inW.adCoins !== undefined ? Number(inW.adCoins) : (existing.wallet.adCoins || 0),
-      referralCoins: inW.referralCoins !== undefined ? Number(inW.referralCoins) : (existing.wallet.referralCoins || 0),
+      referralCoins: Math.max(existingRefCoins, incomingRefCoins),
       rewardCoins: inW.rewardCoins !== undefined ? Number(inW.rewardCoins) : (existing.wallet.rewardCoins || 0),
       depositCash: inW.depositCash !== undefined ? Number(inW.depositCash) : (existing.wallet.depositCash || 0),
       winningCash: inW.winningCash !== undefined ? Number(inW.winningCash) : (existing.wallet.winningCash || 0),
@@ -1133,11 +1172,15 @@ app.post('/api/users', (req, res) => {
   }
 
   const defaultWallet = { adCoins: 0, referralCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+  const finalWallet = preservedWallet || user.wallet || defaultWallet;
   const mergedUser = {
     ...existing,
     ...user,
-    wallet: preservedWallet || user.wallet || defaultWallet,
-    wallets: preservedWallet || user.wallet || defaultWallet,
+    referredBy: existing?.referredBy || (user.referredBy ? user.referredBy.trim().toUpperCase() : null),
+    wallet: finalWallet,
+    wallets: finalWallet,
+    referralCoins: finalWallet.referralCoins,
+    referral_coins: finalWallet.referralCoins,
     lastSeen: new Date().toISOString()
   };
 

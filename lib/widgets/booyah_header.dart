@@ -109,6 +109,43 @@ class BooyahHeader extends StatelessWidget implements PreferredSizeWidget {
           ),
           const SizedBox(width: 6),
 
+          // 🎁 Referral Coins (50% usable in Free Matches)
+          InkWell(
+            onTap: () => onTabChange?.call(4), // Go to wallet / refer tab
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFDDD6FE)),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.purple.withAlpha(20),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Text('🎁', style: TextStyle(fontSize: 12)),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${user.wallet.referralCoins}',
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF6D28D9),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+
           // 🎟️ 2. Reward Store Coins
           InkWell(
             onTap: () => onTabChange?.call(3), // Go to rewards store tab
