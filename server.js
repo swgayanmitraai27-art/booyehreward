@@ -49,6 +49,13 @@ let db = {
   referrals: [],
   banners: [],
   notifications: [],
+  noticeBoard: {
+    title: '📢 Booyah Rewards Official Notice',
+    body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+    updatedAt: new Date().toISOString(),
+    allowUserMessages: false,
+    messages: []
+  },
   tournamentModes: [
     {
       key: 'BR',
@@ -163,6 +170,15 @@ function loadDB() {
             }
           ];
         }
+      }
+      if (!db.noticeBoard) {
+        db.noticeBoard = {
+          title: '📢 Booyah Rewards Official Notice',
+          body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+          updatedAt: new Date().toISOString(),
+          allowUserMessages: false,
+          messages: []
+        };
       }
       console.log(`[DB] Loaded successfully. Matches: ${db.matches.length}, Users: ${Object.keys(db.users).length}`);
       // Auto-Repair: ensure anyone in db.referrals has referralCoins & referredBy credited properly
@@ -495,6 +511,7 @@ app.get('/api/sync', (req, res) => {
     allUsers: Object.values(db.users || {}),
     storeItems: db.storeItems || [],
     voucherClaims: db.voucherClaims || [],
+    noticeBoard: db.noticeBoard,
     user,
     stats: db.stats
   });
@@ -1039,6 +1056,131 @@ app.post('/api/leaderboard/distribute', (req, res) => {
   saveDB();
   broadcast('WEEKLY_PRIZES_DISTRIBUTED', record);
   res.json({ success: true, record });
+});
+
+// 9b-2. Live Notice Board & User Community Discussion API
+app.get('/api/notice-board', (req, res) => {
+  if (!db.noticeBoard) {
+    db.noticeBoard = {
+      title: '📢 Booyah Rewards Official Notice',
+      body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+      updatedAt: new Date().toISOString(),
+      allowUserMessages: false,
+      messages: []
+    };
+  }
+  res.json({ success: true, noticeBoard: db.noticeBoard });
+});
+
+app.post('/api/notice-board/admin', (req, res) => {
+  const { title, body, allowUserMessages, adminMessage } = req.body;
+  if (!db.noticeBoard) {
+    db.noticeBoard = {
+      title: '📢 Booyah Rewards Official Notice',
+      body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+      updatedAt: new Date().toISOString(),
+      allowUserMessages: false,
+      messages: []
+    };
+  }
+
+  if (title !== undefined && title.trim()) db.noticeBoard.title = title.trim();
+  if (body !== undefined && body.trim()) db.noticeBoard.body = body.trim();
+  if (allowUserMessages !== undefined) db.noticeBoard.allowUserMessages = !!allowUserMessages;
+  db.noticeBoard.updatedAt = new Date().toISOString();
+
+  if (adminMessage && adminMessage.trim()) {
+    if (!Array.isArray(db.noticeBoard.messages)) db.noticeBoard.messages = [];
+    const newMsg = {
+      id: `msg_admin_${Date.now()}`,
+      senderUid: 'admin',
+      senderName: '👑 Admin (Booyah Rewards)',
+      senderRole: 'admin',
+      text: adminMessage.trim(),
+      createdAt: new Date().toISOString()
+    };
+    db.noticeBoard.messages.unshift(newMsg);
+    if (db.noticeBoard.messages.length > 50) {
+      db.noticeBoard.messages = db.noticeBoard.messages.slice(0, 50);
+    }
+  }
+
+  saveDB();
+  broadcast('NOTICE_BOARD_UPDATED', db.noticeBoard);
+  res.json({ success: true, noticeBoard: db.noticeBoard });
+});
+
+app.post('/api/notice-board/toggle-user-messages', (req, res) => {
+  const { allowUserMessages } = req.body;
+  if (!db.noticeBoard) {
+    db.noticeBoard = {
+      title: '📢 Booyah Rewards Official Notice',
+      body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+      updatedAt: new Date().toISOString(),
+      allowUserMessages: false,
+      messages: []
+    };
+  }
+  db.noticeBoard.allowUserMessages = !!allowUserMessages;
+  db.noticeBoard.updatedAt = new Date().toISOString();
+  saveDB();
+  broadcast('NOTICE_BOARD_UPDATED', db.noticeBoard);
+  res.json({ success: true, allowUserMessages: db.noticeBoard.allowUserMessages });
+});
+
+app.post('/api/notice-board/message', (req, res) => {
+  const { uid, name, text, role } = req.body;
+  if (!text || !text.trim()) {
+    return res.status(400).json({ success: false, error: 'Message cannot be empty' });
+  }
+
+  if (!db.noticeBoard) {
+    db.noticeBoard = {
+      title: '📢 Booyah Rewards Official Notice',
+      body: 'स्वागत है सभी प्लेयर्स का! 100% फ्री टूर्नामेंट खेलें, 1 Ad = 1 Coin पाएं और गूगल प्ले रिडीम कोड जीतें!',
+      updatedAt: new Date().toISOString(),
+      allowUserMessages: false,
+      messages: []
+    };
+  }
+
+  const isSenderAdmin = role === 'admin' || uid === 'admin';
+  if (!isSenderAdmin && !db.noticeBoard.allowUserMessages) {
+    return res.status(403).json({
+      success: false,
+      error: 'एडमिन ने अभी यूज़र मैसेज बंद कर रखे हैं।'
+    });
+  }
+
+  const newMsg = {
+    id: `msg_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`,
+    senderUid: uid || 'anonymous',
+    senderName: isSenderAdmin ? '👑 Admin (Booyah Rewards)' : (name || 'Player'),
+    senderRole: isSenderAdmin ? 'admin' : 'user',
+    text: text.trim().slice(0, 300),
+    createdAt: new Date().toISOString()
+  };
+
+  if (!Array.isArray(db.noticeBoard.messages)) db.noticeBoard.messages = [];
+  db.noticeBoard.messages.unshift(newMsg);
+  if (db.noticeBoard.messages.length > 50) {
+    db.noticeBoard.messages = db.noticeBoard.messages.slice(0, 50);
+  }
+
+  saveDB();
+  broadcast('NOTICE_BOARD_NEW_MESSAGE', { noticeBoard: db.noticeBoard, newMsg });
+  res.json({ success: true, noticeBoard: db.noticeBoard, message: newMsg });
+});
+
+app.delete('/api/notice-board/message/:id', (req, res) => {
+  const { id } = req.params;
+  if (!db.noticeBoard || !Array.isArray(db.noticeBoard.messages)) {
+    return res.json({ success: true });
+  }
+  db.noticeBoard.messages = db.noticeBoard.messages.filter(m => m.id !== id);
+  saveDB();
+  broadcast('NOTICE_BOARD_UPDATED', db.noticeBoard);
+  res.json({ success: true, id });
 });
 
 // 9c. Referral Attribution & Tracking API

@@ -9,6 +9,7 @@ import '../widgets/squad_team_dialog.dart';
 import '../widgets/match_banner_image.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/dynamic_banner_carousel.dart';
+import '../widgets/admin_notice_board_widget.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
   final AppState appState;
@@ -39,6 +40,9 @@ class TournamentLobbyScreen extends StatelessWidget {
             DynamicBannerCarousel(banners: appState.activeBanners),
             const SizedBox(height: 14),
           ],
+
+          // 📢 Official Admin Notice & Live Community Board (Admin Message)
+          AdminNoticeBoardWidget(appState: appState),
 
           // 1. Hero Promo Card: 100% FREE ESPORTS & REAL REDEEM CODES (High-Retention Hindi)
           Container(

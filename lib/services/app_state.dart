@@ -14,6 +14,7 @@ import '../models/banner_model.dart';
 import '../models/notification_model.dart';
 import '../models/leaderboard_model.dart';
 import '../models/referral_record.dart';
+import '../models/notice_board_model.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
@@ -23,6 +24,7 @@ import 'web_storage/web_storage.dart';
 
 class AppState extends ChangeNotifier {
   late UserModel user;
+  NoticeBoardData noticeBoard = NoticeBoardData();
   final NotificationService _notificationService = NotificationService();
   NotificationService get notificationService => _notificationService;
 
@@ -2953,6 +2955,11 @@ class AppState extends ChangeNotifier {
               }
             }
 
+            // 5b. Live Admin Notice Board
+            if (data['noticeBoard'] != null && data['noticeBoard'] is Map) {
+              noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
+            }
+
             // 6. Notifications
             if (data['notifications'] is List) {
               final parsed = (data['notifications'] as List).map((d) => AppNotification.fromJson(Map<String, dynamic>.from(d))).toList();
@@ -3430,5 +3437,118 @@ class AppState extends ChangeNotifier {
         body: jsonEncode(rec.toJson()),
       ).timeout(const Duration(seconds: 4));
     } catch (_) {}
+  }
+
+  // --- NOTICE BOARD OPERATIONS ---
+  Future<void> fetchNoticeBoard() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsApiUrl/notice-board')).timeout(const Duration(seconds: 4));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['noticeBoard'] is Map) {
+          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> adminUpdateNoticeBoard({
+    String? title,
+    String? body,
+    bool? allowUserMessages,
+    String? adminMessage,
+  }) async {
+    try {
+      final Map<String, dynamic> payload = {};
+      if (title != null) payload['title'] = title;
+      if (body != null) payload['body'] = body;
+      if (allowUserMessages != null) payload['allowUserMessages'] = allowUserMessages;
+      if (adminMessage != null && adminMessage.isNotEmpty) payload['adminMessage'] = adminMessage;
+
+      final res = await http.post(
+        Uri.parse('$vpsApiUrl/notice-board/admin'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(payload),
+      ).timeout(const Duration(seconds: 5));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['noticeBoard'] is Map) {
+          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
+          notifyListeners();
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Future<bool> adminToggleUserMessages(bool allow) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsApiUrl/notice-board/toggle-user-messages'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'allowUserMessages': allow}),
+      ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          noticeBoard = noticeBoard.copyWith(allowUserMessages: allow);
+          notifyListeners();
+          return true;
+        }
+      }
+    } catch (_) {}
+    return false;
+  }
+
+  Future<Map<String, dynamic>> postNoticeBoardMessage(String text) async {
+    final isAdmin = user.role == 'admin' || AuthService.isAdminIdentifier(user.email, user.uid);
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsApiUrl/notice-board/message'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'uid': user.uid,
+          'name': user.displayName.isNotEmpty ? user.displayName : ((user.inGameUid != null && user.inGameUid!.isNotEmpty) ? 'Player #${user.inGameUid}' : 'Player'),
+          'text': text,
+          'role': isAdmin ? 'admin' : 'user',
+        }),
+      ).timeout(const Duration(seconds: 5));
+
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        if (data['noticeBoard'] is Map) {
+          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
+          notifyListeners();
+        }
+        return {'success': true, 'message': 'Message posted!'};
+      } else {
+        return {
+          'success': false,
+          'message': data['error'] ?? 'Failed to send message',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<bool> adminDeleteNoticeBoardMessage(String messageId) async {
+    try {
+      final res = await http.delete(
+        Uri.parse('$vpsApiUrl/notice-board/message/$messageId'),
+      ).timeout(const Duration(seconds: 4));
+
+      if (res.statusCode == 200) {
+        final updatedList = noticeBoard.messages.where((m) => m.id != messageId).toList();
+        noticeBoard = noticeBoard.copyWith(messages: updatedList);
+        notifyListeners();
+        return true;
+      }
+    } catch (_) {}
+    return false;
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
 import '../services/auth_service.dart';
 import '../models/match_model.dart';
@@ -130,9 +131,19 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   String _userRoleFilter = 'all'; // 'all', 'admin', 'user'
   String _prizeType = 'winningCoins'; // 'winningCoins' (🪙) or 'storeRewardCoins' (🎟️)
 
+  // Live Notice Board & Chat Controls state
+  final TextEditingController _noticeTitleController = TextEditingController();
+  final TextEditingController _noticeBodyController = TextEditingController();
+  final TextEditingController _noticeAdminMsgController = TextEditingController();
+  bool _noticeAllowUsers = false;
+  bool _isSavingNotice = false;
+
   @override
   void initState() {
     super.initState();
+    _noticeTitleController.text = widget.appState.noticeBoard.title;
+    _noticeBodyController.text = widget.appState.noticeBoard.body;
+    _noticeAllowUsers = widget.appState.noticeBoard.allowUserMessages;
     _telegramUrlController.text = widget.appState.telegramSupportUrl;
     _brCategoryBannerController.text = widget.appState.brCategoryBanner;
     _csCategoryBannerController.text = widget.appState.csCategoryBanner;
@@ -314,6 +325,9 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
     _verificationSearchController.dispose();
     _roomIdController.dispose();
     _roomPassController.dispose();
+    _noticeTitleController.dispose();
+    _noticeBodyController.dispose();
+    _noticeAdminMsgController.dispose();
     _storeTitleController.dispose();
     _storeImgUrlController.dispose();
     _storeCoinPriceController.dispose();
@@ -564,6 +578,8 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                 _buildTabBtn(12, '👥 Manage Users & Admins (${_registeredUsers.length})'),
                 const SizedBox(width: 8),
                 _buildTabBtn(13, '📜 Completed Matches (${widget.appState.matches.where((m) => m.status == MatchStatus.completed).length})'),
+                const SizedBox(width: 8),
+                _buildTabBtn(14, '📢 Notice Board & Chat Controls'),
               ],
             ),
           ),
@@ -583,6 +599,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
           if (activeSection == 11) _buildReferralLedgerSection(),
           if (activeSection == 12) _buildUserRoleManagementSection(),
           if (activeSection == 13) _buildCompletedMatchesSection(),
+          if (activeSection == 14) _buildNoticeBoardManagementSection(),
         ],
       ),
     );
@@ -8499,6 +8516,321 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                             label: const Text('Delete Record', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
                           ),
                         ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoticeBoardManagementSection() {
+    final board = widget.appState.noticeBoard;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.campaign, color: Colors.amber, size: 22),
+                  SizedBox(width: 8),
+                  Text(
+                    'Admin Live Notice & Chat Board',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh, size: 20),
+                onPressed: () => widget.appState.fetchNoticeBoard(),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'यहाँ से आप मुख्य स्क्रीन पर दिखने वाला एडमिन नोटिस बदल सकते हैं और यूज़र मैसेज/चैट की परमिशन ऑन/ऑफ कर सकते हैं।',
+            style: TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+          const SizedBox(height: 16),
+
+          // Pinned Notice Card
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFEF3C7),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFFCD34D)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'नोटिस टाइटल (Headline):',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _noticeTitleController,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    hintText: 'e.g. 📢 ज़रूरी सूचना: नया टूर्नामेंट लाइव है!',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'नोटिस विवरण (Notice Body):',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF78350F)),
+                ),
+                const SizedBox(height: 4),
+                TextField(
+                  controller: _noticeBodyController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white,
+                    hintText: 'यहाँ संदेश का विवरण लिखें जो होम स्क्रीन पर सभी को दिखेगा...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    contentPadding: const EdgeInsets.all(12),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // Toggle allow user messages
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Allow Users to Write Messages',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          Text(
+                            _noticeAllowUsers
+                                ? '🟢 यूज़र्स नोटिस बोर्ड पर मैसेज/सवाल लिख सकते हैं'
+                                : '🔒 यूज़र मैसेज बंद हैं (सिर्फ एडमिन के मैसेज दिखेंगे)',
+                            style: TextStyle(
+                              fontSize: 10.5,
+                              color: _noticeAllowUsers ? const Color(0xFF16A34A) : Colors.red,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Switch(
+                        value: _noticeAllowUsers,
+                        activeThumbColor: Colors.amber.shade700,
+                        onChanged: (val) {
+                          setState(() => _noticeAllowUsers = val);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 14),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _isSavingNotice
+                        ? null
+                        : () async {
+                            setState(() => _isSavingNotice = true);
+                            final ok = await widget.appState.adminUpdateNoticeBoard(
+                              title: _noticeTitleController.text,
+                              body: _noticeBodyController.text,
+                              allowUserMessages: _noticeAllowUsers,
+                            );
+                            setState(() => _isSavingNotice = false);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  backgroundColor: ok ? const Color(0xFF16A34A) : Colors.red,
+                                  content: Text(ok ? 'नोटिस सफलतापूर्वक लाइव अपडेट हो गया!' : 'अपडेट विफल हुआ'),
+                                ),
+                              );
+                            }
+                          },
+                    icon: _isSavingNotice
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.cloud_upload_rounded, size: 18),
+                    label: Text(
+                      _isSavingNotice ? 'सेव हो रहा है...' : 'पब्लिश करें (Update Live Notice)',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Post Quick Admin Message to Board
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  '💬 पोस्ट एडमिन कमेंट (Post as Admin)',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF334155)),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _noticeAdminMsgController,
+                        decoration: InputDecoration(
+                          hintText: 'एडमिन के रूप में तुरंत कोई कमेंट या रिप्लाई लिखें...',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber.shade700,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () async {
+                        final txt = _noticeAdminMsgController.text.trim();
+                        if (txt.isEmpty) return;
+                        final res = await widget.appState.postNoticeBoardMessage(txt);
+                        if (mounted) {
+                          if (res['success'] == true) {
+                            _noticeAdminMsgController.clear();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(backgroundColor: Color(0xFF16A34A), content: Text('एडमिन मैसेज पोस्ट हो गया!')),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(backgroundColor: Colors.red, content: Text(res['message'] ?? 'त्रुटि')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Post', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Moderation Section (Messages List)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'हाल के संदेश (${board.messages.length})',
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                'कुल 50 तक सुरक्षित',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+
+          if (board.messages.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(16),
+              alignment: Alignment.center,
+              child: const Text('अभी कोई मैसेज नहीं है।', style: TextStyle(color: Colors.grey)),
+            )
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: board.messages.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 6),
+              itemBuilder: (context, index) {
+                final msg = board.messages[index];
+                return Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: msg.isAdmin ? const Color(0xFFFEF3C7) : Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: msg.isAdmin ? Colors.amber.shade400 : Colors.grey.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(msg.isAdmin ? Icons.star : Icons.person, size: 16, color: msg.isAdmin ? Colors.amber.shade900 : Colors.grey),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  msg.senderName,
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: msg.isAdmin ? Colors.amber.shade900 : Colors.black87),
+                                ),
+                                if (msg.isAdmin) ...[
+                                  const SizedBox(width: 4),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(color: Colors.amber.shade800, borderRadius: BorderRadius.circular(4)),
+                                    child: const Text('ADMIN', style: TextStyle(fontSize: 8, color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                                const Spacer(),
+                                Text(
+                                  DateFormat('dd MMM, hh:mm a').format(msg.createdAt),
+                                  style: TextStyle(fontSize: 9.5, color: Colors.grey.shade500),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(msg.text, style: const TextStyle(fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+                        onPressed: () => widget.appState.adminDeleteNoticeBoardMessage(msg.id),
                       ),
                     ],
                   ),
