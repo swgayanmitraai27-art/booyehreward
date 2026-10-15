@@ -40,18 +40,22 @@ class TournamentLobbyScreen extends StatelessWidget {
             const SizedBox(height: 14),
           ],
 
-          // 1. Hero Promo Card (Clean Light Aesthetic with Amber Accent)
+          // 1. Hero Promo Card: 100% FREE ESPORTS & REAL REDEEM CODES (High-Retention Hindi)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFEF3C7), Color(0xFFFFFBEB)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFFCD34D), width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(12),
-                  blurRadius: 12,
+                  color: Colors.amber.withAlpha(25),
+                  blurRadius: 14,
                   offset: const Offset(0, 4),
                 ),
               ],
@@ -59,28 +63,38 @@ class TournamentLobbyScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Top row with Free Fire Short Logo and 100% FREE BADGE
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFFBEB),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF16A34A), Color(0xFF15803D)],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF16A34A).withAlpha(60),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                      child: Row(
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Image.asset('imgasest/FF_SHORT_LOGO.PNG.png', width: 14, height: 14),
-                          const SizedBox(width: 6),
+                          Icon(Icons.check_circle_rounded, color: Colors.white, size: 14),
+                          SizedBox(width: 5),
                           Text(
-                            appState.isRealCashModeEnabled ? 'HYBRID ESPORTS ARENA' : 'COMMUNITY ESPORTS ARENA',
-                            style: const TextStyle(
+                            '100% फ्री ऐप • 0₹ कोई पैसा नहीं लगेगा',
+                            style: TextStyle(
                               fontFamily: 'Inter',
-                              fontSize: 9.5,
+                              fontSize: 10.5,
                               fontWeight: FontWeight.w900,
-                              color: Color(0xFF92400E),
-                              letterSpacing: 1,
+                              color: Colors.white,
+                              letterSpacing: 0.3,
                             ),
                           ),
                         ],
@@ -89,42 +103,145 @@ class TournamentLobbyScreen extends StatelessWidget {
                     const FreeFireLogoInline(height: 16),
                   ],
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 12),
+
+                // Main Big Heading in Devanagari Hindi
+                const Text(
+                  '100% फ्री टूर्नामेंट्स खेलें!',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: Color(0xFF0F172A),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 4),
                 RichText(
-                  text: TextSpan(
-                    style: AppTheme.gamingTitle(fontSize: 22, color: Colors.black),
+                  text: const TextSpan(
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 13,
+                      fontWeight: FontWeight.w900,
+                      color: Color(0xFFD97706),
+                    ),
                     children: [
-                      TextSpan(text: appState.isRealCashModeEnabled ? 'PLAY FREE OR WIN ' : 'PLAY ESPORTS & WIN '),
+                      TextSpan(text: '🎁 नए यूज़र्स को '),
                       TextSpan(
-                        text: appState.isRealCashModeEnabled ? 'REAL CASH' : 'PRIZES',
-                        style: const TextStyle(color: AppTheme.primaryAmber),
+                        text: '5 फ्री Coins मिले हैं ',
+                        style: TextStyle(color: Color(0xFF16A34A), fontWeight: FontWeight.w900),
+                      ),
+                      TextSpan(text: '• '),
+                      TextSpan(
+                        text: '📺 1 Ad = 1 Coin!',
+                        style: TextStyle(color: Color(0xFFB45309)),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  appState.isRealCashModeEnabled
-                      ? 'Watch ads for 🟡 Ad Coins in Free Tournaments or deposit cash for Pro 75/25 Matches with Instant UPI withdrawals.'
-                      : 'Watch ads for 🟡 Ad Coins in Free Tournaments to win Google Play Redeem Codes and Free Fire Diamonds.',
-                  style: const TextStyle(fontFamily: 'Inter', fontSize: 11.5, color: Color(0xFF64748B), height: 1.3),
+                const SizedBox(height: 8),
+
+                // Clear explanatory box
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFDE68A)),
+                  ),
+                  child: const Text(
+                    'यहाँ एक भी रुपया जमा करने की ज़रूरत नहीं है! बस Ads (वीडियो) देखकर फ्री में Ad Coins लें, 100% फ्री मैच में एंट्री लें और Booyah करके असली Google Play Redeem Code जीतें!',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11.5,
+                      color: Color(0xFF475569),
+                      height: 1.45,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // 3 Quick Steps visual row
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFFFBEB),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFFCD34D)),
+                        ),
+                        child: const Column(
+                          children: [
+                            Text('📺 Step 1', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFFB45309))),
+                            SizedBox(height: 2),
+                            Text('1 Ad = 1 Coin', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                            Text('तुरंत Coin लें', style: TextStyle(fontSize: 8.5, color: Color(0xFF64748B))),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFECFDF5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF86EFAC)),
+                        ),
+                        child: const Column(
+                          children: [
+                            Text('🎮 Step 2', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
+                            SizedBox(height: 2),
+                            Text('मैच खेलें', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                            Text('100% फ्री एंट्री', style: TextStyle(fontSize: 8.5, color: Color(0xFF16A34A), fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFF93C5FD)),
+                        ),
+                        child: const Column(
+                          children: [
+                            Text('🎁 Step 3', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8))),
+                            SizedBox(height: 2),
+                            Text('कोड जीतें', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold, color: Color(0xFF1E293B))),
+                            Text('Real Redeem Code', style: TextStyle(fontSize: 8.5, color: Color(0xFF2563EB), fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 14),
+
+                // Action buttons
                 Row(
                   children: [
                     ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryAmber,
-                        foregroundColor: Colors.black,
+                        backgroundColor: const Color(0xFF16A34A),
+                        foregroundColor: Colors.white,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                       onPressed: onEarnCoinsClick,
-                      icon: const Text('🟡', style: TextStyle(fontSize: 13)),
+                      icon: const Icon(Icons.play_circle_fill, color: Colors.white, size: 16),
                       label: const Text(
-                        'Get Free Coins',
-                        style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w800, fontSize: 11.5),
+                        '📺 Ads देखकर फ्री Coins लें',
+                        style: TextStyle(fontFamily: 'Inter', fontWeight: FontWeight.w900, fontSize: 11.5),
                       ),
                     ),
                     const SizedBox(width: 8),
