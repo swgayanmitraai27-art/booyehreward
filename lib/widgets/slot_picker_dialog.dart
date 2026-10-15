@@ -159,7 +159,6 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
     final bool hasEnoughBalance = isPaidMatch
         ? (fee <= 0 || userCash >= fee)
         : widget.appState.user.wallet.canAffordFreeMatch(feeCoins);
-    final int adsWatchedSinceCoin = widget.appState.user.adTracker.adsWatchedSinceLastCoin;
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),

@@ -13,17 +13,6 @@ class ReferAndEarnCard extends StatefulWidget {
 }
 
 class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
-  final TextEditingController _refInputController = TextEditingController();
-  bool _isApplying = false;
-  String? _applyMessage;
-  bool _isSuccess = false;
-
-  @override
-  void dispose() {
-    _refInputController.dispose();
-    super.dispose();
-  }
-
   void _copyReferralCode(String code) {
     Clipboard.setData(ClipboardData(text: code));
     ScaffoldMessenger.of(context).showSnackBar(
@@ -51,30 +40,6 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
       '📲 Download on Play Store: $playUrl',
     );
     UrlLauncherUtil.openUrl('https://t.me/share/url?url=${Uri.encodeComponent(playUrl)}&text=$shareText');
-  }
-
-  Future<void> _handleApplyCode() async {
-    final code = _refInputController.text.trim();
-    if (code.isEmpty) return;
-
-    setState(() {
-      _isApplying = true;
-      _applyMessage = null;
-    });
-
-    final res = await widget.appState.applyReferralCode(code);
-
-    if (mounted) {
-      setState(() {
-        _isApplying = false;
-        _isSuccess = res['success'] == true;
-        _applyMessage = res['message']?.toString() ?? 'Processed';
-      });
-
-      if (_isSuccess) {
-        _refInputController.clear();
-      }
-    }
   }
 
   @override

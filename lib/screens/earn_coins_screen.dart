@@ -208,7 +208,6 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
     final user = widget.appState.user;
     user.adTracker.checkAndResetDaily();
     final tracker = user.adTracker;
-    final progress = tracker.adsWatchedSinceLastCoin / 3.0;
 
     return Stack(
       children: [
