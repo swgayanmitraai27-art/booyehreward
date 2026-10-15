@@ -1,7 +1,7 @@
 name: booyah_rewards
 description: "Booyah Rewards - Hybrid Free & Paid Esports Tournament Platform"
 publish_to: 'none'
-version: 1.3.5+35
+version: 1.3.6+36
 
 environment:
   sdk: ^3.11.4
