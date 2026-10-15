@@ -152,7 +152,7 @@ class AuthService {
       password: password,
       role: isAdminIdentifier(cleanEmail, uid) ? 'admin' : 'user',
       wallet: UserWallet(
-        adCoins: 0,        // Ad Coins must be earned by watching ads
+        adCoins: 5,        // 🎁 5 Free Welcome Coins on Signup!
         referralCoins: 0,  // Referral Coins earned via referral code (+5 each, 50% usable in Free Matches)
         rewardCoins: 0,
         depositCash: 0.0,
@@ -169,7 +169,7 @@ class AuthService {
         totalKills: 0,
         totalWinningsCash: 0.0,
         totalRewardCoinsWon: 0,
-        totalCoinsEarned: 0,
+        totalCoinsEarned: 5,
       ),
     );
 

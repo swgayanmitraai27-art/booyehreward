@@ -1004,38 +1004,33 @@ class AppState extends ChangeNotifier {
     );
     _syncUser();
 
-    bool coinAwarded = false;
-    String message = 'Ad completed (${user.adTracker.adsWatchedSinceLastCoin}/3). Watch ${3 - user.adTracker.adsWatchedSinceLastCoin} more for 1 🟡 Ad Coin!';
+    user.adTracker.adsWatchedSinceLastCoin = 0;
+    final balBefore = user.wallet.adCoins.toDouble();
+    user.wallet.adCoins += 1;
+    user.stats.totalCoinsEarned += 1;
+    const coinAwarded = true;
+    const message = '🎉 +1 🟡 Ad Coin Earned!';
 
-    if (user.adTracker.adsWatchedSinceLastCoin >= 3) {
-      user.adTracker.adsWatchedSinceLastCoin = 0;
-      final balBefore = user.wallet.adCoins.toDouble();
-      user.wallet.adCoins += 1;
-      user.stats.totalCoinsEarned += 1;
-      coinAwarded = true;
-      message = '🎉 Milestone Reached! You earned +1 🟡 Ad Coin!';
+    final newTxn = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.adReward,
+      walletAffected: WalletType.adCoins,
+      amount: 1,
+      currency: 'AD_COINS',
+      balanceBefore: balBefore,
+      balanceAfter: user.wallet.adCoins.toDouble(),
+      status: 'SUCCESS',
+      description: 'Earned 1 Ad Coin by watching Rewarded Ad',
+      createdAt: DateTime.now(),
+    );
 
-      final newTxn = TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.adReward,
-        walletAffected: WalletType.adCoins,
-        amount: 1,
-        currency: 'AD_COINS',
-        balanceBefore: balBefore,
-        balanceAfter: user.wallet.adCoins.toDouble(),
-        status: 'SUCCESS',
-        description: 'Earned 1 Ad Coin by watching 3 Rewarded Ads',
-        createdAt: DateTime.now(),
-      );
+    transactions.insert(0, newTxn);
+    allGlobalTransactions.insert(0, newTxn);
 
-      transactions.insert(0, newTxn);
-      allGlobalTransactions.insert(0, newTxn);
-
-      _syncUser();
-      _syncTransaction(newTxn);
-    }
+    _syncUser();
+    _syncTransaction(newTxn);
 
     notifyListeners();
     return {

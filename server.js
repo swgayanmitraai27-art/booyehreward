@@ -1171,7 +1171,7 @@ app.post('/api/users', (req, res) => {
     };
   }
 
-  const defaultWallet = { adCoins: 0, referralCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
+  const defaultWallet = { adCoins: 5, referralCoins: 0, rewardCoins: 0, depositCash: 0, winningCash: 0, bonusCash: 0 };
   const finalWallet = preservedWallet || user.wallet || defaultWallet;
   const mergedUser = {
     ...existing,

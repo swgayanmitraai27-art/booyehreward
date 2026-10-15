@@ -304,16 +304,16 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF78350F),
+                      color: const Color(0xFF15803D),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Text(
-                      '3 ADS = 1 AD COIN 🟡',
+                      '🔥 1 AD = 1 AD COIN 🟡 (INSTANT COIN)',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.w900,
-                        color: Colors.amber,
-                        letterSpacing: 1,
+                        color: Colors.white,
+                        letterSpacing: 0.8,
                       ),
                     ),
                   ),
@@ -324,9 +324,9 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    'Collect 🟡 Ad Coins to join Free Fire tournaments without spending real money!',
+                    'हर 1 Ad देखने पर तुरंत मिलता है 1 🟡 Ad Coin! Free Fire टूर्नामेंट्स में 100% फ्री खेलें!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 11.5, color: Color(0xFF92400E)),
+                    style: TextStyle(fontSize: 11.5, color: Color(0xFF92400E), fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 16),
 
@@ -343,21 +343,21 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              'Progress: ${tracker.adsWatchedSinceLastCoin} / 3 Ads Watched',
+                              'Daily Ads: ${tracker.adsWatchedToday} / 30 Watched',
                               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
                             ),
-                            Text(
-                              '${3 - tracker.adsWatchedSinceLastCoin} more for 1 Coin',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFFB45309)),
+                            const Text(
+                              '+1 Coin Per Ad! 🟡',
+                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF15803D)),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
                         LinearProgressIndicator(
-                          value: progress,
+                          value: (tracker.adsWatchedToday / 30.0).clamp(0.0, 1.0),
                           minHeight: 10,
                           backgroundColor: const Color(0xFFF1F5F9),
-                          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryAmber),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF16A34A)),
                           borderRadius: BorderRadius.circular(6),
                         ),
                       ],

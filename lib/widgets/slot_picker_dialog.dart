@@ -579,13 +579,13 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text(
-                                    'Watch 3 Ads = 1 🟡 Ad Coin',
+                                    'Watch 1 Ad = +1 🟡 Ad Coin (Instant)',
                                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF92400E)),
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    'Progress: $adsWatchedSinceCoin/3 Ads watched towards next coin.',
-                                    style: const TextStyle(fontSize: 11, color: Color(0xFFB45309)),
+                                  const Text(
+                                    '1 Ad dekhein aur turant 1 Ad Coin paayein!',
+                                    style: TextStyle(fontSize: 11, color: Color(0xFFB45309)),
                                   ),
                                 ],
                               ),
@@ -667,7 +667,7 @@ class _SlotPickerDialogState extends State<SlotPickerDialog> {
                                     : (!hasEnoughBalance
                                         ? (isPaidMatch
                                             ? '➕ RECHARGE ₹${(fee - userCash).ceil()} TO LOCK SLOT'
-                                            : '🎬 WATCH AD ($adsWatchedSinceCoin/3) TO EARN COIN')
+                                            : '🎬 WATCH 1 AD TO EARN +1 COIN')
                                         : (fee <= 0
                                             ? 'CONFIRM & LOCK SLOT #$selectedSlot (FREE)'
                                             : (isPaidMatch

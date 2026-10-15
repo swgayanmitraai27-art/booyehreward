@@ -408,58 +408,6 @@ class _ReferAndEarnCardState extends State<ReferAndEarnCard> {
                 ],
               ),
             ),
-          ] else ...[
-            const Text(
-              'HAVE A FRIEND\'S REFERRAL CODE?',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 0.8),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _refInputController,
-                    textCapitalization: TextCapitalization.characters,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Enter Referral Code',
-                      hintStyle: const TextStyle(color: Colors.grey, fontSize: 12),
-                      filled: true,
-                      fillColor: Colors.white.withAlpha(15),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: _isApplying ? null : _handleApplyCode,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.amber,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: _isApplying
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Apply', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
-                ),
-              ],
-            ),
-            if (_applyMessage != null) ...[
-              const SizedBox(height: 6),
-              Text(
-                _applyMessage!,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: _isSuccess ? const Color(0xFF34D399) : Colors.redAccent,
-                ),
-              ),
-            ],
           ],
         ],
       ),
