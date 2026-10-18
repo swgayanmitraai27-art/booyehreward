@@ -11,6 +11,7 @@ import 'earn_coins_screen.dart';
 import 'wallet_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
+import '../widgets/admob_banner_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppState appState;
@@ -130,7 +131,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _handleTabChange(int index) {
     if (_currentIndex != index) {
-      AdService.showInterstitialAd(context: context);
+      final isAdmin = widget.appState.user.role == 'admin' || AuthService.isAdminIdentifier(widget.appState.user.email, widget.appState.user.uid);
+      final isSwitchingToAdmin = isAdmin && index == 5;
+      final isSwitchingFromAdmin = isAdmin && _currentIndex == 5;
+
+      // Update AdService disabled flag so admin panel has ZERO ads
+      AdService.isAdsDisabled = isSwitchingToAdmin;
+
+      // Only show interstitial if not switching to or from admin panel
+      if (!isSwitchingToAdmin && !isSwitchingFromAdmin) {
+        AdService.showInterstitialAd(context: context);
+      }
       setState(() => _currentIndex = index);
     }
   }
@@ -165,13 +176,24 @@ class _HomeScreenState extends State<HomeScreen> {
           ProfileScreen(appState: widget.appState),
         ];
 
+        final currentScreen = screens[_currentIndex < screens.length ? _currentIndex : 0];
+        final isViewingAdmin = currentScreen is AdminPanelScreen;
+        AdService.isAdsDisabled = isViewingAdmin;
+
         return Scaffold(
           appBar: BooyahHeader(
             appState: widget.appState,
             onTabChange: (index) => _handleTabChange(index),
           ),
           body: SafeArea(
-            child: screens[_currentIndex < screens.length ? _currentIndex : 0],
+            child: Column(
+              children: [
+                Expanded(
+                  child: currentScreen,
+                ),
+                if (!isViewingAdmin) const AdmobBannerWidget(),
+              ],
+            ),
           ),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex < screens.length ? _currentIndex : 0,

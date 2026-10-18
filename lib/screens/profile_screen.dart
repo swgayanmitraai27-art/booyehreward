@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
+import '../services/ad_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/match_rules_card.dart';
@@ -323,6 +324,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               content: Text('Free Fire details & Level updated successfully!'),
                             ),
                           );
+                          AdService.showInterstitialAd(context: context);
                         },
                         icon: const Icon(Icons.check, size: 18),
                         label: const Text(

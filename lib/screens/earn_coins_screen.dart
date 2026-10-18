@@ -179,7 +179,10 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                                       foregroundColor: Colors.white,
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
-                                    onPressed: () => Navigator.of(context).pop(),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      AdService.showInterstitialAd(context: context);
+                                    },
                                     child: const Text('OKAY'),
                                   ),
                                 ],

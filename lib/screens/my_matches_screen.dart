@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/match_model.dart';
 import '../services/app_state.dart';
+import '../services/ad_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/match_banner_image.dart';
 import '../widgets/ff_brand_elements.dart';
@@ -42,6 +43,7 @@ class _MyMatchesScreenState extends State<MyMatchesScreen> {
 
   void _copyToClipboard(String text, String label) {
     Clipboard.setData(ClipboardData(text: text));
+    AdService.showInterstitialAd(context: context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         duration: const Duration(seconds: 2),

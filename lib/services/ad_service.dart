@@ -13,8 +13,15 @@ class AdService {
   // Official 100% Live Interstitial Ad Unit ID (Booyah Rewards Interstitial)
   static const String liveInterstitialAdUnitId = "ca-app-pub-2914481734058093/7866592668";
 
+  // Official 100% Live Banner Ad Unit ID (Booyah Rewards Banner)
+  static const String liveBannerAdUnitId = "ca-app-pub-2914481734058093/4561540966";
+
   static String activeRewardedAdUnitId = liveRewardedAdUnitId;
   static String activeInterstitialAdUnitId = liveInterstitialAdUnitId;
+  static String activeBannerAdUnitId = liveBannerAdUnitId;
+
+  /// Global flag to disable ads (e.g. inside Admin Panel)
+  static bool isAdsDisabled = false;
   static bool _isInitialized = false;
 
   static InterstitialAd? _cachedInterstitialAd;
@@ -50,6 +57,12 @@ class AdService {
   static void setInterstitialAdUnitId(String unitId) {
     if (unitId.trim().isNotEmpty) {
       activeInterstitialAdUnitId = unitId.trim();
+    }
+  }
+
+  static void setBannerAdUnitId(String unitId) {
+    if (unitId.trim().isNotEmpty) {
+      activeBannerAdUnitId = unitId.trim();
     }
   }
 
@@ -105,7 +118,7 @@ class AdService {
     VoidCallback? onAdDismissed,
     bool force = false,
   }) async {
-    if (kIsWeb) {
+    if (kIsWeb || isAdsDisabled) {
       if (onAdDismissed != null) onAdDismissed();
       return;
     }

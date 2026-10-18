@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/leaderboard_model.dart';
 import '../services/app_state.dart';
+import '../services/ad_service.dart';
 
 class WeeklyLeaderboardScreen extends StatefulWidget {
   final AppState appState;
@@ -538,7 +539,12 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
   Widget _buildFilterTab({required String label, required String filterKey}) {
     final isSelected = _selectedFilter == filterKey;
     return InkWell(
-      onTap: () => setState(() => _selectedFilter = filterKey),
+      onTap: () {
+        if (_selectedFilter != filterKey) {
+          AdService.showInterstitialAd(context: context);
+          setState(() => _selectedFilter = filterKey);
+        }
+      },
       borderRadius: BorderRadius.circular(10),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 8),
@@ -959,7 +965,12 @@ class _WeeklyLeaderboardScreenState extends State<WeeklyLeaderboardScreen> {
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(
-                  onPressed: widget.onBrowseTournaments,
+                  onPressed: () {
+                    AdService.showInterstitialAd(context: context);
+                    if (widget.onBrowseTournaments != null) {
+                      widget.onBrowseTournaments!();
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFF59E0B),
                     foregroundColor: Colors.black,
