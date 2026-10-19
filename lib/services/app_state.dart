@@ -15,6 +15,7 @@ import '../models/notification_model.dart';
 import '../models/leaderboard_model.dart';
 import '../models/referral_record.dart';
 import '../models/notice_board_model.dart';
+import '../models/daily_task_model.dart';
 import 'firestore_rest_service.dart';
 import 'firebase_config.dart';
 import 'auth_service.dart';
@@ -25,6 +26,7 @@ import 'web_storage/web_storage.dart';
 class AppState extends ChangeNotifier {
   late UserModel user;
   NoticeBoardData noticeBoard = NoticeBoardData();
+  UserDailyTaskData dailyTaskData = UserDailyTaskData.createInitial();
   final NotificationService _notificationService = NotificationService();
   NotificationService get notificationService => _notificationService;
 
@@ -174,8 +176,27 @@ class AppState extends ChangeNotifier {
         isRealCashModeEnabled = cachedSafeMode == 'true';
         notifyListeners();
       }
+
+      final cachedTasks = WebStorageHelper.getItem('booyah_daily_tasks_${user.uid}') ?? prefs.getString('booyah_daily_tasks_${user.uid}');
+      if (cachedTasks != null && cachedTasks.isNotEmpty) {
+        dailyTaskData = UserDailyTaskData.fromJson(jsonDecode(cachedTasks));
+      } else {
+        dailyTaskData = UserDailyTaskData.createInitial();
+      }
+      dailyTaskData.checkAndResetForNewDay();
+      notifyListeners();
     } catch (e) {
       debugPrint('[AppState] Load local cache error: $e');
+    }
+  }
+
+  void _saveLocalDailyTasksCache() {
+    try {
+      final jsonStr = jsonEncode(dailyTaskData.toJson());
+      WebStorageHelper.setItem('booyah_daily_tasks_${user.uid}', jsonStr);
+      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_daily_tasks_${user.uid}', jsonStr));
+    } catch (e) {
+      debugPrint('[AppState] Save local daily tasks cache error: $e');
     }
   }
 
@@ -538,6 +559,9 @@ class AppState extends ChangeNotifier {
     match.participants.add(participant);
     match.filledSlots += 1;
     user.stats.matchesPlayed += 1;
+    dailyTaskData.checkAndResetForNewDay();
+    dailyTaskData.matchesJoinedToday += 1;
+    _saveLocalDailyTasksCache();
 
     if (fee > 0) {
       final newTxn = TransactionModel(
@@ -854,6 +878,114 @@ class AppState extends ChangeNotifier {
     };
   }
 
+  // --- DAILY TASKS & MISSIONS SYSTEM ---
+  Map<String, dynamic> claimDailyCheckIn() {
+    dailyTaskData.checkAndResetForNewDay();
+    if (dailyTaskData.hasCheckedInToday) {
+      return {'success': false, 'message': 'Already claimed today\'s login bonus!'};
+    }
+
+    final rewardCoins = dailyTaskData.getTodayCheckInReward();
+    final balBefore = user.wallet.adCoins.toDouble();
+    user.wallet.adCoins += rewardCoins;
+    user.stats.totalCoinsEarned += rewardCoins;
+
+    dailyTaskData.hasCheckedInToday = true;
+    if (!dailyTaskData.claimedTaskIds.contains('task_daily_login')) {
+      dailyTaskData.claimedTaskIds.add('task_daily_login');
+    }
+
+    final newTxn = TransactionModel(
+      id: 'txn_checkin_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.adReward,
+      walletAffected: WalletType.adCoins,
+      amount: rewardCoins.toDouble(),
+      currency: 'AD_COINS',
+      balanceBefore: balBefore,
+      balanceAfter: user.wallet.adCoins.toDouble(),
+      status: 'SUCCESS',
+      description: 'Daily Check-In Day ${dailyTaskData.checkInStreak} Bonus (+$rewardCoins 🪙)',
+      createdAt: DateTime.now(),
+    );
+
+    transactions.insert(0, newTxn);
+    allGlobalTransactions.insert(0, newTxn);
+
+    _syncUser();
+    _syncTransaction(newTxn);
+    _saveLocalDailyTasksCache();
+    notifyListeners();
+
+    return {
+      'success': true,
+      'rewardCoins': rewardCoins,
+      'message': '🎉 Day ${dailyTaskData.checkInStreak} Check-In Claimed! +$rewardCoins 🪙 Coins Earned!',
+    };
+  }
+
+  Map<String, dynamic> claimDailyTaskReward(String taskId) {
+    dailyTaskData.checkAndResetForNewDay();
+    final taskIndex = DailyTasksCatalog.allTasks.indexWhere((t) => t.id == taskId);
+    if (taskIndex == -1) {
+      return {'success': false, 'message': 'Task not found'};
+    }
+
+    final task = DailyTasksCatalog.allTasks[taskIndex];
+    if (!task.isCompleted(dailyTaskData)) {
+      return {'success': false, 'message': 'Task not completed yet!'};
+    }
+    if (task.isClaimed(dailyTaskData)) {
+      return {'success': false, 'message': 'Task reward already claimed today!'};
+    }
+
+    final balBefore = user.wallet.adCoins.toDouble();
+    user.wallet.adCoins += task.rewardCoins;
+    user.stats.totalCoinsEarned += task.rewardCoins;
+    if (task.isStreakMilestone) {
+      dailyTaskData.claimedMilestoneTaskIds.add(taskId);
+    } else {
+      dailyTaskData.claimedTaskIds.add(taskId);
+    }
+
+    final newTxn = TransactionModel(
+      id: 'txn_task_${DateTime.now().millisecondsSinceEpoch}',
+      userId: user.uid,
+      userName: user.displayName,
+      type: TransactionType.adReward,
+      walletAffected: WalletType.adCoins,
+      amount: task.rewardCoins.toDouble(),
+      currency: 'AD_COINS',
+      balanceBefore: balBefore,
+      balanceAfter: user.wallet.adCoins.toDouble(),
+      status: 'SUCCESS',
+      description: 'Daily Mission Reward: ${task.title} (+${task.rewardCoins} 🪙)',
+      createdAt: DateTime.now(),
+    );
+
+    transactions.insert(0, newTxn);
+    allGlobalTransactions.insert(0, newTxn);
+
+    _syncUser();
+    _syncTransaction(newTxn);
+    _saveLocalDailyTasksCache();
+    notifyListeners();
+
+    return {
+      'success': true,
+      'rewardCoins': task.rewardCoins,
+      'message': '🎉 Mission Completed! +${task.rewardCoins} 🪙 Coins Earned!',
+    };
+  }
+
+  void recordReferralShareForTasks() {
+    dailyTaskData.checkAndResetForNewDay();
+    dailyTaskData.referralsDoneToday += 1;
+    _saveLocalDailyTasksCache();
+    notifyListeners();
+  }
+
   // --- REDEEM REWARD COINS FOR REDEEM CODES WITH WHATSAPP NUMBER ---
   Map<String, dynamic> redeemStoreItem({
     required StoreItem item,
@@ -1010,6 +1142,9 @@ class AppState extends ChangeNotifier {
     final balBefore = user.wallet.adCoins.toDouble();
     user.wallet.adCoins += 1;
     user.stats.totalCoinsEarned += 1;
+    dailyTaskData.checkAndResetForNewDay();
+    dailyTaskData.adsWatchedToday += 1;
+    _saveLocalDailyTasksCache();
     const coinAwarded = true;
     const message = '🎉 +1 🟡 Ad Coin Earned!';
 
@@ -1576,6 +1711,183 @@ class AppState extends ChangeNotifier {
     _syncMatch(match);
     notifyListeners();
   }
+
+  // --- ADMIN: CUSTOM MULTI-SELECT WINNER DECLARATION (FOR RANDOM CS/LW PLAYERS) ---
+  void adminDeclareCustomCSWinners({
+    required String matchId,
+    required List<String> winningUids,
+  }) {
+    final match = matches.firstWhere((m) => m.id == matchId);
+    match.status = MatchStatus.completed;
+    match.completedAt = DateTime.now();
+    if (match.hostName == null || match.hostName!.isEmpty) {
+      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
+    }
+    final bool isPaid = match.matchType == MatchType.paid;
+
+    // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
+    final double actualCollection = isPaid
+        ? (match.participants.isNotEmpty
+            ? match.participants.fold(0.0, (s, p) => s + p.amountPaid)
+            : match.totalCollection)
+        : 0.0;
+    match.financialBreakdown = FinancialBreakdown.calculate(totalCollection: actualCollection);
+
+    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
+
+    // Distributable Prize Pool
+    final double totalPrizePool = (isPaid && isCashPrize) ? match.distributablePrizePool : match.prizePool.totalPool;
+    final int winningCount = winningUids.isNotEmpty ? winningUids.length : 1;
+    final double prizePerPlayer = totalPrizePool / winningCount;
+
+    // Update participants
+    for (var p in match.participants) {
+      final isWinner = winningUids.contains(p.uid);
+      if (isWinner) {
+        p.isWinner = true;
+        p.rank = 1;
+        p.prizeAwarded = prizePerPlayer;
+
+        if (p.uid == user.uid || p.inGameName == user.inGameName) {
+          // Current user is winner
+          dailyTaskData.checkAndResetForNewDay();
+          dailyTaskData.booyahsWonToday += 1;
+          _saveLocalDailyTasksCache();
+
+          if (isCashPrize) {
+            final balBefore = user.wallet.winningCash;
+            user.wallet.winningCash += prizePerPlayer;
+            user.stats.totalWinningsCash += prizePerPlayer;
+            user.stats.matchesWon += 1;
+            user.stats.matchesPlayed += 1;
+
+            final winTxn = TransactionModel(
+              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+              userId: user.uid,
+              userName: user.displayName,
+              type: TransactionType.matchWinningCash,
+              walletAffected: WalletType.winningCash,
+              amount: prizePerPlayer,
+              currency: 'INR',
+              balanceBefore: balBefore,
+              balanceAfter: user.wallet.winningCash,
+              status: 'SUCCESS',
+              description: 'Clash Squad Victory (Selected Winner: ₹${prizePerPlayer.toInt()}) in "${match.title}"',
+              createdAt: DateTime.now(),
+            );
+            transactions.insert(0, winTxn);
+            _syncTransaction(winTxn);
+          } else {
+            final balBefore = user.wallet.rewardCoins.toDouble();
+            user.wallet.rewardCoins += prizePerPlayer.toInt();
+            user.stats.totalCoinsEarned += prizePerPlayer.toInt();
+            user.stats.matchesWon += 1;
+            user.stats.matchesPlayed += 1;
+
+            final winTxn = TransactionModel(
+              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+              userId: user.uid,
+              userName: user.displayName,
+              type: TransactionType.matchWinningRewardCoins,
+              walletAffected: WalletType.rewardCoins,
+              amount: prizePerPlayer,
+              currency: 'REWARD_COINS',
+              balanceBefore: balBefore,
+              balanceAfter: user.wallet.rewardCoins.toDouble(),
+              status: 'SUCCESS',
+              description: 'Clash Squad Victory (Selected Winner: ${prizePerPlayer.toInt()} 🎟️ Coins) in "${match.title}"',
+              createdAt: DateTime.now(),
+            );
+            transactions.insert(0, winTxn);
+            _syncTransaction(winTxn);
+          }
+        } else if (p.uid.isNotEmpty) {
+          _creditWinningToParticipant(
+            uid: p.uid,
+            inGameName: p.inGameName,
+            amount: prizePerPlayer,
+            isPaid: isCashPrize,
+            matchTitle: match.title,
+            rank: 1,
+            kills: 0,
+          );
+        }
+      } else {
+        p.isWinner = false;
+        p.rank = 2;
+        p.prizeAwarded = 0;
+      }
+    }
+
+    // 💰 Credit 25% Host Profit Commission
+    if (isPaid && isCashPrize && match.financialBreakdown != null) {
+      final hostShare = match.financialBreakdown!.shares.host25;
+      _creditHostCommission(match: match, commissionAmount: hostShare);
+    }
+
+    _syncUser();
+    _syncMatch(match);
+    notifyListeners();
+  }
+
+  // --- ADMIN: RESCHEDULE MATCH DATE & TIME ---
+  void adminRescheduleMatch(String matchId, DateTime newMatchTime) {
+    final matchIndex = matches.indexWhere((m) => m.id == matchId);
+    if (matchIndex == -1) return;
+
+    final match = matches[matchIndex];
+    match.matchTime = newMatchTime;
+    if (match.status != MatchStatus.completed && match.status != MatchStatus.cancelled) {
+      if (newMatchTime.isAfter(DateTime.now())) {
+        match.status = MatchStatus.upcoming;
+      }
+    }
+    _saveLocalMatchesCache();
+    _syncMatch(match);
+    notifyListeners();
+  }
+
+  // --- ADMIN: KICK / REMOVE ABSENT PLAYER FROM MATCH SLOT ---
+  void adminKickParticipant({
+    required String matchId,
+    required String participantUid,
+    bool refund = true,
+  }) {
+    final matchIndex = matches.indexWhere((m) => m.id == matchId);
+    if (matchIndex == -1) return;
+
+    final match = matches[matchIndex];
+    final pIndex = match.participants.indexWhere((p) => p.uid == participantUid);
+    if (pIndex == -1) return;
+
+    final participant = match.participants[pIndex];
+
+    // Optional refund if player paid entry fee
+    if (refund && participant.amountPaid > 0) {
+      if (participant.uid == user.uid) {
+        if (participant.paidWith.contains('COIN')) {
+          user.wallet.adCoins += participant.amountPaid.toInt();
+        } else {
+          user.wallet.depositCash += participant.amountPaid;
+        }
+        _syncUser();
+      }
+    }
+
+    match.participants.removeAt(pIndex);
+    match.filledSlots = match.participants.length;
+
+    // If room filling countdown was active and slots are now below max, reset
+    if (match.status == MatchStatus.roomFilling && match.filledSlots < match.maxSlots) {
+      match.status = MatchStatus.upcoming;
+      match.roomFillingStartedAt = null;
+    }
+
+    _saveLocalMatchesCache();
+    _syncMatch(match);
+    notifyListeners();
+  }
+
 
   // --- ADMIN: FULL MAP BR DYNAMIC RESULT DECLARATION ---
   void adminDeclareBRWinners({
@@ -3383,6 +3695,9 @@ class AppState extends ChangeNotifier {
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(m.toJson()),
       ).timeout(const Duration(seconds: 4));
+    } catch (_) {}
+    try {
+      await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
     } catch (_) {}
   }
 

@@ -12,6 +12,7 @@ import '../widgets/dynamic_banner_carousel.dart';
 import '../widgets/admin_notice_board_widget.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' show AdSize;
 import '../widgets/admob_banner_widget.dart';
+import '../widgets/daily_login_popup_dialog.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
   final AppState appState;
@@ -45,6 +46,11 @@ class TournamentLobbyScreen extends StatelessWidget {
 
           // 📢 Official Admin Notice & Live Community Board (Admin Message)
           AdminNoticeBoardWidget(appState: appState),
+          const SizedBox(height: 12),
+
+          // 🎁 Daily Login & Tasks Quick Access Card
+          _buildDailyMissionsQuickCard(context),
+          const SizedBox(height: 12),
 
           // 1. Hero Promo Card: 100% FREE ESPORTS & REAL REDEEM CODES (High-Retention Hindi)
           Container(
@@ -1461,6 +1467,115 @@ class TournamentLobbyScreen extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // --- 🎁 DAILY MISSIONS & LOGIN HERO CARD ---
+  Widget _buildDailyMissionsQuickCard(BuildContext context) {
+    final taskData = appState.dailyTaskData;
+    taskData.checkAndResetForNewDay();
+    final hasCheckedIn = taskData.hasCheckedInToday;
+    final todayReward = taskData.getTodayCheckInReward();
+
+    return InkWell(
+      onTap: () {
+        DailyLoginPopupDialog.show(context, appState, onNavigateToEarn: onEarnCoinsClick);
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.amber.withAlpha(90), width: 1.2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(25),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.withAlpha(30),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.amber, width: 1),
+              ),
+              child: const Text('🎁', style: TextStyle(fontSize: 22)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Text(
+                        'DAILY MISSIONS & LOGIN',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: Colors.amber,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'Day ${taskData.checkInStreak}/14',
+                          style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Colors.black),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    hasCheckedIn
+                        ? 'Day ${taskData.checkInStreak} Claimed! Daily match & ad missions ready!'
+                        : 'Day ${taskData.checkInStreak} login reward ready! Tap to claim +$todayReward 🪙 Coin!',
+                    style: TextStyle(
+                      fontSize: 10.5,
+                      color: hasCheckedIn ? const Color(0xFF94A3B8) : const Color(0xFFFDE68A),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: hasCheckedIn ? const Color(0xFF334155) : const Color(0xFFF59E0B),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                hasCheckedIn ? 'TASKS' : 'CLAIM',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  color: hasCheckedIn ? Colors.white70 : Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

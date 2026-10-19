@@ -4,19 +4,25 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/refer_and_earn_widget.dart';
+import '../widgets/daily_tasks_widget.dart';
 import '../services/ad_service.dart';
 
 class EarnCoinsScreen extends StatefulWidget {
   final AppState appState;
+  final VoidCallback? onBrowseMatches;
 
-  const EarnCoinsScreen({super.key, required this.appState});
+  const EarnCoinsScreen({
+    super.key,
+    required this.appState,
+    this.onBrowseMatches,
+  });
 
   @override
   State<EarnCoinsScreen> createState() => _EarnCoinsScreenState();
 }
 
 class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
-  int activeTab = 0; // 0: Watch & Earn, 1: Rewards Store
+  int activeTab = 0; // 0: Daily Tasks, 1: Watch & Earn, 2: Rewards Store
 
   @override
   void initState() {
@@ -224,7 +230,7 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-          // Segmented Navigation Header
+          // Segmented Navigation Header (3 Tabs: Daily Tasks, Watch Ads, Store)
           Container(
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
@@ -238,16 +244,19 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                     onTap: () => setState(() => activeTab = 0),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: activeTab == 0 ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
+                        boxShadow: activeTab == 0
+                            ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4, offset: const Offset(0, 1))]
+                            : null,
                       ),
                       child: Text(
-                        '🟡 Watch Ads (Earn Coins)',
+                        '🎯 Daily Tasks',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11.5,
                           fontWeight: FontWeight.w900,
                           color: activeTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                         ),
@@ -260,23 +269,51 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
                     onTap: () => setState(() => activeTab = 1),
                     borderRadius: BorderRadius.circular(10),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: activeTab == 1 ? Colors.white : Colors.transparent,
                         borderRadius: BorderRadius.circular(10),
+                        boxShadow: activeTab == 1
+                            ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4, offset: const Offset(0, 1))]
+                            : null,
+                      ),
+                      child: Text(
+                        '🟡 Watch Ads',
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w900,
+                          color: activeTab == 1 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: InkWell(
+                    onTap: () => setState(() => activeTab = 2),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 9),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: activeTab == 2 ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: activeTab == 2
+                            ? [BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 4, offset: const Offset(0, 1))]
+                            : null,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text('🎁 Rewards Store', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900)),
+                          const Text('🎁 Store', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.w900)),
                           const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                             decoration: BoxDecoration(color: Colors.amber, borderRadius: BorderRadius.circular(6)),
                             child: Text(
                               '${user.wallet.rewardCoins}🎟️',
-                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black),
+                              style: const TextStyle(fontSize: 8.5, fontWeight: FontWeight.bold, color: Colors.black),
                             ),
                           ),
                         ],
@@ -290,6 +327,13 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
           const SizedBox(height: 16),
 
           if (activeTab == 0) ...[
+            // Tab 0: Daily Missions & Check-In System
+            DailyTasksWidget(
+              appState: widget.appState,
+              onWatchAdClick: () => setState(() => activeTab = 1),
+              onBrowseMatchesClick: widget.onBrowseMatches,
+            ),
+          ] else if (activeTab == 1) ...[
             // Tab 1: Rewarded Ads Hub
             Container(
               width: double.infinity,
@@ -406,7 +450,7 @@ class _EarnCoinsScreenState extends State<EarnCoinsScreen> {
 
             // 🎁 REFER & EARN BONUS CARD
             ReferAndEarnCard(appState: widget.appState),
-          ] else ...[
+          ] else if (activeTab == 2) ...[
             // Tab 2: Rewards Store (Exchange Winning/Reward Coins for Google Play Redeem Codes)
             Container(
               padding: const EdgeInsets.all(14),

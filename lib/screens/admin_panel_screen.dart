@@ -137,6 +137,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   final TextEditingController _noticeAdminMsgController = TextEditingController();
   bool _noticeAllowUsers = false;
   bool _isSavingNotice = false;
+  final Set<String> _selectedCsWinnerUids = {};
 
   @override
   void initState() {
@@ -1409,6 +1410,14 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 6),
+
+                      // Kick / Remove Absent Player Button
+                      IconButton(
+                        icon: const Icon(Icons.person_remove_rounded, color: Colors.redAccent, size: 20),
+                        tooltip: 'Kick / Remove Absent Player',
+                        onPressed: () => _confirmKickPlayer(context, selectedMatch, p),
+                      ),
                     ],
                   ),
                 );
@@ -1561,6 +1570,17 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                     });
                   },
                 ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                style: IconButton.styleFrom(
+                  backgroundColor: const Color(0xFFFEF3C7),
+                  foregroundColor: const Color(0xFFB45309),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                tooltip: 'Reschedule Date & Time',
+                icon: const Icon(Icons.edit_calendar_rounded, size: 20),
+                onPressed: () => _handleRescheduleMatch(context, selectedMatch),
               ),
               const SizedBox(width: 8),
               IconButton.filled(
@@ -1792,7 +1812,266 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
             ),
           ],
         ),
+
+        const SizedBox(height: 16),
+
+        // 🌟 CUSTOM WINNER SELECTION FOR RANDOM PLAYERS
+        _buildCustomCSWinnerSelector(match, isCashMatch, prizePool),
       ],
+    );
+  }
+
+  Widget _buildCustomCSWinnerSelector(MatchModel match, bool isCashMatch, double prizePool) {
+    final participants = match.participants;
+    final int selectedCount = _selectedCsWinnerUids.length;
+    final double prizePerSelected = selectedCount > 0 ? (prizePool / selectedCount) : 0.0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(40),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Text('🎯', style: TextStyle(fontSize: 20)),
+                  SizedBox(width: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'RANDOM PLAYERS: CUSTOM WINNER SELECTOR',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.amber),
+                      ),
+                      Text(
+                        'Winning team ke players ko select karke prize distribute karein',
+                        style: TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.amber,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  '$selectedCount Selected',
+                  style: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.w900, color: Colors.black),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          // Quick selection chips
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              ActionChip(
+                backgroundColor: const Color(0xFF1E293B),
+                side: const BorderSide(color: Color(0xFF334155)),
+                label: const Text('Slots 1-4', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                onPressed: () {
+                  setState(() {
+                    for (var p in participants) {
+                      if (p.slotNumber <= 4) _selectedCsWinnerUids.add(p.uid);
+                    }
+                  });
+                },
+              ),
+              ActionChip(
+                backgroundColor: const Color(0xFF1E293B),
+                side: const BorderSide(color: Color(0xFF334155)),
+                label: const Text('Slots 5-8', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                onPressed: () {
+                  setState(() {
+                    for (var p in participants) {
+                      if (p.slotNumber > 4) _selectedCsWinnerUids.add(p.uid);
+                    }
+                  });
+                },
+              ),
+              ActionChip(
+                backgroundColor: const Color(0xFF1E293B),
+                side: const BorderSide(color: Color(0xFF334155)),
+                label: const Text('Select All', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white)),
+                onPressed: () {
+                  setState(() {
+                    for (var p in participants) {
+                      _selectedCsWinnerUids.add(p.uid);
+                    }
+                  });
+                },
+              ),
+              ActionChip(
+                backgroundColor: const Color(0xFF1E293B),
+                side: const BorderSide(color: Color(0xFF334155)),
+                label: const Text('Clear All', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.redAccent)),
+                onPressed: () {
+                  setState(() {
+                    _selectedCsWinnerUids.clear();
+                  });
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+          const Divider(color: Colors.white12),
+          const SizedBox(height: 6),
+
+          if (participants.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: Text('No participants joined this match yet.', style: TextStyle(color: Colors.grey, fontSize: 11)),
+              ),
+            )
+          else
+            ...participants.map((p) {
+              final isChecked = _selectedCsWinnerUids.contains(p.uid);
+              return Container(
+                margin: const EdgeInsets.only(bottom: 6),
+                decoration: BoxDecoration(
+                  color: isChecked ? Colors.amber.withAlpha(25) : const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isChecked ? Colors.amber : Colors.white10,
+                    width: isChecked ? 1.5 : 1,
+                  ),
+                ),
+                child: CheckboxListTile(
+                  dense: true,
+                  activeColor: Colors.amber,
+                  checkColor: Colors.black,
+                  value: isChecked,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedCsWinnerUids.add(p.uid);
+                      } else {
+                        _selectedCsWinnerUids.remove(p.uid);
+                      }
+                    });
+                  },
+                  title: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: isChecked ? Colors.amber : const Color(0xFF334155),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '#${p.slotNumber}',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: isChecked ? Colors.black : Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          p.inGameName,
+                          style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.white),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        'UID: ${p.inGameUid}',
+                        style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8), fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+          const SizedBox(height: 10),
+
+          // Prize distribution summary
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withAlpha(60)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Prize Each Winner:', style: TextStyle(fontSize: 11, color: Color(0xFFCBD5E1), fontWeight: FontWeight.bold)),
+                Text(
+                  selectedCount > 0
+                      ? (isCashMatch ? '₹${prizePerSelected.toInt()} Real Cash' : '${prizePerSelected.toInt()} 🎟️ Coins')
+                      : 'Select players above',
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.amber),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          // Declare Selected Players Button
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: selectedCount > 0 ? const Color(0xFFF59E0B) : const Color(0xFF334155),
+                foregroundColor: selectedCount > 0 ? Colors.black : Colors.white54,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                elevation: selectedCount > 0 ? 3 : 0,
+              ),
+              onPressed: selectedCount == 0
+                  ? null
+                  : () {
+                      widget.appState.adminDeclareCustomCSWinners(
+                        matchId: match.id,
+                        winningUids: _selectedCsWinnerUids.toList(),
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: const Color(0xFF065F46),
+                          content: Text('🎉 Declared $selectedCount Selected Players as Winners! Prize distributed!'),
+                        ),
+                      );
+                      setState(() {
+                        _selectedCsWinnerUids.clear();
+                      });
+                    },
+              icon: const Icon(Icons.emoji_events, size: 18),
+              label: Text(
+                'DECLARE SELECTED ($selectedCount) PLAYERS AS WINNERS 🏆',
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11.5),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3888,6 +4167,22 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               onPressed: () => _confirmDeleteMatch(context, match),
                               icon: const Icon(Icons.delete_outline, size: 14),
                               label: const Text('Delete Match', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 6),
+
+                            // 📅 Reschedule (Date & Time) Button
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFEF3C7),
+                                foregroundColor: const Color(0xFFB45309),
+                                elevation: 0,
+                                side: const BorderSide(color: Color(0xFFFCD34D)),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: () => _handleRescheduleMatch(context, match),
+                              icon: const Icon(Icons.edit_calendar_rounded, size: 14),
+                              label: const Text('Reschedule Date/Time', style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold)),
                             ),
                             const SizedBox(width: 6),
 
@@ -6328,6 +6623,90 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               }
             },
             child: Text(match.isCashMatch ? 'CANCEL MATCH & REFUND REAL CASH' : 'CANCEL MATCH & REFUND COINS'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleRescheduleMatch(BuildContext context, MatchModel match) async {
+    final initialDate = match.matchTime.isAfter(DateTime.now()) ? match.matchTime : DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 1)),
+      lastDate: DateTime.now().add(const Duration(days: 90)),
+      helpText: 'SELECT NEW MATCH DATE',
+    );
+    if (pickedDate == null || !mounted) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(match.matchTime),
+      helpText: 'SELECT NEW MATCH TIME',
+    );
+    if (pickedTime == null || !mounted) return;
+
+    final newMatchTime = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    widget.appState.adminRescheduleMatch(match.id, newMatchTime);
+    setState(() {});
+
+    final formatted = DateFormat('dd MMM yyyy, hh:mm a').format(newMatchTime);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: const Color(0xFF065F46),
+        content: Text('📅 Match #${match.id} rescheduled to $formatted!\nSynced to VPS & Firebase live for all players!'),
+      ),
+    );
+  }
+
+  void _confirmKickPlayer(BuildContext context, MatchModel match, MatchParticipant participant) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.person_remove, color: Colors.red),
+            SizedBox(width: 8),
+            Text('Kick Absent Player?'),
+          ],
+        ),
+        content: Text(
+          'Kya aap "${participant.inGameName}" (Slot #${participant.slotNumber}, UID: ${participant.inGameUid}) ko match se remove karna chahte hain?\n\nIsse ye slot khali ho jayega aur doosra active player join kar sakega.',
+          style: const TextStyle(fontSize: 12.5, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('CANCEL'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              widget.appState.adminKickParticipant(
+                matchId: match.id,
+                participantUid: participant.uid,
+                refund: true,
+              );
+              setState(() {});
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  backgroundColor: Colors.red.shade800,
+                  content: Text('🗑️ Removed ${participant.inGameName} from slot #${participant.slotNumber}. Slot is now open!'),
+                ),
+              );
+            },
+            child: const Text('KICK & FREE SLOT', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),

@@ -12,6 +12,7 @@ import 'wallet_screen.dart';
 import 'admin_panel_screen.dart';
 import 'profile_screen.dart';
 import '../widgets/admob_banner_widget.dart';
+import '../widgets/daily_login_popup_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   final AppState appState;
@@ -25,6 +26,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   bool _hasShownUpdateDialog = false;
+  bool _hasShownDailyCheckInPopup = false;
 
   @override
   void initState() {
@@ -32,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.appState.addListener(_checkAppUpdateRequired);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAppUpdateRequired();
+      _checkAndShowDailyLoginRewardDialog();
     });
   }
 
@@ -129,6 +132,31 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _checkAndShowDailyLoginRewardDialog() {
+    if (!mounted || _hasShownDailyCheckInPopup) return;
+    if (widget.appState.isUpdateRequired) return;
+
+    final taskData = widget.appState.dailyTaskData;
+    taskData.checkAndResetForNewDay();
+    if (!taskData.hasCheckedInToday) {
+      _hasShownDailyCheckInPopup = true;
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (!mounted) return;
+        final isAdmin = widget.appState.user.role == 'admin' ||
+            AuthService.isAdminIdentifier(widget.appState.user.email, widget.appState.user.uid);
+        if (isAdmin && _currentIndex == 5) return;
+
+        DailyLoginPopupDialog.show(
+          context,
+          widget.appState,
+          onNavigateToEarn: () {
+            _handleTabChange(2); // 2 is Earn Coins tab
+          },
+        );
+      });
+    }
+  }
+
   void _handleTabChange(int index) {
     if (_currentIndex != index) {
       final isAdmin = widget.appState.user.role == 'admin' || AuthService.isAdminIdentifier(widget.appState.user.email, widget.appState.user.uid);
@@ -167,7 +195,10 @@ class _HomeScreenState extends State<HomeScreen> {
             appState: widget.appState,
             onBrowseTournaments: () => _handleTabChange(0),
           ),
-          EarnCoinsScreen(appState: widget.appState),
+          EarnCoinsScreen(
+            appState: widget.appState,
+            onBrowseMatches: () => _handleTabChange(0),
+          ),
           WalletScreen(
             appState: widget.appState,
             onGoToStore: () => _handleTabChange(3),
