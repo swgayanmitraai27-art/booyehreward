@@ -10,6 +10,8 @@ import '../widgets/match_banner_image.dart';
 import '../widgets/ff_brand_elements.dart';
 import '../widgets/dynamic_banner_carousel.dart';
 import '../widgets/admin_notice_board_widget.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart' show AdSize;
+import '../widgets/admob_banner_widget.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
   final AppState appState;
@@ -583,7 +585,70 @@ class TournamentLobbyScreen extends StatelessWidget {
               separatorBuilder: (context, index) => const SizedBox(height: 16),
               itemBuilder: (context, index) {
                 final match = matches[index];
-                return _buildMatchCard(context, match);
+                final matchCard = _buildMatchCard(context, match);
+
+                // Har 2 match card ke baad ek sponsored ad banner dikhega (index 1, 3, 5...)
+                if ((index + 1) % 2 == 0) {
+                  return Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      matchCard,
+                      const SizedBox(height: 16),
+                      Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.symmetric(vertical: 4),
+                        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(8),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text(
+                                      'SPONSORED',
+                                      style: TextStyle(
+                                        fontSize: 8.5,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.amber,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            AdmobBannerWidget(
+                              key: ValueKey('lobby_feed_banner_$index'),
+                              adSize: AdSize.mediumRectangle, // 300x250 Medium Rectangle (bada banner)
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
+                return matchCard;
               },
             ),
         ],
