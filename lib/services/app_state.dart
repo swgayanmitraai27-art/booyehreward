@@ -64,9 +64,9 @@ class AppState extends ChangeNotifier {
   List<TournamentModeItem> get activeTournamentModes => tournamentModes.where((m) => m.enabled).toList();
   
   String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
-  bool isRealCashModeEnabled = false; // Default: Play Store Review Safe Mode (OFF)
+  bool isRealCashModeEnabled = false; // Off: Deposit disabled, Free Tournament Withdrawals (₹100 Min) Active
   double coinToRupeeRate = 1.0; // 1 Coin = ₹1.00 Real Cash (1:1 Ratio)
-  int minWithdrawalCoins = 50; // Minimum 50 Winning Coins (₹50) for instant UPI withdrawal
+  int minWithdrawalCoins = 100; // Minimum ₹100 for instant UPI / Redeem Code withdrawal
 
   // Dynamic Weekly Leaderboard Prize Pool (Configured from Admin Panel)
   double weeklyRank1Prize = 200.0;
@@ -90,16 +90,34 @@ class AppState extends ChangeNotifier {
   bool isLoadingAuth = true;
   int globalTotalAdsWatched = 0;
 
-  // Rewards Store: Minimum 1000 Reward Coins = ₹100 Google Play Redeem Code (Diamonds removed; Admin can add/delete items)
+  // Rewards Store: Real Cash (₹) to Google Play Redeem Codes (1:1 with rupees, Min ₹100)
   List<StoreItem> storeItems = [
     StoreItem(
       id: 'store_gp_100',
       title: '₹100 Google Play Redeem Code',
-      description: '1000 Reward Coins (Won in Free Matches) = ₹100 Google Play Redeem Code sent to your WhatsApp.',
+      description: '₹100 Winning Cash = ₹100 Google Play Code sent to your WhatsApp.',
       imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
       iconEmoji: '🎟️',
-      rewardCoinsPrice: 1000, // 1000 Winning/Reward Coins = ₹100 Play Code
-      rewardValue: '₹100 Redeem Code',
+      rewardCoinsPrice: 100,
+      rewardValue: '₹100 Play Code',
+    ),
+    StoreItem(
+      id: 'store_gp_200',
+      title: '₹200 Google Play Redeem Code',
+      description: '₹200 Winning Cash = ₹200 Google Play Code sent to your WhatsApp.',
+      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
+      iconEmoji: '🎟️',
+      rewardCoinsPrice: 200,
+      rewardValue: '₹200 Play Code',
+    ),
+    StoreItem(
+      id: 'store_gp_500',
+      title: '₹500 Google Play Redeem Code',
+      description: '₹500 Winning Cash = ₹500 Google Play Code sent to your WhatsApp.',
+      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
+      iconEmoji: '🎟️',
+      rewardCoinsPrice: 500,
+      rewardValue: '₹500 Play Code',
     ),
   ];
 
@@ -257,6 +275,10 @@ class AppState extends ChangeNotifier {
   }
 
   void setUser(UserModel u) {
+    if (u.wallet.rewardCoins > 0) {
+      u.wallet.winningCash += u.wallet.rewardCoins;
+      u.wallet.rewardCoins = 0;
+    }
     user = u;
     isAuthenticated = true;
     _notificationService.initialize(userId: u.uid);
@@ -986,16 +1008,24 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- REDEEM REWARD COINS FOR REDEEM CODES WITH WHATSAPP NUMBER ---
+  // --- REDEEM WINNING CASH (₹) FOR GOOGLE PLAY REDEEM CODES WITH WHATSAPP DELIVERY ---
   Map<String, dynamic> redeemStoreItem({
     required StoreItem item,
     required String whatsappNumber,
     required String inGameUid,
   }) {
-    if (user.wallet.rewardCoins < 1000 || user.wallet.rewardCoins < item.rewardCoinsPrice) {
+    final costInRupees = item.priceInRupees.toDouble();
+    if (user.wallet.winningCash < costInRupees) {
       return {
         'success': false,
-        'message': 'Minimum 1000 🎟️ Reward Coins required for redemption! You have ${user.wallet.rewardCoins} 🎟️ Reward Coins, need ${item.rewardCoinsPrice} coins.'
+        'message': 'Insufficient Winning Cash! Aapke paas ₹${user.wallet.winningCash.toInt()} hain, ₹${costInRupees.toInt()} chahiye ${item.title} ke liye.'
+      };
+    }
+
+    if (costInRupees < 100 && minWithdrawalCoins >= 100) {
+      return {
+        'success': false,
+        'message': 'Minimum withdrawal / Redeem Code limit ₹100 hai.'
       };
     }
 
@@ -1006,9 +1036,9 @@ class AppState extends ChangeNotifier {
       };
     }
 
-    final balBefore = user.wallet.rewardCoins.toDouble();
-    user.wallet.rewardCoins -= item.rewardCoinsPrice;
-    final balAfter = user.wallet.rewardCoins.toDouble();
+    final balBefore = user.wallet.winningCash;
+    user.wallet.winningCash -= costInRupees;
+    final balAfter = user.wallet.winningCash;
 
     final claimId = 'vclaim_${DateTime.now().millisecondsSinceEpoch}';
     final claim = VoucherClaim(
@@ -1018,7 +1048,7 @@ class AppState extends ChangeNotifier {
       inGameUid: inGameUid.isNotEmpty ? inGameUid : (user.inGameUid ?? ''),
       whatsappNumber: whatsappNumber.trim(),
       itemTitle: item.title,
-      rewardCoinsSpent: item.rewardCoinsPrice,
+      rewardCoinsSpent: item.priceInRupees,
       status: VoucherClaimStatus.pending,
       requestedAt: DateTime.now(),
     );
@@ -1033,13 +1063,13 @@ class AppState extends ChangeNotifier {
         userId: user.uid,
         userName: user.displayName,
         type: TransactionType.voucherRedeem,
-        walletAffected: WalletType.rewardCoins,
-        amount: -item.rewardCoinsPrice.toDouble(),
-        currency: 'REWARD_COINS',
+        walletAffected: WalletType.winningCash,
+        amount: -costInRupees,
+        currency: 'INR',
         balanceBefore: balBefore,
         balanceAfter: balAfter,
         status: 'SUCCESS',
-        description: 'Redeemed ${item.title} (WhatsApp: $whatsappNumber)',
+        description: 'Redeemed ${item.title} (-₹${costInRupees.toInt()} Cash, WhatsApp: $whatsappNumber)',
         createdAt: DateTime.now(),
       ),
     );
@@ -1051,7 +1081,7 @@ class AppState extends ChangeNotifier {
     notifyListeners();
     return {
       'success': true,
-      'message': '2 hours ke andar Admin aapse WhatsApp par connect karenge aur aapka Redeem Code deliver karenge.',
+      'message': 'Redeem Code request submit ho gayi hai! 2 hours ke andar Admin aapke WhatsApp ($whatsappNumber) par Google Play Code send karenge.',
     };
   }
 
@@ -1232,18 +1262,18 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- WITHDRAWAL SYSTEM (WINNING COINS TO UPI CASH) ---
+  // --- WITHDRAWAL SYSTEM (WINNING CASH TO UPI CASH) ---
   Map<String, dynamic> requestWithdrawal(double coinsToWithdraw, String upiId) {
     if (coinsToWithdraw < minWithdrawalCoins) {
       return {
         'success': false,
-        'message': 'Minimum withdrawal limit is $minWithdrawalCoins 🪙 Winning Coins (₹${(minWithdrawalCoins * coinToRupeeRate).toStringAsFixed(1)}).'
+        'message': 'Minimum withdrawal limit ₹$minWithdrawalCoins Real Cash hai.'
       };
     }
     if (user.wallet.winningCash < coinsToWithdraw) {
       return {
         'success': false,
-        'message': 'Insufficient Winning Coins! You have ${user.wallet.winningCash.toInt()} 🪙 Winning Coins available.'
+        'message': 'Insufficient Winning Cash! Aapke paas ₹${user.wallet.winningCash.toInt()} hain.'
       };
     }
     if (!upiId.contains('@')) {
@@ -1543,14 +1573,9 @@ class AppState extends ChangeNotifier {
       }
 
       if (targetUser != null) {
-        final double balBefore = isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble();
-        if (isPaid) {
-          targetUser.wallet.winningCash += amount;
-          targetUser.stats.totalWinningsCash += amount;
-        } else {
-          targetUser.wallet.rewardCoins += amount.toInt();
-          targetUser.stats.totalRewardCoinsWon += amount.toInt();
-        }
+        final double balBefore = targetUser.wallet.winningCash;
+        targetUser.wallet.winningCash += amount;
+        targetUser.stats.totalWinningsCash += amount;
         targetUser.stats.totalKills += kills;
         targetUser.stats.matchesPlayed += 1;
         if (rank == 1) targetUser.stats.matchesWon += 1;
@@ -1575,14 +1600,14 @@ class AppState extends ChangeNotifier {
           id: 'txn_${DateTime.now().millisecondsSinceEpoch}_$uid',
           userId: uid,
           userName: targetUser.displayName.isNotEmpty ? targetUser.displayName : inGameName,
-          type: isPaid ? TransactionType.matchWinningCash : TransactionType.matchWinningRewardCoins,
-          walletAffected: isPaid ? WalletType.winningCash : WalletType.rewardCoins,
+          type: TransactionType.matchWinningCash,
+          walletAffected: WalletType.winningCash,
           amount: amount,
-          currency: isPaid ? 'INR' : 'REWARD_COINS',
+          currency: 'INR',
           balanceBefore: balBefore,
-          balanceAfter: isPaid ? targetUser.wallet.winningCash : targetUser.wallet.rewardCoins.toDouble(),
+          balanceAfter: targetUser.wallet.winningCash,
           status: 'SUCCESS',
-          description: '🏆 Rank #${rank ?? 1} (+${isPaid ? "₹${amount.toInt()} Real Cash" : "${amount.toInt()} 🎟️ Coins"}) in "$matchTitle"',
+          description: '🏆 Rank #${rank ?? 1} (+₹${amount.toInt()} Real Cash) in "$matchTitle"',
           createdAt: DateTime.now(),
         );
         allGlobalTransactions.insert(0, winTxn);
@@ -1634,59 +1659,34 @@ class AppState extends ChangeNotifier {
       p.prizeAwarded = prizePerPlayer;
 
       if (p.uid == user.uid || p.inGameName == user.inGameName) {
-        if (isCashPrize) {
-          final balBefore = user.wallet.winningCash;
-          user.wallet.winningCash += prizePerPlayer;
-          user.stats.totalWinningsCash += prizePerPlayer;
-          user.stats.matchesWon += 1;
-          user.stats.matchesPlayed += 1;
+        final balBefore = user.wallet.winningCash;
+        user.wallet.winningCash += prizePerPlayer;
+        user.stats.totalWinningsCash += prizePerPlayer;
+        user.stats.matchesWon += 1;
+        user.stats.matchesPlayed += 1;
 
-          final winTxn = TransactionModel(
-            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-            userId: user.uid,
-            userName: user.displayName,
-            type: TransactionType.matchWinningCash,
-            walletAffected: WalletType.winningCash,
-            amount: prizePerPlayer,
-            currency: 'INR',
-            balanceBefore: balBefore,
-            balanceAfter: user.wallet.winningCash,
-            status: 'SUCCESS',
-            description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
-            createdAt: DateTime.now(),
-          );
-          transactions.insert(0, winTxn);
-          _syncTransaction(winTxn);
-        } else {
-          final balBefore = user.wallet.rewardCoins.toDouble();
-          user.wallet.rewardCoins += prizePerPlayer.toInt();
-          user.stats.totalRewardCoinsWon += prizePerPlayer.toInt();
-          user.stats.matchesWon += 1;
-          user.stats.matchesPlayed += 1;
-
-          final winTxn = TransactionModel(
-            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-            userId: user.uid,
-            userName: user.displayName,
-            type: TransactionType.matchWinningRewardCoins,
-            walletAffected: WalletType.rewardCoins,
-            amount: prizePerPlayer,
-            currency: 'REWARD_COINS',
-            balanceBefore: balBefore,
-            balanceAfter: user.wallet.rewardCoins.toDouble(),
-            status: 'SUCCESS',
-            description: '🏆 $winningTeam Winner (+${prizePerPlayer.toInt()} 🎟️ Reward Coins) in "${match.title}"',
-            createdAt: DateTime.now(),
-          );
-          transactions.insert(0, winTxn);
-          _syncTransaction(winTxn);
-        }
+        final winTxn = TransactionModel(
+          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+          userId: user.uid,
+          userName: user.displayName,
+          type: TransactionType.matchWinningCash,
+          walletAffected: WalletType.winningCash,
+          amount: prizePerPlayer,
+          currency: 'INR',
+          balanceBefore: balBefore,
+          balanceAfter: user.wallet.winningCash,
+          status: 'SUCCESS',
+          description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
+          createdAt: DateTime.now(),
+        );
+        transactions.insert(0, winTxn);
+        _syncTransaction(winTxn);
       } else if (p.uid.isNotEmpty) {
         _creditWinningToParticipant(
           uid: p.uid,
           inGameName: p.inGameName,
           amount: prizePerPlayer,
-          isPaid: isCashPrize,
+          isPaid: true,
           matchTitle: match.title,
           rank: 1,
           kills: 0,
@@ -1754,59 +1754,34 @@ class AppState extends ChangeNotifier {
           dailyTaskData.booyahsWonToday += 1;
           _saveLocalDailyTasksCache();
 
-          if (isCashPrize) {
-            final balBefore = user.wallet.winningCash;
-            user.wallet.winningCash += prizePerPlayer;
-            user.stats.totalWinningsCash += prizePerPlayer;
-            user.stats.matchesWon += 1;
-            user.stats.matchesPlayed += 1;
+          final balBefore = user.wallet.winningCash;
+          user.wallet.winningCash += prizePerPlayer;
+          user.stats.totalWinningsCash += prizePerPlayer;
+          user.stats.matchesWon += 1;
+          user.stats.matchesPlayed += 1;
 
-            final winTxn = TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningCash,
-              walletAffected: WalletType.winningCash,
-              amount: prizePerPlayer,
-              currency: 'INR',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.winningCash,
-              status: 'SUCCESS',
-              description: 'Clash Squad Victory (Selected Winner: ₹${prizePerPlayer.toInt()}) in "${match.title}"',
-              createdAt: DateTime.now(),
-            );
-            transactions.insert(0, winTxn);
-            _syncTransaction(winTxn);
-          } else {
-            final balBefore = user.wallet.rewardCoins.toDouble();
-            user.wallet.rewardCoins += prizePerPlayer.toInt();
-            user.stats.totalCoinsEarned += prizePerPlayer.toInt();
-            user.stats.matchesWon += 1;
-            user.stats.matchesPlayed += 1;
-
-            final winTxn = TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningRewardCoins,
-              walletAffected: WalletType.rewardCoins,
-              amount: prizePerPlayer,
-              currency: 'REWARD_COINS',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.rewardCoins.toDouble(),
-              status: 'SUCCESS',
-              description: 'Clash Squad Victory (Selected Winner: ${prizePerPlayer.toInt()} 🎟️ Coins) in "${match.title}"',
-              createdAt: DateTime.now(),
-            );
-            transactions.insert(0, winTxn);
-            _syncTransaction(winTxn);
-          }
+          final winTxn = TransactionModel(
+            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+            userId: user.uid,
+            userName: user.displayName,
+            type: TransactionType.matchWinningCash,
+            walletAffected: WalletType.winningCash,
+            amount: prizePerPlayer,
+            currency: 'INR',
+            balanceBefore: balBefore,
+            balanceAfter: user.wallet.winningCash,
+            status: 'SUCCESS',
+            description: 'Clash Squad Victory (Selected Winner: ₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
+            createdAt: DateTime.now(),
+          );
+          transactions.insert(0, winTxn);
+          _syncTransaction(winTxn);
         } else if (p.uid.isNotEmpty) {
           _creditWinningToParticipant(
             uid: p.uid,
             inGameName: p.inGameName,
             amount: prizePerPlayer,
-            isPaid: isCashPrize,
+            isPaid: true,
             matchTitle: match.title,
             rank: 1,
             kills: 0,
@@ -1926,62 +1901,36 @@ class AppState extends ChangeNotifier {
 
       if (participant.uid == user.uid || participant.inGameName == user.inGameName) {
         if (totalPrize > 0) {
-          if (isCashPrize) {
-            final balBefore = user.wallet.winningCash;
-            user.wallet.winningCash += totalPrize;
-            user.stats.totalWinningsCash += totalPrize;
-            user.stats.totalKills += kills;
-            user.stats.matchesPlayed += 1;
-            if (rank == 1) user.stats.matchesWon += 1;
+          final balBefore = user.wallet.winningCash;
+          user.wallet.winningCash += totalPrize;
+          user.stats.totalWinningsCash += totalPrize;
+          user.stats.totalKills += kills;
+          user.stats.matchesPlayed += 1;
+          if (rank == 1) user.stats.matchesWon += 1;
 
-            final winTxn = TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningCash,
-              walletAffected: WalletType.winningCash,
-              amount: totalPrize,
-              currency: 'INR',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.winningCash,
-              status: 'SUCCESS',
-              description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Real Cash) in "${match.title}"',
-              createdAt: DateTime.now(),
-            );
-            transactions.insert(0, winTxn);
-            _syncTransaction(winTxn);
-          } else {
-            final balBefore = user.wallet.rewardCoins.toDouble();
-            user.wallet.rewardCoins += totalPrize.toInt();
-            user.stats.totalRewardCoinsWon += totalPrize.toInt();
-            user.stats.totalKills += kills;
-            user.stats.matchesPlayed += 1;
-            if (rank == 1) user.stats.matchesWon += 1;
-
-            final winTxn = TransactionModel(
-              id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-              userId: user.uid,
-              userName: user.displayName,
-              type: TransactionType.matchWinningRewardCoins,
-              walletAffected: WalletType.rewardCoins,
-              amount: totalPrize,
-              currency: 'REWARD_COINS',
-              balanceBefore: balBefore,
-              balanceAfter: user.wallet.rewardCoins.toDouble(),
-              status: 'SUCCESS',
-              description: '🏆 Rank #$rank (+${totalPrize.toInt()} 🎟️ Coins) in "${match.title}"',
-              createdAt: DateTime.now(),
-            );
-            transactions.insert(0, winTxn);
-            _syncTransaction(winTxn);
-          }
+          final winTxn = TransactionModel(
+            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+            userId: user.uid,
+            userName: user.displayName,
+            type: TransactionType.matchWinningCash,
+            walletAffected: WalletType.winningCash,
+            amount: totalPrize,
+            currency: 'INR',
+            balanceBefore: balBefore,
+            balanceAfter: user.wallet.winningCash,
+            status: 'SUCCESS',
+            description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Real Cash) in "${match.title}"',
+            createdAt: DateTime.now(),
+          );
+          transactions.insert(0, winTxn);
+          _syncTransaction(winTxn);
         }
       } else if (participant.uid.isNotEmpty && totalPrize > 0) {
         _creditWinningToParticipant(
           uid: participant.uid,
           inGameName: participant.inGameName,
           amount: totalPrize,
-          isPaid: isCashPrize,
+          isPaid: true,
           matchTitle: match.title,
           rank: rank,
           kills: kills,

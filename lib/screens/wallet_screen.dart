@@ -1,6 +1,7 @@
+import 'package:flutter/services.dart';
+import '../models/voucher_model.dart';
 import 'package:flutter/material.dart';
 import '../models/withdrawal_model.dart';
-import '../models/transaction_model.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import '../widgets/withdraw_dialog.dart';
@@ -60,18 +61,176 @@ class _WalletScreenState extends State<WalletScreen> {
               ),
               const SizedBox(height: 14),
 
-              // 1. FREE-TO-PLAY WALLET (Ad-Based / Non-Cash)
+              // 1. 🏆 REAL WINNINGS (₹ RUPAYE) WALLET (ALWAYS VISIBLE & WITHDRAWABLE)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFFBEB), Color(0xFFFEF3C7)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: const Color(0xFFFDE68A), width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.amber.withAlpha(30),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFECFDF5),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFA7F3D0)),
+                          ),
+                          child: const Row(
+                            children: [
+                              Text('🏆', style: TextStyle(fontSize: 12)),
+                              SizedBox(width: 4),
+                              Text(
+                                'TOTAL WINNING CASH (ASLI RUPAYE)',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF047857),
+                                  letterSpacing: 0.8,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFCBD5E1)),
+                          ),
+                          child: Text(
+                            'MIN ₹${widget.appState.minWithdrawalCoins}',
+                            style: const TextStyle(fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFFDE68A)),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'AVAILABLE WINNINGS',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Free Fire matches jeet kar kamaye gaye rupaye',
+                                style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.bold, color: Color(0xFF16A34A)),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            '₹${wallet.winningCash.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
+                              color: Color(0xFF047857),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Two Primary Withdrawal Options (UPI & Redeem Code)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF047857),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => WithdrawDialog(appState: widget.appState, initialTab: 0),
+                              );
+                            },
+                            icon: const Text('⚡', style: TextStyle(fontSize: 13)),
+                            label: const Text(
+                              'UPI WITHDRAWAL',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => WithdrawDialog(appState: widget.appState, initialTab: 1),
+                              );
+                            },
+                            icon: const Text('🎟️', style: TextStyle(fontSize: 13)),
+                            label: const Text(
+                              'REDEEM CODE',
+                              style: TextStyle(fontFamily: 'Inter', fontSize: 10.5, fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+
+              // 2. FREE TOURNAMENT ENTRY COINS (Ad Coins + Ref Coins)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFFDE68A)),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.amber.withAlpha(25),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
+                      color: Colors.black.withAlpha(10),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -84,21 +243,20 @@ class _WalletScreenState extends State<WalletScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFFBEB),
+                            color: const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFFDE68A)),
                           ),
                           child: const Row(
                             children: [
                               Text('🎮', style: TextStyle(fontSize: 10)),
                               SizedBox(width: 4),
                               Text(
-                                'TOURNAMENT COINS',
+                                'FREE MATCH ENTRY TOKENS',
                                 style: TextStyle(
                                   fontFamily: 'Inter',
                                   fontSize: 10,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF92400E),
+                                  color: Color(0xFF334155),
                                   letterSpacing: 0.8,
                                 ),
                               ),
@@ -169,36 +327,6 @@ class _WalletScreenState extends State<WalletScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFFDF5),
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFFFEF3C7)),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '🎟️ REWARD COINS',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${wallet.rewardCoins}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
-                                ),
-                                const Text(
-                                  'Match Winnings',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 8.5, color: Color(0xFF94A3B8)),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
                       ],
                     ),
                     const SizedBox(height: 12),
@@ -207,16 +335,16 @@ class _WalletScreenState extends State<WalletScreen> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryAmber,
-                          foregroundColor: Colors.black,
+                          backgroundColor: const Color(0xFF16A34A),
+                          foregroundColor: Colors.white,
                           elevation: 0,
                           padding: const EdgeInsets.symmetric(vertical: 11),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         onPressed: widget.onGoToStore,
-                        icon: const Text('🎟️', style: TextStyle(fontSize: 14)),
+                        icon: const Icon(Icons.play_circle_fill, size: 16),
                         label: const Text(
-                          'REDEEM ₹100 GOOGLE PLAY CODE (MIN 1000 COINS)',
+                          '📺 ADS DEKHKAR FREE AD COINS LEIN',
                           style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900),
                         ),
                       ),
@@ -346,222 +474,106 @@ class _WalletScreenState extends State<WalletScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // 3. PRO WINNING COINS WALLET (Esports Payouts)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFFDE68A)),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withAlpha(12),
-                        blurRadius: 10,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFEF3C7),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFFFDE68A)),
-                            ),
-                            child: const Row(
-                              children: [
-                                Text('🪙', style: TextStyle(fontSize: 11)),
-                                SizedBox(width: 4),
-                                Text(
-                                  'WINNING COINS WALLET',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 9.5,
-                                    fontWeight: FontWeight.w900,
-                                    color: Color(0xFF92400E),
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '1 Coin = ₹${widget.appState.coinToRupeeRate.toInt()} Real Cash (1:1)',
-                            style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFFB45309)),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFFDF5),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFFEF3C7)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  '🏆 TOTAL WINNING COINS',
-                                  style: TextStyle(fontFamily: 'Inter', fontSize: 9.5, fontWeight: FontWeight.w900, color: Color(0xFF92400E)),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '🪙 ${wallet.winningCash.toInt()}',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
-                                ),
-                                Text(
-                                  '≈ ₹${(wallet.winningCash * widget.appState.coinToRupeeRate).toStringAsFixed(0)} Real Cash Value',
-                                  style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF059669)),
-                                ),
-                              ],
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFECFDF5),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: const Color(0xFFA7F3D0)),
-                              ),
-                              child: Column(
-                                children: [
-                                  const Text('MIN WITHDRAW', style: TextStyle(fontSize: 8, fontWeight: FontWeight.w900, color: Color(0xFF065F46))),
-                                  Text('${widget.appState.minWithdrawalCoins} COINS (₹${widget.appState.minWithdrawalCoins})', style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF047857))),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A),
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            padding: const EdgeInsets.symmetric(vertical: 13),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) => WithdrawDialog(appState: widget.appState),
-                            );
-                          },
-                          icon: const Icon(Icons.account_balance, size: 18, color: AppTheme.primaryAmber),
-                          label: const Text('WITHDRAW WINNING COINS (UPI)', style: TextStyle(fontFamily: 'Inter', fontSize: 11.5, fontWeight: FontWeight.w900)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                
               ],
               const SizedBox(height: 18),
 
-              // Sub Tabs for Transactions / UPI Requests
-              if (widget.appState.isRealCashModeEnabled) ...[
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => subTab = 0),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: subTab == 0 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: subTab == 0
-                                  ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4, offset: const Offset(0, 1))]
-                                  : null,
-                            ),
-                            child: Text(
-                              'Transactions (${widget.appState.transactions.length})',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: subTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: InkWell(
-                          onTap: () => setState(() => subTab = 1),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: subTab == 1 ? Colors.white : Colors.transparent,
-                              borderRadius: BorderRadius.circular(10),
-                              boxShadow: subTab == 1
-                                  ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4, offset: const Offset(0, 1))]
-                                  : null,
-                            ),
-                            child: Text(
-                              'UPI Requests (${widget.appState.withdrawals.length})',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: subTab == 1 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              // Universal Sub Tabs for Transactions / UPI Requests / Claimed Redeem Codes
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ] else ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 4),
-                  child: Text(
-                    'TRANSACTION HISTORY',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF64748B),
-                      letterSpacing: 0.8,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => subTab = 0),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: subTab == 0 ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: subTab == 0
+                                ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4, offset: const Offset(0, 1))]
+                                : null,
+                          ),
+                          child: Text(
+                            '⚡ All Txns (${widget.appState.transactions.length})',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: subTab == 0 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => subTab = 1),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: subTab == 1 ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: subTab == 1
+                                ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4, offset: const Offset(0, 1))]
+                                : null,
+                          ),
+                          child: Text(
+                            '🏦 UPI (${widget.appState.withdrawals.length})',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: subTab == 1 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => setState(() => subTab = 2),
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: subTab == 2 ? Colors.white : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: subTab == 2
+                                ? [BoxShadow(color: Colors.black.withAlpha(8), blurRadius: 4, offset: const Offset(0, 1))]
+                                : null,
+                          ),
+                          child: Text(
+                            '🎟️ Codes (${widget.appState.voucherClaims.length})',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.bold,
+                              color: subTab == 2 ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
               const SizedBox(height: 12),
 
-              // Transaction / Withdrawal List
-              if (subTab == 0 || !widget.appState.isRealCashModeEnabled) ...[
+              // Sub Tab 0: All Transactions
+              if (subTab == 0) ...[
                 () {
-                  final displayTxns = widget.appState.isRealCashModeEnabled
-                      ? widget.appState.transactions
-                      : widget.appState.transactions.where((t) => t.currency != 'INR' && t.walletAffected != WalletType.depositCash && t.walletAffected != WalletType.bonusCash).toList();
+                  final displayTxns = widget.appState.transactions;
 
                   if (displayTxns.isEmpty) {
                     return Container(
@@ -575,15 +587,15 @@ class _WalletScreenState extends State<WalletScreen> {
                       ),
                       child: const Column(
                         children: [
-                          Icon(Icons.stars, size: 36, color: Colors.amber),
+                          Icon(Icons.receipt_long_outlined, size: 36, color: Colors.blueGrey),
                           SizedBox(height: 6),
                           Text(
-                            'No coin transactions recorded yet',
+                            'No transactions recorded yet',
                             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF64748B)),
                           ),
                           SizedBox(height: 2),
                           Text(
-                            'Watch ads or join free matches to earn and redeem coins.',
+                            'Watch ads to get free entries or win tournaments to earn cash.',
                             style: TextStyle(fontSize: 10.5, color: Color(0xFF94A3B8)),
                           ),
                         ],
@@ -630,7 +642,8 @@ class _WalletScreenState extends State<WalletScreen> {
                     },
                   );
                 }(),
-              ] else ...[
+              ] else if (subTab == 1) ...[
+                // Sub Tab 1: UPI Withdrawal Requests
                 if (widget.appState.withdrawals.isEmpty) ...[
                   Container(
                     width: double.infinity,
@@ -651,8 +664,25 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Win paid tournaments and withdraw directly to your UPI (Min ₹50).',
+                          'Win tournaments and withdraw directly to your UPI (Min ₹100).',
                           style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => WithdrawDialog(appState: widget.appState, initialTab: 0),
+                            );
+                          },
+                          icon: const Icon(Icons.account_balance, size: 14, color: AppTheme.primaryAmber),
+                          label: const Text('WITHDRAW VIA UPI (₹100+)', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900)),
                         ),
                       ],
                     ),
@@ -834,6 +864,299 @@ class _WalletScreenState extends State<WalletScreen> {
                                   Text(
                                     'Refunded to Wallet. Note: ${w.adminNotes ?? "Invalid UPI"}',
                                     style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red.shade900),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ] else if (subTab == 2) ...[
+                // Sub Tab 2: Claimed Google Play Redeem Codes
+                if (widget.appState.voucherClaims.isEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(Icons.confirmation_number_outlined, size: 40, color: Colors.grey.shade400),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'No redeem codes claimed yet',
+                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF64748B)),
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Win tournaments and redeem Google Play codes starting from ₹100.',
+                          style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                        ),
+                        const SizedBox(height: 12),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: () {
+                            showDialog(
+                              context: context,
+                              builder: (context) => WithdrawDialog(appState: widget.appState, initialTab: 1),
+                            );
+                          },
+                          icon: const Text('🎟️', style: TextStyle(fontSize: 12)),
+                          label: const Text('REDEEM CODE STORE', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w900)),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: widget.appState.voucherClaims.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 10),
+                    itemBuilder: (context, index) {
+                      final claim = widget.appState.voucherClaims[index];
+                      final isDelivered = claim.status == VoucherClaimStatus.delivered;
+                      final isRejected = claim.status == VoucherClaimStatus.rejected;
+                      final isPending = claim.status == VoucherClaimStatus.pending;
+
+                      return Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: isDelivered
+                                ? const Color(0xFFA7F3D0)
+                                : isRejected
+                                    ? const Color(0xFFFECACA)
+                                    : const Color(0xFFFDE68A),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withAlpha(8),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: isDelivered
+                                            ? const Color(0xFFECFDF5)
+                                            : isRejected
+                                                ? const Color(0xFFFEF2F2)
+                                                : const Color(0xFFFFFBEB),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isDelivered
+                                            ? Icons.check_circle
+                                            : isRejected
+                                                ? Icons.cancel
+                                                : Icons.access_time,
+                                        size: 16,
+                                        color: isDelivered
+                                            ? AppTheme.winningGreen
+                                            : isRejected
+                                                ? Colors.red
+                                                : Colors.amber.shade800,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          claim.itemTitle,
+                                          style: const TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontWeight: FontWeight.w900,
+                                            fontSize: 13,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        Text(
+                                          'Cost: ₹${claim.rewardCoinsSpent} Winning Cash',
+                                          style: const TextStyle(
+                                            fontFamily: 'Inter',
+                                            fontSize: 10,
+                                            color: Color(0xFF64748B),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: isDelivered
+                                        ? const Color(0xFFECFDF5)
+                                        : isRejected
+                                            ? const Color(0xFFFEF2F2)
+                                            : const Color(0xFFFFFBEB),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDelivered
+                                          ? const Color(0xFFA7F3D0)
+                                          : isRejected
+                                              ? const Color(0xFFFECACA)
+                                              : const Color(0xFFFDE68A),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    isDelivered
+                                        ? 'CODE DELIVERED'
+                                        : isRejected
+                                            ? 'REJECTED'
+                                            : 'PENDING APPROVAL',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w900,
+                                      color: isDelivered
+                                          ? const Color(0xFF065F46)
+                                          : isRejected
+                                              ? Colors.red.shade900
+                                              : const Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.phone_android, size: 13, color: Color(0xFF64748B)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'WhatsApp: ${claim.whatsappNumber}',
+                                        style: const TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: Color(0xFF1E293B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    DateFormat('dd MMM, hh:mm a').format(claim.requestedAt),
+                                    style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8)),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            if (isPending) ...[
+                              const Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 12, color: Color(0xFFD97706)),
+                                  SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Admin review ke baad aapke WhatsApp aur yahan par code show hoga.',
+                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: Color(0xFF92400E)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ] else if (isDelivered && (claim.redeemCode != null && claim.redeemCode!.isNotEmpty)) ...[
+                              Container(
+                                width: double.infinity,
+                                margin: const EdgeInsets.only(top: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFF6FF),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFF93C5FD)),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'GOOGLE PLAY REDEEM CODE:',
+                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8)),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          SelectableText(
+                                            claim.redeemCode!,
+                                            style: const TextStyle(
+                                              fontFamily: 'Courier',
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w900,
+                                              color: Color(0xFF0F172A),
+                                              letterSpacing: 1.0,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    ElevatedButton.icon(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF1D4ED8),
+                                        foregroundColor: Colors.white,
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                        visualDensity: VisualDensity.compact,
+                                      ),
+                                      onPressed: () {
+                                        Clipboard.setData(ClipboardData(text: claim.redeemCode!));
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(
+                                            backgroundColor: AppTheme.winningGreen,
+                                            content: Text('📋 Redeem Code copied! Play Store me paste karein.'),
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.copy, size: 13),
+                                      label: const Text('COPY', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900)),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ] else if (isRejected) ...[
+                              const Row(
+                                children: [
+                                  Icon(Icons.error_outline, size: 12, color: Colors.red),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Request rejected. Refunded to winning wallet.',
+                                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.red),
                                   ),
                                 ],
                               ),

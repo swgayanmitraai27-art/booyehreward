@@ -1,3 +1,4 @@
+import '../widgets/interactive_user_guide_dialog.dart';
 import 'package:flutter/material.dart';
 import '../services/app_state.dart';
 import '../services/auth_service.dart';
@@ -34,6 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
     widget.appState.addListener(_checkAppUpdateRequired);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkAppUpdateRequired();
+      _checkAndShowInteractiveGuide();
       _checkAndShowDailyLoginRewardDialog();
     });
   }
@@ -132,6 +134,17 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _checkAndShowInteractiveGuide() async {
+    if (!mounted) return;
+    final seen = await InteractiveUserGuideDialog.hasSeenGuide();
+    if (!seen && mounted) {
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (!mounted) return;
+        InteractiveUserGuideDialog.show(context);
+      });
+    }
+  }
+
   void _checkAndShowDailyLoginRewardDialog() {
     if (!mounted || _hasShownDailyCheckInPopup) return;
     if (widget.appState.isUpdateRequired) return;
@@ -150,7 +163,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           widget.appState,
           onNavigateToEarn: () {
-            _handleTabChange(2); // 2 is Earn Coins tab
+            _handleTabChange(3); // 3 is Earn Coins tab
           },
         );
       });

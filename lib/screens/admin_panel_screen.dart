@@ -50,7 +50,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
   // Store Item Creation state
   final TextEditingController _storeTitleController = TextEditingController(text: '₹100 Google Play Redeem Code');
   final TextEditingController _storeImgUrlController = TextEditingController(text: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80');
-  final TextEditingController _storeCoinPriceController = TextEditingController(text: '1000');
+  final TextEditingController _storeCoinPriceController = TextEditingController(text: '100');
   final TextEditingController _storeRewardValController = TextEditingController(text: '₹100 Redeem Code');
 
   // Dynamic Banners state
@@ -2678,7 +2678,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                               style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 12.5, color: Color(0xFF0F172A)),
                             ),
                             Text(
-                              'Cost: ${item.rewardCoinsPrice} 🎟️ Reward Coins • Value: ${item.rewardValue}',
+                              'Cost: ₹${item.rewardCoinsPrice} Winning Cash • Value: ${item.rewardValue}',
                               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
                             ),
                           ],
@@ -2718,33 +2718,33 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               children: [
                 const Text('Quick Presets: ', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                 ActionChip(
-                  label: const Text('🎟️ ₹100 Play Code (1000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('🎟️ ₹100 Play Code (₹100)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () {
                     setState(() {
                       _storeTitleController.text = '₹100 Google Play Redeem Code';
-                      _storeCoinPriceController.text = '1000';
+                      _storeCoinPriceController.text = '100';
                       _storeRewardValController.text = '₹100 Redeem Code';
                     });
                   },
                 ),
                 const SizedBox(width: 6),
                 ActionChip(
-                  label: const Text('🎟️ ₹200 Play Code (2000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('🎟️ ₹200 Play Code (₹200)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () {
                     setState(() {
                       _storeTitleController.text = '₹200 Google Play Redeem Code';
-                      _storeCoinPriceController.text = '2000';
+                      _storeCoinPriceController.text = '200';
                       _storeRewardValController.text = '₹200 Redeem Code';
                     });
                   },
                 ),
                 const SizedBox(width: 6),
                 ActionChip(
-                  label: const Text('🎟️ ₹500 Play Code (5000 Coins)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                  label: const Text('🎟️ ₹500 Play Code (₹500)', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
                   onPressed: () {
                     setState(() {
                       _storeTitleController.text = '₹500 Google Play Redeem Code';
-                      _storeCoinPriceController.text = '5000';
+                      _storeCoinPriceController.text = '500';
                       _storeRewardValController.text = '₹500 Redeem Code';
                     });
                   },
@@ -2779,7 +2779,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
                   controller: _storeCoinPriceController,
                   keyboardType: TextInputType.number,
                   decoration: InputDecoration(
-                    labelText: 'Price in Reward Coins (e.g. 1000)',
+                    labelText: 'Price in Winning Cash ₹ (Min 100)',
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
@@ -2809,7 +2809,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
               ),
               onPressed: () async {
                 final title = _storeTitleController.text.trim();
-                final price = int.tryParse(_storeCoinPriceController.text.trim()) ?? 1000;
+                final price = int.tryParse(_storeCoinPriceController.text.trim()) ?? 100;
                 final img = _storeImgUrlController.text.trim();
                 final val = _storeRewardValController.text.trim();
 
@@ -2817,7 +2817,7 @@ class _AdminPanelScreenState extends State<AdminPanelScreen> {
 
                 await widget.appState.adminAddStoreItem(
                   title: title,
-                  description: '$price Reward Coins (Won in Free Matches) = $val sent to your WhatsApp.',
+                  description: '₹$price Winning Cash (Won in Tournaments) = $val sent to your WhatsApp.',
                   imageUrl: img,
                   coinPrice: price,
                   rewardValue: val,

@@ -4,8 +4,8 @@ class StoreItem {
   String description;
   String imageUrl; // Image URL or asset
   String iconEmoji;
-  int rewardCoinsPrice; // Cost in 🎟️ Winning/Reward Coins
-  String rewardValue; // e.g. "₹10 Code" or "100 💎"
+  int rewardCoinsPrice; // Cost in ₹ Winning Cash (1:1 with rupees)
+  String rewardValue; // e.g. "₹10 Code" or "₹100 Code"
 
   StoreItem({
     required this.id,
@@ -17,6 +17,8 @@ class StoreItem {
     required this.rewardValue,
   });
 
+  int get priceInRupees => rewardCoinsPrice;
+
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
@@ -24,6 +26,7 @@ class StoreItem {
     'imageUrl': imageUrl,
     'iconEmoji': iconEmoji,
     'rewardCoinsPrice': rewardCoinsPrice,
+    'priceInRupees': rewardCoinsPrice,
     'rewardValue': rewardValue,
   };
 
@@ -33,7 +36,7 @@ class StoreItem {
     description: json['description'] ?? '',
     imageUrl: json['imageUrl'] ?? '',
     iconEmoji: json['iconEmoji'] ?? '🎁',
-    rewardCoinsPrice: (json['rewardCoinsPrice'] ?? 50) as int,
+    rewardCoinsPrice: ((json['rewardCoinsPrice'] ?? json['priceInRupees'] ?? json['price'] ?? 50) as num).toInt(),
     rewardValue: json['rewardValue'] ?? '',
   );
 }
@@ -47,11 +50,13 @@ class VoucherClaim {
   String inGameUid;
   String whatsappNumber; // Captured during redemption for admin WhatsApp delivery!
   String itemTitle;
-  int rewardCoinsSpent;
+  int rewardCoinsSpent; // Amount of ₹ Winning Cash spent
   VoucherClaimStatus status;
   String? redeemCode;
   DateTime requestedAt;
   DateTime? deliveredAt;
+
+  int get cashSpent => rewardCoinsSpent;
 
   VoucherClaim({
     required this.id,

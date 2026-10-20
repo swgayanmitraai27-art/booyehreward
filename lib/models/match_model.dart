@@ -305,7 +305,7 @@ class PrizePool {
       tenthPlace: json['tenthPlace'] != null
           ? ((json['tenthPlace']) as num).toDouble()
           : (json['tenth_place'] != null ? ((json['tenth_place']) as num).toDouble() : fallbackTenth),
-      isCashPrize: (json['isCashPrize'] ?? json['is_cash_prize']) != null ? ((json['isCashPrize'] ?? json['is_cash_prize']) == true) : (fallbackIsCashPrize ?? false),
+      isCashPrize: true, // Direct Rupee (₹) prize economy for all tournaments
     );
   }
 }

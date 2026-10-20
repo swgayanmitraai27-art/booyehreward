@@ -13,6 +13,7 @@ import '../widgets/admin_notice_board_widget.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' show AdSize;
 import '../widgets/admob_banner_widget.dart';
 import '../widgets/daily_login_popup_dialog.dart';
+import '../widgets/interactive_user_guide_dialog.dart';
 
 class TournamentLobbyScreen extends StatelessWidget {
   final AppState appState;
@@ -237,6 +238,75 @@ class TournamentLobbyScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
+
+                // 📖 NEW PLAYER APP GUIDE CALLOUT BANNER
+                InkWell(
+                  onTap: () {
+                    InteractiveUserGuideDialog.show(
+                      context,
+                      onGoToMatches: () => onTabChange(0),
+                      onGoToEarnCoins: onEarnCoinsClick,
+                      onGoToWallet: () => onTabChange(4),
+                    );
+                  },
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFEF3C7), Color(0xFFFDE68A)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF59E0B), width: 1.2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.amber.withAlpha(30),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(7),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text('📖', style: TextStyle(fontSize: 16)),
+                        ),
+                        const SizedBox(width: 10),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Naye Player Ho? Kaise Khele Guide Dekhein!',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF78350F),
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Yahan click karein aur sikhein matches khel kar paise kaise jeetein ➔',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF92400E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 // Action buttons
                 Row(
@@ -907,7 +977,6 @@ class TournamentLobbyScreen extends StatelessWidget {
   // --- MATCH CARD WIDGET ---
   Widget _buildMatchCard(BuildContext context, MatchModel match) {
     final isFree = match.matchType == MatchType.free;
-    final isWinCoin = match.prizePool.isCashPrize;
     final isJoined = match.participants.any((p) => p.uid == appState.user.uid);
     final userSlot = isJoined
         ? match.participants.firstWhere((p) => p.uid == appState.user.uid).slotNumber
@@ -963,15 +1032,17 @@ class TournamentLobbyScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: isWinCoin ? const Color(0xFF1D4ED8) : const Color(0xFF059669),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF047857), Color(0xFF059669)],
+                        ),
                         borderRadius: BorderRadius.circular(8),
                         boxShadow: [
                           BoxShadow(color: Colors.black.withAlpha(40), blurRadius: 4),
                         ],
                       ),
-                      child: Text(
-                        isWinCoin ? '💵 REAL CASH (₹)' : '🎟️ REWARD COIN',
-                        style: const TextStyle(
+                      child: const Text(
+                        '🏆 CASH PRIZE (₹)',
+                        style: TextStyle(
                           fontFamily: 'Inter',
                           fontSize: 9.5,
                           fontWeight: FontWeight.w900,
@@ -1141,7 +1212,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                     Expanded(
                       child: _buildPrizeBox(
                         'Total Pool',
-                        isWinCoin ? '₹${match.prizePool.totalPool.toInt()}' : '${match.prizePool.totalPool.toInt()} 🎟️ Coins',
+                        '₹${match.prizePool.totalPool.toInt()}',
                         const Color(0xFF065F46),
                         const Color(0xFFECFDF5),
                       ),
@@ -1150,7 +1221,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                     Expanded(
                       child: _buildPrizeBox(
                         '1st Prize',
-                        isWinCoin ? '₹${match.prizePool.firstPlace.toInt()}' : '${match.prizePool.firstPlace.toInt()} 🎟️ Coins',
+                        '₹${match.prizePool.firstPlace.toInt()}',
                         Colors.amber.shade900,
                         const Color(0xFFFFFBEB),
                       ),
@@ -1159,9 +1230,7 @@ class TournamentLobbyScreen extends StatelessWidget {
                     Expanded(
                       child: _buildPrizeBox(
                         'Per Kill',
-                        isWinCoin
-                            ? (match.prizePool.perKill > 0 ? '₹${match.prizePool.perKill.toInt()}' : '₹0')
-                            : '${match.prizePool.perKill.toInt()} 🎟️',
+                        match.prizePool.perKill > 0 ? '₹${match.prizePool.perKill.toInt()}' : '₹0',
                         AppTheme.roseRed,
                         const Color(0xFFFFF1F2),
                       ),
@@ -1349,8 +1418,6 @@ class TournamentLobbyScreen extends StatelessWidget {
   }
 
   void _showPrizeBreakdownDialog(BuildContext context, MatchModel match) {
-    final isFree = match.matchType == MatchType.free;
-    final isCashPrize = match.prizePool.isCashPrize || !isFree;
     final pp = match.prizePool;
     showDialog(
       context: context,
@@ -1413,15 +1480,15 @@ class TournamentLobbyScreen extends StatelessWidget {
 
                 return _buildPrizeRow(
                   rankBadge,
-                  isCashPrize ? '₹${prize.toInt()} Real Cash' : '${prize.toInt()} 🎟️ Coins',
+                  '₹${prize.toInt()} Real Cash',
                   rankColor,
                 );
               }),
               if (pp.perKill > 0)
-                _buildPrizeRow('🎯 Per Kill Bounty', isCashPrize ? '₹${pp.perKill.toInt()} Real Cash' : '${pp.perKill.toInt()} 🎟️', Colors.red),
+                _buildPrizeRow('🎯 Per Kill Bounty', '₹${pp.perKill.toInt()} Real Cash', Colors.red),
               const Divider(height: 20),
-              _buildPrizeRow('📊 Total Prize Pool', isCashPrize ? '₹${pp.totalPool.toInt()} Real Cash' : '${pp.totalPool.toInt()} 🎟️ Coins', AppTheme.winningGreen, isBold: true),
-              _buildPrizeRow('🎟️ Entry Fee', match.entryFee <= 0 ? 'FREE DIRECT ENTRY' : (isCashPrize ? '₹${match.entryFee.toInt()} Real Cash' : '${match.entryFee.toInt()} 🟡 Ad Coins'), const Color(0xFF0F172A)),
+              _buildPrizeRow('📊 Total Prize Pool', '₹${pp.totalPool.toInt()} Real Cash', AppTheme.winningGreen, isBold: true),
+              _buildPrizeRow('🎟️ Entry Fee', match.entryFee <= 0 ? 'FREE DIRECT ENTRY' : '${match.entryFee.toInt()} 🟡 Ad Coins', const Color(0xFF0F172A)),
               if (match.roomPublishedByAdminName != null && match.roomPublishedByAdminName!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
