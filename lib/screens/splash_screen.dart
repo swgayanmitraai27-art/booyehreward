@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/app_state.dart';
-import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/ff_brand_elements.dart';
 import 'home_screen.dart';
-import 'auth_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final AppState appState;
@@ -16,60 +14,47 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scaleAnimation;
-  late final Animation<double> _fadeAnimation;
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late Animation<double> _fadeAnimation;
+  Timer? _navTimer;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _animationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1400),
     );
 
-    _scaleAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutBack,
+    _scaleAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutBack,
+      ),
     );
 
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeIn,
+      ),
     );
 
-    _controller.forward();
+    _animationController.forward();
 
-    // Immediately restore session from synchronous WebStorage cache
-    AuthService.getActiveUser().then((savedUser) {
-      if (savedUser != null && mounted) {
-        widget.appState.setUser(savedUser);
-      }
-    });
-
-    Timer(const Duration(milliseconds: 1800), () async {
+    _navTimer = Timer(const Duration(seconds: 2), () {
       if (mounted) {
-        if (!widget.appState.isAuthenticated) {
-          final savedUser = await AuthService.getActiveUser();
-          if (savedUser != null) {
-            widget.appState.setUser(savedUser);
-          }
-        }
-
-        if (!mounted) return;
-
-        final targetScreen = widget.appState.isAuthenticated
-            ? HomeScreen(appState: widget.appState)
-            : AuthScreen(appState: widget.appState);
-
         Navigator.of(context).pushReplacement(
           PageRouteBuilder(
-            pageBuilder: (context, anim, secAnim) => targetScreen,
-            transitionsBuilder: (context, anim, secAnim, child) {
-              return FadeTransition(opacity: anim, child: child);
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                HomeScreen(appState: widget.appState),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
             },
-            transitionDuration: const Duration(milliseconds: 500),
+            transitionDuration: const Duration(milliseconds: 400),
           ),
         );
       }
@@ -78,155 +63,125 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
   @override
   void dispose() {
-    _controller.dispose();
+    _navTimer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
-        children: [
-          // Background subtle FF Watermark
-          Positioned(
-            right: -40,
-            bottom: -40,
-            child: const FfWatermark(size: 260, opacity: 0.04),
-          ),
-          Positioned(
-            left: -40,
-            top: -40,
-            child: const FfWatermark(size: 200, opacity: 0.03, angle: 0.2),
-          ),
-
-          // Central Branding
-          Center(
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // App Logo Card with Light Theme Glow & Shadow
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryAmber.withAlpha(80),
-                              blurRadius: 36,
-                              spreadRadius: 8,
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withAlpha(20),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'imgasest/app logo .png',
-                            width: 130,
-                            height: 130,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 130,
-                                height: 130,
-                                color: AppTheme.primaryAmber,
-                                child: const Center(
-                                  child: Icon(Icons.sports_esports, size: 64, color: Colors.black),
+      backgroundColor: AppTheme.bgDark,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Center(
+              child: AnimatedBuilder(
+                animation: _animationController,
+                builder: (context, child) {
+                  return FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: ScaleTransition(
+                      scale: _scaleAnimation,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppTheme.primaryGold.withValues(alpha: 0.35),
+                                  blurRadius: 28,
+                                  spreadRadius: 4,
                                 ),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 28),
-
-                      // Platform Title
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('BOOYAH ', style: AppTheme.gamingTitle(fontSize: 28, color: Colors.black)),
-                          Text(
-                            'REWARDS',
-                            style: AppTheme.gamingTitle(fontSize: 28, color: AppTheme.primaryAmber),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-
-                      // Inline Free Fire Branding
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text(
-                            'PREMIUM ESPORTS ARENA FOR ',
-                            style: TextStyle(
-                              fontSize: 10.5,
-                              fontWeight: FontWeight.w900,
-                              color: Color(0xFF64748B),
-                              letterSpacing: 1.2,
+                              ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(24),
+                              child: Image.asset(
+                                'assets/imgasest/booyah_hero_logo.png',
+                                height: 110,
+                                width: 110,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.emoji_events,
+                                  size: 84,
+                                  color: AppTheme.primaryGold,
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const FreeFireLogoInline(height: 14),
+                          const SizedBox(height: 20),
+                          Text(
+                            'BOOYAH REWARDS',
+                            style: GoogleFonts.rajdhani(
+                              fontSize: 34,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 2,
+                              color: AppTheme.primaryGold,
+                              shadows: [
+                                Shadow(
+                                  color: AppTheme.primaryGold.withValues(alpha: 0.5),
+                                  blurRadius: 16,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            'India Ka Apna Esports Platform.\nZero Entry Fee, Infinite Glory!',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              letterSpacing: 1.1,
+                              color: AppTheme.cyanAccent,
+                              fontWeight: FontWeight.w600,
+                              height: 1.35,
+                            ),
+                          ),
+                          const SizedBox(height: 36),
+                          const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.5,
+                              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          const Text(
+                            'Community Esports Platform for Free Fire Gamers\nNot affiliated with Garena',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppTheme.textMuted,
+                              height: 1.3,
+                            ),
+                          ),
                         ],
                       ),
-                      const SizedBox(height: 32),
-
-                      // Custom FF Short Logo Pulse
-                      const FfLoadingSpinner(size: 32),
-                    ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24.0),
+                child: Text(
+                  'India Ka Apna Esports Platform • Booyah Rewards',
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ),
-          ),
-
-          // Bottom Tagline & Fair Play Badge
-          Positioned(
-            bottom: 24,
-            left: 0,
-            right: 0,
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.verified_user, color: AppTheme.winningGreen, size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        '100% Fair Play Verified • Instant UPI Payouts',
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF475569)),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  '© 2026 Booyah Rewards Platform',
-                  style: TextStyle(fontSize: 9.5, color: Color(0xFF94A3B8)),
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

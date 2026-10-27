@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arena Rewards - Master Admin Control Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --gold: #FFB900;
+      --gold-dark: #FF8800;
+      --bg-dark: #0F172A;
+      --bg-card: #1E293B;
+      --bg-card-light: #334155;
+      --text-white: #F8FAFC;
+      --text-muted: #94A3B8;
+      --success: #10B981;
+      --danger: #EF4444;
+      --info: #38BDF8;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      padding: 24px;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--bg-card-light);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    h1 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 1.5px;
+    }
+    .badge-live {
+      background: rgba(16, 185, 129, 0.2);
+      color: var(--success);
+      border: 1px solid var(--success);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .badge-season {
+      background: rgba(255, 185, 0, 0.2);
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      padding: 20px;
+      border-radius: 14px;
+      border: 1px solid var(--bg-card-light);
+    }
+    .stat-card h3 {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 6px;
+    }
+    .stat-card .val {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 32px;
+      font-weight: 900;
+      color: var(--gold);
+    }
+    .card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      border: 1px solid var(--bg-card-light);
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      font-weight: 900;
+      color: var(--gold);
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+    @media(max-width: 960px) { .grid-2 { grid-template-columns: 1fr; } }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; }
+    .btn {
+      background: var(--gold);
+      color: #000;
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      font-weight: 900;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btn:hover { background: var(--gold-dark); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-info { background: var(--info); color: #000; }
+    .form-group {
+      margin-bottom: 12px;
+    }
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    input, textarea, select {
+      width: 100%;
+      background: var(--bg-dark);
+      border: 1px solid var(--bg-card-light);
+      color: #fff;
+      padding: 10px;
+      border-radius: 8px;
+      font-family: 'Inter', sans-serif;
+      font-size: 13px;
+    }
+    input:focus, textarea:focus { border-color: var(--gold); outline: none; }
+    .proof-item {
+      background: var(--bg-dark);
+      border: 1px solid var(--bg-card-light);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <h1>ARENA REWARDS ADMIN</h1>
+      <p style="color: var(--text-muted); font-size: 13px;">Dedicated VPS Controller & Tournament Management</p>
+    </div>
+    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+      <span class="badge-season" id="seasonBadge">SEASON 1 ACTIVE</span>
+      <span class="badge-live">● VPS ONLINE (35.154.113.3)</span>
+    </div>
+  </header>
+
+  <!-- Statistics Grid (Real-time Live Analytics: Active, DAU, MAU, Prize Pool) -->
+  <div class="stats-grid">
+    <div class="stat-card" style="border-color: rgba(16, 185, 129, 0.5); background: linear-gradient(180deg, #1E293B 0%, #132722 100%);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>🟢 Live Active (Online Now)</h3>
+        <span style="font-size:10px; background:rgba(16,185,129,0.2); color:var(--success); padding:2px 6px; border-radius:10px; font-weight:bold;">LIVE (15m)</span>
+      </div>
+      <div class="val" id="liveActiveCount" style="color: var(--success);">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Players online right now</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(234, 179, 8, 0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>🌟 Naye Player Aaj (New Today)</h3>
+        <span style="font-size:10px; background:rgba(234,179,8,0.2); color:#fde047; padding:2px 6px; border-radius:10px; font-weight:bold;">NEW USERS</span>
+      </div>
+      <div class="val" id="newUsersCount" style="color: #fde047;">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Aaj register hone wale naye users</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(59, 130, 246, 0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>🔄 Purane Player Aaj Active</h3>
+        <span style="font-size:10px; background:rgba(59,130,246,0.2); color:#60a5fa; padding:2px 6px; border-radius:10px; font-weight:bold;">RETURNING</span>
+      </div>
+      <div class="val" id="returningUsersCount" style="color: #60a5fa;">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Pehle ke users jo aaj wapas khele</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(56, 189, 248, 0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>📈 Total DAU (Daily Active)</h3>
+        <span style="font-size:10px; background:rgba(56,189,248,0.2); color:var(--info); padding:2px 6px; border-radius:10px; font-weight:bold;">24 HOURS</span>
+      </div>
+      <div class="val" id="dauCount" style="color: var(--info);">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Unique active players (New + Old)</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(168, 85, 247, 0.4);">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3>📊 Total MAU (Monthly Active)</h3>
+        <span style="font-size:10px; background:rgba(168,85,247,0.2); color:#c084fc; padding:2px 6px; border-radius:10px; font-weight:bold;">30 DAYS</span>
+      </div>
+      <div class="val" id="mauCount" style="color: #c084fc;">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Unique active players in last 30 days</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(255, 185, 0, 0.4);">
+      <h3>👥 Total Real Registered Players</h3>
+      <div class="val" id="realUsersCount" style="color: var(--gold);">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Verified device accounts (No bots)</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(245, 158, 11, 0.4);">
+      <h3>⏳ Pending Redeem Codes</h3>
+      <div class="val" id="pendingRedeemCount" style="color: #F59E0B;">0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Needs Code within 24-48 Hours</div>
+    </div>
+
+    <div class="stat-card" style="border-color: rgba(16, 185, 129, 0.4);">
+      <h3>🎁 Total Codes Delivered</h3>
+      <div class="val" id="totalRedeemedAmount" style="color: #10B981;">₹0</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Disbursed to satisfied players</div>
+    </div>
+
+    <div class="stat-card">
+      <h3>Active Prize Pool</h3>
+      <div class="val" id="activePrizePool">₹5,000</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Auto-distributed to Top 10</div>
+    </div>
+
+    <div class="stat-card">
+      <h3>Active Tournament Season</h3>
+      <div class="val" id="activeSeasonVal" style="color: #fff;">Season 1</div>
+      <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Resets Sunday 23:59 IST</div>
+    </div>
+  </div>
+
+  <!-- 🎁 GOOGLE PLAY REDEEM CODE REQUESTS MANAGER -->
+  <div class="card" style="border: 2px solid #10B981; background: linear-gradient(180deg, #13241F 0%, #0F172A 100%); box-shadow: 0 0 25px rgba(16, 185, 129, 0.2);">
+    <div class="card-title">
+      <span>🎁 GOOGLE PLAY REDEEM CODE REQUESTS (24-48 HOUR FULFILLMENT)</span>
+      <div style="display:flex; gap:8px;">
+        <span class="badge-live" style="background:rgba(245, 158, 11, 0.2); color:#F59E0B; border-color:#F59E0B;" id="pendingBadge">0 PENDING</span>
+        <span class="badge-live" style="background:rgba(16, 185, 129, 0.2); color:#10B981; border-color:#10B981;" id="deliveredBadge">0 DELIVERED</span>
+      </div>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+      Jab bhi koi player game khelkar aur ads dekhkar <b>₹50 (10,000 pts)</b> ya usse upar ka Google Play code request karta hai, wo request yahan aati hai. Aap Play Store ya Amazon se code buy karke yahan paste karein aur <b>"Send"</b> dabayein. User ke app me turant code dikh jayega! (SLA: 24 to 48 hours).
+    </p>
+
+    <div style="overflow-x: auto; max-height: 450px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Time & Date</th>
+            <th>Player Name / UID</th>
+            <th>Redeem Amount</th>
+            <th>Points Cost</th>
+            <th>User Email / WhatsApp</th>
+            <th>Status</th>
+            <th style="min-width: 260px;">Action / Deliver Code</th>
+          </tr>
+        </thead>
+        <tbody id="redeemRequestsBody">
+          <tr><td colspan="7" style="text-align:center; padding:16px;">Loading redeem requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 📢 TOURNAMENT NOTICE BOARD MANAGER -->
+  <div class="card" style="border: 2px solid var(--gold); background: linear-gradient(180deg, #1E293B 0%, #172338 100%); box-shadow: 0 0 20px rgba(255, 185, 0, 0.18);">
+    <div class="card-title">
+      <span>📢 TOURNAMENT NOTICE BOARD (LIVE APP ANNOUNCEMENT)</span>
+      <span class="badge-live" id="noticeLiveBadge">ACTIVE IN APP</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 12px;">
+      Aap yahan se jo bhi notice likhenge, wo sabhi users ko app ke <b>Leaderboard</b> par sabse upar glowing notice board me turant dikhega!
+    </p>
+    <div class="form-group">
+      <label>Currently Live Notice on App:</label>
+      <div id="currentNoticeDisplay" style="background: var(--bg-dark); padding: 12px 14px; border-radius: 8px; border: 1px solid var(--gold); color: #fff; font-size: 13.5px; margin-bottom: 12px; line-height: 1.4;">
+        Loading active notice...
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Enter New Notice / Announcement:</label>
+      <textarea id="noticeInput" rows="3" placeholder="Type notice to publish to all users..." style="font-size: 13px;"></textarea>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;">
+      <button type="button" class="btn btn-info" style="font-size: 11px; padding: 5px 12px;" onclick="setNoticePreset('📢 Season 1 LIVE! Top 10 skill players win Google Play redeem codes on Sunday! Payouts on 25th.')">Preset: Season 1 Live 🏆</button>
+      <button type="button" class="btn btn-info" style="font-size: 11px; padding: 5px 12px;" onclick="setNoticePreset('✅ All 25th Monthly Payouts & Redeem Codes have been disbursed directly to winner WhatsApp/Emails!')">Preset: Payouts Sent ✅</button>
+      <button type="button" class="btn btn-info" style="font-size: 11px; padding: 5px 12px;" onclick="setNoticePreset('🔥 Mega Weekend Contest! Earn 2X Points on Fruit Slash & Knife Hit today!')">Preset: 2X Points 🔥</button>
+      <button type="button" class="btn btn-info" style="font-size: 11px; padding: 5px 12px;" onclick="setNoticePreset('⚠️ Maintenance Alert: Scheduled server maintenance tonight from 12:00 AM to 1:00 AM. Scores are safe.')">Preset: Maintenance ⚠️</button>
+    </div>
+    <button class="btn" style="width: 100%; padding: 12px; font-size: 15px; letter-spacing: 1px;" onclick="updateNotice()">🚀 PUBLISH NOTICE TO LIVE APP NOW</button>
+  </div>
+
+  <!-- 🛡️ TOP 10 BOT FINANCIAL SHIELD CONTROLLER -->
+  <div class="card" style="border: 2px solid #3B82F6; background: linear-gradient(180deg, #1E293B 0%, #0F172A 100%); box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);">
+    <div class="card-title">
+      <span>🛡️ TOP 10 BOT FINANCIAL SHIELD (FINANCIAL SAFETY)</span>
+      <span class="badge-live" id="botShieldBadge" style="background: rgba(16, 185, 129, 0.2); color: #10B981; border: 1px solid #10B981;">ACTIVE (PROTECTED)</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+      <span id="botShieldStatusDesc" style="color: #fff;"><b>Protection ON:</b> 10 Realistic Indian Bots Top 10 ranks ko safe rakhenge taaki bina ad revenue ke pocket se payout na dena pade. Jab aapko real players ko Top 10 me aane dena ho aur direct payout shuru karna ho, to niche diye button se 1-click me ise BAND ya CHALU kar sakte hain.</span>
+    </p>
+    <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <button id="toggleShieldBtn" class="btn" style="padding: 10px 22px; font-size: 14px; background: linear-gradient(135deg, #EF4444 0%, #B91C1C 100%); cursor: pointer;" onclick="toggleBotShield()">
+        🛑 TURN OFF BOT SHIELD (ALLOW REAL PLAYERS TO WIN)
+      </button>
+    </div>
+  </div>
+
+  <!-- Weekly Prize Pool Controller Card -->
+  <div class="card" style="border: 1.5px solid var(--gold); background: linear-gradient(180deg, #1E293B 0%, #151F30 100%);">
+    <div class="card-title">
+      <span>💰 Set Weekly Prize Pool (Automatic Top 10 Distribution)</span>
+      <span class="badge-live" id="currentPoolBadge">₹5,000 Active</span>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+      Har week yahan bas total Prize Pool amount daalein (e.g. <b>5000</b>, <b>10000</b>, <b>25000</b>). System automatically Top 10 ranks (Rank 1 se 10) me amount calculate karke tournament leaderboard aur app par turant live kar dega!
+    </p>
+    <div style="display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 200px;">
+        <input type="number" id="prizePoolInput" placeholder="Enter New Prize Pool (e.g. 5000)" style="font-size: 16px; font-weight: bold; color: var(--gold); padding: 12px;">
+      </div>
+      <button class="btn" style="padding: 12px 24px; font-size: 15px;" onclick="updatePrizePool()">🚀 Update & Distribute Top 10 Now</button>
+    </div>
+
+    <!-- Live Preview of Top 10 Breakdown -->
+    <div style="background: var(--bg-dark); border-radius: 12px; padding: 14px; border: 1px solid var(--bg-card-light);">
+      <div style="font-size: 12px; font-weight: bold; color: var(--gold); margin-bottom: 10px; display: flex; justify-content: space-between;">
+        <span>📊 CURRENT TOP 10 RANK-WISE DISTRIBUTION IN APP:</span>
+        <span style="color: var(--text-muted); font-size: 11px;">Resets Every Sunday 23:59 IST</span>
+      </div>
+      <div id="prizeDistributionTable" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px;">
+        <!-- Populated via fetchStats -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Real Registered Players Directory (LIVE - Zero Fake Data) -->
+  <div class="card">
+    <div class="card-title">
+      <span>👥 Real Registered Devices Directory (Live Real Users Only)</span>
+      <span style="font-size: 12px; color: var(--text-muted);">Seed bots excluded</span>
+    </div>
+    <div style="overflow-x: auto; max-height: 280px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Device UID</th>
+            <th>Gamer Tag</th>
+            <th>Weekly Points</th>
+            <th>Claim Info (Phone / Email / UPI)</th>
+            <th>Joined / Last Active</th>
+            <th>Direct Score Boost</th>
+          </tr>
+        </thead>
+        <tbody id="realUsersBody">
+          <tr><td colspan="6">Loading real users...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Live Leaderboard & Score Controller -->
+    <div class="card">
+      <div class="card-title">
+        <span>🏆 Current Week Leaderboard</span>
+        <button class="btn btn-danger" onclick="resetLeaderboard()">🔄 Archive Winners & Start New Season</button>
+      </div>
+      <div style="overflow-x: auto; max-height: 380px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Player Name</th>
+              <th>Score</th>
+              <th>Prize</th>
+              <th>Claim Info (25th Payout)</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <tr><td colspan="5">Loading players...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <hr style="border: 0; border-top: 1px solid var(--bg-card-light); margin: 20px 0;">
+
+      <div class="card-title">⚡ Boost Any Player's Score Directly</div>
+      <div class="form-group">
+        <label>Player UID / Device ID / Name</label>
+        <input type="text" id="boostUid" placeholder="e.g. Aman_Pro or guest_1001">
+      </div>
+      <div class="form-group">
+        <label>Points to Set / Add</label>
+        <input type="number" id="boostScore" placeholder="e.g. 350">
+      </div>
+      <button class="btn" style="width: 100%;" onclick="boostScore()">Update Score Now</button>
+    </div>
+
+    <!-- Past Winners Archive (For 25th Monthly Payouts) -->
+    <div class="card">
+      <div class="card-title">
+        <span>👑 Past Seasons Winners Hall (25th Monthly Payouts)</span>
+        <span class="badge-live" style="background: rgba(56, 189, 248, 0.2); color: var(--info); border-color: var(--info);">Payout on 25th</span>
+      </div>
+      <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 12px;">
+        Har week reset hone se theek pehle Top 10 winners automatically yahan archive ho jaate hain taaki mahine ki 25 tareekh ko direct cash/code transfer kiya ja sake.
+      </p>
+      <div id="pastWinnersList" style="max-height: 480px; overflow-y: auto;">
+        Loading past winners...
+      </div>
+    </div>
+  </div>
+
+  <!-- Winner Proofs & Reviews Uploader -->
+  <div class="card">
+    <div class="card-title">📸 Upload Winner Payment Proof & Community Review</div>
+    <form id="proofForm" onsubmit="uploadProof(event)">
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;">
+        <div class="form-group">
+          <label>Proof Title</label>
+          <input type="text" id="proofTitle" placeholder="e.g. ₹1,500 Direct UPI Sent! 🎁" required>
+        </div>
+        <div class="form-group">
+          <label>Winner Player Name & Rank</label>
+          <input type="text" id="proofWinner" placeholder="e.g. Aman (Rank 1)" required>
+        </div>
+        <div class="form-group">
+          <label>Verification Tag</label>
+          <input type="text" id="proofTag" placeholder="e.g. UPI Verified ⚡" value="UPI Verified ⚡">
+        </div>
+        <div class="form-group">
+          <label>YouTube / Video URL (Optional)</label>
+          <input type="url" id="proofVideo" placeholder="https://youtube.com/...">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Winner Review / Feedback Text</label>
+        <textarea id="proofReview" rows="2" placeholder="e.g. Received direct payout on the 25th in UPI! 100% genuine tournament."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Screenshot / Proof Photo</label>
+        <input type="file" id="proofImage" accept="image/*">
+      </div>
+      <button type="submit" class="btn" style="padding: 10px 24px; font-size: 14px;">Upload & Publish Live Proof</button>
+    </form>
+
+    <hr style="border: 0; border-top: 1px solid var(--bg-card-light); margin: 20px 0;">
+
+    <div class="card-title">Active Winner Proofs in App</div>
+    <div id="proofsList">Loading proofs...</div>
+  </div>
+
+  <script>
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/admin/stats');
+        const data = await res.json();
+        if (data.success) {
+          // Live Real-Time Analytics
+          document.getElementById('liveActiveCount').innerText = data.liveActiveCount || 0;
+          if (document.getElementById('newUsersCount')) document.getElementById('newUsersCount').innerText = data.newUsersTodayCount || 0;
+          if (document.getElementById('returningUsersCount')) document.getElementById('returningUsersCount').innerText = data.returningUsersTodayCount || 0;
+          document.getElementById('dauCount').innerText = data.dauCount || 0;
+          document.getElementById('mauCount').innerText = data.mauCount || 0;
+          document.getElementById('realUsersCount').innerText = data.realUsersCount || 0;
+          
+          // Season
+          const seasonNum = data.config ? (data.config.season || 1) : 1;
+          document.getElementById('activeSeasonVal').innerText = 'Season ' + seasonNum;
+          if (data.config && typeof data.config.enableBotShield === 'boolean') {
+            currentShieldState = data.config.enableBotShield;
+          } else {
+            currentShieldState = true;
+          }
+          updateBotShieldUI(currentShieldState);
+          document.getElementById('seasonBadge').innerText = 'SEASON ' + seasonNum + ' ACTIVE';
+
+          // Prize Pool
+          if (data.config) {
+            document.getElementById('activePrizePool').innerText = data.config.prizePool || '₹5,000';
+            document.getElementById('currentPoolBadge').innerText = (data.config.prizePool || '₹5,000') + ' Active';
+            
+            // Render Top 10 Distribution Grid
+            const distTable = document.getElementById('prizeDistributionTable');
+            if (distTable && data.config.prizesBreakdown) {
+              distTable.innerHTML = data.config.prizesBreakdown.map(p => `
+                <div style="background: var(--bg-card); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--bg-card-light); text-align: center;">
+                  <div style="font-size: 11px; color: var(--text-muted); font-weight: bold;">${p.title}</div>
+                  <div style="font-size: 16px; color: var(--gold); font-weight: 900; font-family: 'Rajdhani';">${p.formatted}</div>
+                  <div style="font-size: 9px; color: var(--success);">${p.type.split('/')[0]}</div>
+                </div>
+              `).join('');
+            }
+          }
+
+          // Render Real Users Table (Strictly NO BOTS)
+          const realUsersBody = document.getElementById('realUsersBody');
+          realUsersBody.innerHTML = '';
+          if (data.realUsers && data.realUsers.length > 0) {
+            data.realUsers.forEach(u => {
+              const activeStr = u.lastActive ? new Date(u.lastActive).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : 'Recent';
+              const pInfo = u.payoutDetails;
+              const claimHtml = pInfo ? `
+                <div style="background:rgba(16,185,129,0.15); border:1px solid var(--success); padding:3px 6px; border-radius:6px; font-size:11px;">
+                  ${pInfo.phoneNumber ? `<div>📱 <b>${pInfo.phoneNumber}</b></div>` : ''}
+                  ${pInfo.email ? `<div>✉️ <b>${pInfo.email}</b></div>` : ''}
+                  ${pInfo.upiId ? `<div>💳 ${pInfo.upiId}</div>` : ''}
+                </div>
+              ` : '<span style="color:var(--text-muted); font-size:11px;">Not submitted</span>';
+
+              realUsersBody.innerHTML += `
+                <tr>
+                  <td><code style="color:var(--gold); font-size:12px;">${u.uid}</code></td>
+                  <td><b>${u.displayName}</b></td>
+                  <td><span style="color:var(--gold); font-weight:bold;">${u.weeklyScore || 0} pts</span></td>
+                  <td>${claimHtml}</td>
+                  <td style="font-size:11px; color:var(--text-muted);">${activeStr}</td>
+                  <td><button class="btn" style="padding:4px 8px; font-size:11px;" onclick="selectForBoost('${u.uid}')">Boost</button></td>
+                </tr>
+              `;
+            });
+          } else {
+            realUsersBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:16px;">Abhi koi real user connect nahi hua hai. App open hone par yahan live UID dikhegi.</td></tr>';
+          }
+
+          // Render Leaderboard
+          const tbody = document.getElementById('leaderboardBody');
+          tbody.innerHTML = '';
+          data.leaderboard.forEach(p => {
+            const pInfo = p.payoutDetails;
+            const claimHtml = pInfo ? `
+              <div style="background:rgba(16,185,129,0.15); border:1px solid var(--success); padding:3px 6px; border-radius:6px; font-size:11px;">
+                ${pInfo.phoneNumber ? `<div>📱 <b>${pInfo.phoneNumber}</b></div>` : ''}
+                ${pInfo.email ? `<div>✉️ <b>${pInfo.email}</b></div>` : ''}
+                ${pInfo.upiId ? `<div>💳 ${pInfo.upiId}</div>` : ''}
+                <span style="color:var(--success); font-size:9px; font-weight:bold;">${pInfo.status || 'Pending'}</span>
+              </div>
+            ` : (p.rank <= 10 ? '<span style="color:var(--gold); font-size:10px;">Eligible - Awaiting Info</span>' : '<span style="color:var(--text-muted); font-size:10px;">-</span>');
+
+            tbody.innerHTML += `
+              <tr>
+                <td><b>#${p.rank}</b></td>
+                <td>${p.name}</td>
+                <td><span style="color:var(--gold); font-weight:bold;">${p.score} pts</span></td>
+                <td><span style="color:var(--success); font-size:11px;">${p.prize || 'Participant'}</span></td>
+                <td>${claimHtml}</td>
+                <td><button class="btn" style="padding:4px 8px; font-size:11px;" onclick="selectForBoost('${p.uid || p.name}')">Edit</button></td>
+              </tr>
+            `;
+          });
+
+          // Render Past Winners Archive (For 25th Monthly Payout)
+          const pastWinnersList = document.getElementById('pastWinnersList');
+          pastWinnersList.innerHTML = '';
+          if (data.pastWinners && data.pastWinners.length > 0) {
+            data.pastWinners.forEach(seasonArchive => {
+              let winnersHtml = (seasonArchive.winners || []).map(w => `
+                <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-size:12px;">
+                  <div>
+                    <span style="font-weight:bold; color:var(--gold);">#${w.rank} ${w.name}</span>
+                    <span style="color:var(--text-muted); font-size:11px;">(${w.score} pts)</span>
+                  </div>
+                  <div>
+                    <span style="color:var(--success); font-weight:bold;">${w.prize}</span>
+                    <span style="background:rgba(56,189,248,0.15); color:var(--info); padding:2px 6px; border-radius:4px; font-size:9px; margin-left:6px;">${w.status || '25th Payout'}</span>
+                  </div>
+                </div>
+              `).join('');
+
+              pastWinnersList.innerHTML += `
+                <div style="background:var(--bg-dark); border:1px solid var(--bg-card-light); border-radius:12px; padding:12px; margin-bottom:12px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <b style="color:var(--gold); font-family:'Rajdhani'; font-size:16px;">🏆 ${seasonArchive.seasonName || ('Season ' + seasonArchive.season)}</b>
+                    <span style="font-size:11px; color:var(--text-muted);">Payout: ${seasonArchive.payoutDue || '25th Monthly'}</span>
+                  </div>
+                  ${winnersHtml}
+                </div>
+              `;
+            });
+          } else {
+            pastWinnersList.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">No archived seasons yet. When week resets, Top 10 will appear here automatically.</p>';
+          }
+
+          // Render Proofs
+          const pList = document.getElementById('proofsList');
+          pList.innerHTML = '';
+          data.proofs.forEach(proof => {
+            pList.innerHTML += `
+              <div class="proof-item">
+                <div>
+                  <b style="color:var(--gold);">${proof.title}</b>
+                  <p style="font-size:11px; color:var(--text-muted);">${proof.winnerName} • ${proof.tag} • ${proof.date}</p>
+                </div>
+                <button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteProof('${proof.id}')">Delete</button>
+              </div>
+            `;
+          });
+        }
+      } catch (e) {
+        console.error('Fetch error:', e);
+      }
+    }
+
+    
+    function setNoticePreset(msg) {
+      document.getElementById('noticeInput').value = msg;
+    }
+
+    async function updateNotice() {
+      const notice = document.getElementById('noticeInput').value.trim();
+      if (!notice) return alert('Please enter notice text to publish.');
+
+      try {
+        const res = await fetch('/api/admin/update-notice', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'X-Admin-Source': 'vps-web-dashboard'
+          },
+          body: JSON.stringify({ notice })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ Notice published live to app successfully!');
+          document.getElementById('currentNoticeDisplay').textContent = data.notice;
+          document.getElementById('noticeInput').value = '';
+          fetchStats();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to update notice'));
+        }
+      } catch (e) {
+        alert('Server error: ' + e.message);
+      }
+    }
+
+    let currentShieldState = true;
+
+    function updateBotShieldUI(active) {
+      const badge = document.getElementById('botShieldBadge');
+      const btn = document.getElementById('toggleShieldBtn');
+      const desc = document.getElementById('botShieldStatusDesc');
+      if (!badge || !btn) return;
+      if (active) {
+        badge.innerText = 'ACTIVE (PROTECTED)';
+        badge.style.background = 'rgba(16, 185, 129, 0.2)';
+        badge.style.color = '#10B981';
+        badge.style.borderColor = '#10B981';
+        btn.innerText = '🛑 TURN OFF BOT SHIELD (ALLOW REAL PLAYERS TO WIN)';
+        btn.style.background = 'linear-gradient(135deg, #EF4444 0%, #B91C1C 100%)';
+        desc.innerHTML = '<b>Protection ON:</b> 10 Realistic Indian Bots Top 10 ranks par hain. Aapka financial risk 100% zero hai.';
+      } else {
+        badge.innerText = 'DISABLED (REAL PLAYERS WIN)';
+        badge.style.background = 'rgba(239, 68, 68, 0.2)';
+        badge.style.color = '#EF4444';
+        badge.style.borderColor = '#EF4444';
+        btn.innerText = '🟢 TURN ON BOT SHIELD (ENABLE ZERO-RISK SHIELD)';
+        btn.style.background = 'linear-gradient(135deg, #10B981 0%, #059669 100%)';
+        desc.innerHTML = '<b>Protection OFF:</b> Real players bina kisi bot ke direct Top 10 me aakar jeet rahe hain.';
+      }
+    }
+
+    async function toggleBotShield() {
+      const newState = !currentShieldState;
+      const msg = newState 
+        ? 'Kya aap Top 10 Bot Shield ko wapas ON karna chahte hain? (Bots wapas Top 10 me set ho jayenge)'
+        : 'WARNING: Kya aap sach me Bot Shield OFF karna chahte hain? (Real players direct Top 10 me aa jayenge aur prize pool ke haqdaar honge)';
+      if (!confirm(msg)) return;
+
+      try {
+        const res = await fetch('/api/admin/toggle-bot-shield', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-admin-source': 'vps-web-dashboard'
+          },
+          body: JSON.stringify({ enabled: newState })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          fetchStats();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to toggle shield'));
+        }
+      } catch (e) {
+        alert('Server error: ' + e.message);
+      }
+    }
+
+    async function updatePrizePool() {
+      const amount = document.getElementById('prizePoolInput').value;
+      if (!amount || Number(amount) <= 0) {
+        return alert('Kripya valid Prize Pool amount enter karein (e.g. 5000, 10000)');
+      }
+
+      try {
+        const res = await fetch('/api/admin/set-prize-pool', {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Admin-Source': 'vps-web-dashboard'
+          },
+          body: JSON.stringify({ prizePoolAmount: Number(amount) })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok && data.success) {
+          alert('✅ ' + data.message);
+          document.getElementById('prizePoolInput').value = '';
+          fetchStats();
+        } else {
+          alert('Error: ' + (data.error || 'Status ' + res.status));
+        }
+      } catch (e) {
+        alert('Server communication error: ' + e.message);
+      }
+    }
+
+    function selectForBoost(uid) {
+      document.getElementById('boostUid').value = uid;
+      window.scrollTo({ top: 500, behavior: 'smooth' });
+    }
+
+    async function boostScore() {
+      const uid = document.getElementById('boostUid').value;
+      const score = document.getElementById('boostScore').value;
+      if (!uid || !score) return alert('Please enter both UID and Score');
+
+      const res = await fetch('/api/admin/update-user-score', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ uid, newScore: score })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Score updated successfully!');
+        fetchStats();
+      }
+    }
+
+    async function uploadProof(e) {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append('title', document.getElementById('proofTitle').value);
+      formData.append('winnerName', document.getElementById('proofWinner').value);
+      formData.append('tag', document.getElementById('proofTag').value);
+      formData.append('review', document.getElementById('proofReview').value);
+      formData.append('videoUrl', document.getElementById('proofVideo').value);
+
+      const fileInput = document.getElementById('proofImage');
+      if (fileInput.files[0]) {
+        formData.append('image', fileInput.files[0]);
+      }
+
+      const res = await fetch('/api/admin/add-proof', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('Proof added and published live to the app!');
+        document.getElementById('proofForm').reset();
+        fetchStats();
+      }
+    }
+
+    async function deleteProof(id) {
+      if (!confirm('Are you sure you want to delete this proof?')) return;
+      const res = await fetch('/api/admin/proof/' + id, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) fetchStats();
+    }
+
+    async function resetLeaderboard() {
+      if (!confirm('Warning: Are you sure you want to reset this week, archive Top 10 winners for the 25th payout, and advance to next Season?')) return;
+      const res = await fetch('/api/admin/reset-leaderboard', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ ' + data.message);
+        fetchStats();
+      }
+    }
+
+    async function fetchRedeemRequests() {
+      try {
+        const res = await fetch('/api/admin/redeem-requests', {
+          headers: { 'x-admin-source': 'vps-web-dashboard' }
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('pendingBadge').innerText = `${data.stats.pending} PENDING`;
+          document.getElementById('deliveredBadge').innerText = `${data.stats.delivered} DELIVERED (₹${data.stats.totalDeliveredVal})`;
+          
+          const el = document.getElementById('pendingRedeemCount');
+          if (el) el.innerText = data.stats.pending;
+          const el2 = document.getElementById('totalRedeemedAmount');
+          if (el2) el2.innerText = `₹${data.stats.totalDeliveredVal}`;
+
+          const tbody = document.getElementById('redeemRequestsBody');
+          tbody.innerHTML = '';
+          if (!data.requests || data.requests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:var(--text-muted); padding:16px;">Abhi koi redeem request nahi aayi hai.</td></tr>';
+            return;
+          }
+
+          data.requests.forEach(r => {
+            let statusBadge = '';
+            if (r.status === 'PENDING') {
+              statusBadge = '<span style="background:rgba(245, 158, 11, 0.2); color:#F59E0B; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:11px;">⏳ 24-48h PENDING</span>';
+            } else if (r.status === 'DELIVERED') {
+              statusBadge = '<span style="background:rgba(16, 185, 129, 0.2); color:#10B981; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:11px;">🟢 DELIVERED</span>';
+            } else {
+              statusBadge = '<span style="background:rgba(239, 68, 68, 0.2); color:#EF4444; padding:4px 10px; border-radius:12px; font-weight:bold; font-size:11px;">🔴 REFUNDED</span>';
+            }
+
+            let actionHtml = '';
+            if (r.status === 'PENDING') {
+              actionHtml = `
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <input type="text" id="code_${r.id}" placeholder="Google Play Code (e.g. ABCD-1234-XYZ)" style="padding:6px 10px; font-size:12px; border-radius:6px; border:1px solid #10B981; background:var(--bg-dark); color:#fff; flex:1;">
+                  <button class="btn" style="background:#10B981; color:#fff; font-size:11px; padding:6px 12px;" onclick="approveRedeem('${r.id}')">✅ Send</button>
+                  <button class="btn btn-danger" style="font-size:11px; padding:6px 10px;" onclick="rejectRedeem('${r.id}')">❌ Refund</button>
+                </div>
+              `;
+            } else if (r.status === 'DELIVERED') {
+              actionHtml = `
+                <div style="font-family:monospace; background:rgba(16, 185, 129, 0.15); border:1px dashed #10B981; padding:6px 10px; border-radius:6px; color:#10B981; font-weight:bold;">
+                  🎁 ${r.redeemCode || 'Code Disbursed'}
+                  <div style="font-size:10px; color:var(--text-muted); margin-top:2px;">Delivered: ${r.deliveredAt ? new Date(r.deliveredAt).toLocaleString('en-IN') : 'Completed'}</div>
+                </div>
+              `;
+            } else {
+              actionHtml = `<div style="font-size:11px; color:#EF4444;">${r.adminNotes || 'Refunded back to user'}</div>`;
+            }
+
+            const dateStr = r.createdAt ? new Date(r.createdAt).toLocaleString('en-IN') : '-';
+            tbody.innerHTML += `
+              <tr>
+                <td style="font-size:11px; color:var(--text-muted);">${dateStr}</td>
+                <td><b>${r.displayName || 'Player'}</b><br><span style="font-size:10px; color:var(--text-muted);">${r.uid}</span></td>
+                <td><span style="font-weight:900; color:#10B981; font-size:15px;">₹${r.amount}</span> Play Code</td>
+                <td><span style="color:var(--gold); font-weight:bold;">${Number(r.pointsCost).toLocaleString('en-IN')}</span> pts</td>
+                <td>
+                  <span style="color:#60A5FA;">📧 ${r.email || '-'}</span><br>
+                  <span style="color:#34D399; font-size:11px;">📱 ${r.phone || 'No WhatsApp'}</span>
+                </td>
+                <td>${statusBadge}</td>
+                <td>${actionHtml}</td>
+              </tr>
+            `;
+          });
+        }
+      } catch (e) {
+        console.error('Error fetching redeem requests:', e);
+      }
+    }
+
+    async function approveRedeem(id) {
+      const codeInput = document.getElementById(`code_${id}`);
+      const code = codeInput ? codeInput.value.trim() : '';
+      if (!code) return alert('Kripya Google Play Redeem Code enter karein (e.g. ABCD-EFGH-1234)!');
+
+      if (!confirm(`Are you sure you want to deliver code "${code}" to this user?`)) return;
+
+      const res = await fetch('/api/admin/redeem-approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+        body: JSON.stringify({ id, code })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Code successfully delivered! User can now see and copy the code in the app.');
+        fetchRedeemRequests();
+        fetchStats();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to approve'));
+      }
+    }
+
+    async function rejectRedeem(id) {
+      const reason = prompt('Kripya reject karne ka reason likhein (Points user ke account me wapas refund ho jayenge):', 'Invalid contact information or policy violation.');
+      if (reason === null) return;
+
+      const res = await fetch('/api/admin/redeem-reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+        body: JSON.stringify({ id, reason })
+      });
+      const data = await res.json();
+      if (data.success) {
+        alert('✅ Request rejected and points refunded to player account.');
+        fetchRedeemRequests();
+        fetchStats();
+      } else {
+        alert('Error: ' + (data.error || 'Failed to reject'));
+      }
+    }
+
+    fetchStats();
+    fetchRedeemRequests();
+    setInterval(() => {
+      fetchStats();
+      fetchRedeemRequests();
+    }, 10000); // 10s auto refresh
+  </script>
+</body>
+</html>

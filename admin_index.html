@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🔥 BOOYAH REWARDS ESPORTS — Master Admin Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0A0E17;
+      --bg-card: #131B2A;
+      --bg-card-light: #1E293B;
+      --gold: #FFB900;
+      --gold-dark: #D97706;
+      --saffron: #FF9933;
+      --green: #10B981;
+      --cyan: #38BDF8;
+      --danger: #EF4444;
+      --text-white: #F8FAFC;
+      --text-muted: #94A3B8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-white);
+      font-family: 'Inter', sans-serif;
+      padding: 16px 20px;
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px;
+      background: linear-gradient(90deg, #1A1305 0%, #131B2A 50%, #0A1913 100%);
+      border: 1.5px solid var(--gold);
+      border-radius: 14px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .header-title h1 {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--gold);
+    }
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+    }
+    .badge-live { background: rgba(16,185,129,0.15); color: var(--green); border: 1px solid var(--green); }
+    .badge-saffron { background: rgba(255,153,51,0.15); color: var(--saffron); border: 1px solid var(--saffron); }
+
+    /* STATS GRID */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .stat-box .title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .stat-box .num {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+    }
+    .stat-box .sub {
+      font-size: 10.5px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* CARDS */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 1px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .btn {
+      font-family: 'Rajdhani', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-gold { background: var(--gold); color: #000; }
+    .btn-gold:hover { background: var(--gold-dark); }
+    .btn-green { background: var(--green); color: #000; }
+    .btn-cyan { background: var(--cyan); color: #000; }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-outline {
+      background: transparent;
+      color: var(--text-white);
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-outline:hover { background: rgba(255,255,255,0.05); }
+
+    /* TABLES */
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    th { color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 11.5px; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg-dark);
+      border: 1px solid rgba(255,255,255,0.15);
+      color: #fff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: 'Inter', sans-serif;
+    }
+    input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media(max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+
+  <!-- TOP HEADER -->
+  <header>
+    <div class="header-title">
+      <span style="font-size: 28px;">🔥</span>
+      <div>
+        <h1>BOOYAH REWARDS — ESPORTS CONTROL ROOM</h1>
+        <div style="font-size: 11.5px; color: var(--gold); font-weight: 600;">India Ka Apna Esports Platform. Zero Entry Fee, Infinite Glory! &bull; Production VPS Mumbai &bull; 100% In-App Ecosystem</div>
+      </div>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+      <span class="badge badge-saffron" id="clockIst">IST: Loading...</span>
+      <span class="badge badge-live">● VPS LIVE ONLINE</span>
+      <button class="btn btn-outline" onclick="refreshAll(true)">🔄 Refresh</button>
+    </div>
+  </header>
+
+  <!-- LIVE METRICS -->
+  <div class="stats-grid">
+    <div class="stat-box" style="border-color: rgba(16,185,129,0.4);">
+      <div class="title">🟢 Live Active (15M)</div>
+      <div class="num" id="statLive" style="color: var(--green);">0</div>
+      <div class="sub">Online right now</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(56,189,248,0.4);">
+      <div class="title">📅 Today DAU (IST)</div>
+      <div class="num" id="statDauToday" style="color: var(--cyan);">0</div>
+      <div class="sub" id="statDateToday">Today</div>
+    </div>
+    <div class="stat-box">
+      <div class="title">📆 Yesterday DAU</div>
+      <div class="num" id="statDauYest" style="color: #cbd5e1;">0</div>
+      <div class="sub">Calendar date count</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(255,185,0,0.4);">
+      <div class="title">👥 Total Gamers</div>
+      <div class="num" id="statUsers" style="color: var(--gold);">0</div>
+      <div class="sub">Verified device accounts</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(244,63,94,0.4);">
+      <div class="title">🌟 New Today</div>
+      <div class="num" id="statNewToday" style="color: #F43F5E;">0</div>
+      <div class="sub">Joined today (IST)</div>
+    </div>
+    <div class="stat-box">
+      <div class="title">🎮 Tournaments</div>
+      <div class="num" id="statMatches" style="color: var(--saffron);">0</div>
+      <div class="sub" id="statMatchesSub">Live & Open matches</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(168,85,247,0.4);">
+      <div class="title">⚡ Slots Joined</div>
+      <div class="num" id="statSlotsJoined" style="color: #A855F7;">0</div>
+      <div class="sub">Total match registrations</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(59,130,246,0.4);">
+      <div class="title">💬 Open Tickets</div>
+      <div class="num" id="statTickets" style="color: var(--cyan);">0</div>
+      <div class="sub">In-App customer queries</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(245,158,11,0.4);">
+      <div class="title">⏳ Pending Redeems</div>
+      <div class="num" id="statPendingRedeems" style="color: #F59E0B;">0</div>
+      <div class="sub">Google Play & UPI</div>
+    </div>
+    <div class="stat-box" style="border-color: rgba(16,185,129,0.4);">
+      <div class="title">🎁 Total Delivered</div>
+      <div class="num" id="statDeliveredVal" style="color: var(--green);">₹0</div>
+      <div class="sub">Prizes paid out</div>
+    </div>
+  </div>
+
+  <!-- TOP QUICK NAVIGATION BAR -->
+  <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; background:#1E293B; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+    <a href="#sec-tournaments" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">🔥 Tournaments</a>
+    <a href="#sec-app-mgmt" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--gold); color:var(--gold);">📱 Popup Banner & YouTube Video</a>
+    <a href="#sec-minigame" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--cyan); color:var(--cyan);">🕹️ Mini-Game Arcade</a>
+    <a href="#sec-fcm" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--saffron); color:var(--saffron);">📢 FCM Push Broadcast</a>
+    <a href="#sec-redeems" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--green); color:var(--green);">🎁 Redeem Payouts</a>
+    <a href="#sec-support" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">💬 Support Desk</a>
+    <a href="#sec-users" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">👥 Users</a>
+    <a href="#sec-economy" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">⚙️ Economy</a>
+  </div>
+
+  <!-- MODULE 1: TOURNAMENT & ROOM CONTROL -->
+  <div id="sec-tournaments" class="card" style="border: 2px solid var(--gold); background: linear-gradient(180deg, #1C1917 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>🔥 ACTIVE MATCHES & ROOM CREDENTIALS MANAGER</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="btn btn-gold" onclick="openCreateTournModal()">➕ Create Match</button>
+        <button class="btn btn-outline" onclick="fetchTournaments()">🔄 Refresh Matches</button>
+      </div>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+      Match shuru hone se 15 minute pehle <b>Room ID & Password</b> publish karein (yeh app me players ko interstitial ad dekhne par reveal hoga). Match khatam hone par Spectate karke <b>Booyah Winner / Squad</b> ko 1-Click me prize coins auto-split karein!
+    </p>
+    <div id="tournContainer" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;">
+      <div style="color:var(--text-muted); padding:20px;">Loading matches...</div>
+    </div>
+  </div>
+
+  <!-- MODULE 2: 100% IN-APP CUSTOMER SUPPORT DESK -->
+  <div class="card" style="border: 2px solid var(--cyan); background: linear-gradient(180deg, #0F172A 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>💬 100% IN-APP CUSTOMER SUPPORT DESK</span>
+        <span class="badge badge-live" id="ticketCountBadge">0 TICKETS</span>
+      </div>
+      <button class="btn btn-outline" onclick="fetchTickets()">🔄 Refresh Tickets</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+      User app ke andar bina kisi bahar ke app ke message bhejte hain. Yahan reply type karein, user ko direct unki app ticket screen me turant dikhega!
+    </p>
+    <div id="ticketContainer" style="display:flex; flex-direction:column; gap:12px; max-height:420px; overflow-y:auto;">
+      <div style="color:var(--text-muted); padding:15px;">Loading support tickets...</div>
+    </div>
+  </div>
+
+  <!-- MODULE 3: GOOGLE PLAY REDEEM CODE & UPI PAYOUT DESK -->
+  <div class="card" style="border: 2px solid var(--green); background: linear-gradient(180deg, #064E3B 0%, #131B2A 100%);">
+    <div class="card-title">
+      <span>🎁 GOOGLE PLAY REDEEM CODES & UPI WITHDRAWAL DESK</span>
+      <button class="btn btn-outline" onclick="fetchRedeems()">🔄 Refresh Requests</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+      Jab player coins jeet kar ₹10, ₹50, ya ₹100 ka Play Code ya UPI cash claim karta hai, request yahan aati hai. Code / UPI UTR daal kar "Deliver" dabayein!
+    </p>
+    <div style="overflow-x:auto; max-height:380px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Gamer / UID</th>
+            <th>Amount</th>
+            <th>Coins Cost</th>
+            <th>Claim Info</th>
+            <th>Status</th>
+            <th style="min-width: 240px;">Action</th>
+          </tr>
+        </thead>
+        <tbody id="redeemTableBody">
+          <tr><td colspan="7" style="text-align:center; padding:16px;">Loading redeem requests...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODULE 4: REAL PLAYERS DIRECTORY -->
+  <div class="card">
+    <div class="card-title">
+      <span>👥 REAL FREE FIRE GAMERS DIRECTORY (<span id="userCountBadge">0 Players</span>)</span>
+      <input type="text" id="userSearch" placeholder="🔍 Search by In-Game Name, UID, Device ID..." style="max-width:320px;" oninput="filterUsers()">
+    </div>
+    <div style="overflow-x:auto; max-height:360px;">
+      <table>
+        <thead>
+          <tr>
+            <th>In-Game Name (IGN)</th>
+            <th>Free Fire UID</th>
+            <th>💰 Wallet Coins</th>
+            <th>Booyah Wins</th>
+            <th>Kills</th>
+            <th>Device UID</th>
+            <th>Last Active</th>
+          </tr>
+        </thead>
+        <tbody id="userTableBody">
+          <tr><td colspan="7" style="text-align:center; padding:16px;">Loading players...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- MODULE 7: 📱 IN-APP MANAGEMENT (POPUP BANNER & "HOW TO PLAY" VIDEO) -->
+  <div id="sec-app-mgmt" class="card" style="border: 2px solid var(--gold); background: linear-gradient(180deg, #1C1917 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>📱 IN-APP MANAGEMENT (POPUP BANNER & "HOW TO PLAY" VIDEO)</span>
+      </div>
+      <button class="btn btn-gold" onclick="saveAppSettings()">💾 Save App Settings</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+      App open hone par user ko aane wala <b>Popup Event Banner</b> aur naye players ke liye <b>"How to Play" YouTube Video Tutorial</b> link yahan se control karein!
+    </p>
+    <div class="grid-2">
+      <!-- 1. POPUP BANNER SETTINGS -->
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+        <h4 style="color:var(--gold); font-size:15px; margin-bottom:12px;">🖼️ App Open Popup Event Banner</h4>
+        <div class="form-group">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="popupEnabled" style="width:18px; height:18px;">
+            <span style="color:#fff; font-weight:bold;">Enable Popup Banner on App Startup</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Banner Image URL</label>
+          <input type="text" id="popupImageUrl" placeholder="https://vps.swgayanbhumi.in/uploads/...">
+        </div>
+        <div class="form-group">
+          <label>Upload Banner Image</label>
+          <input type="file" id="popupImageFile" accept="image/*" onchange="uploadPopupBannerImage()">
+          <div id="popupUploadStatus" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Upload custom event banner (PNG/JPG)</div>
+        </div>
+        <div class="form-group">
+          <label>Banner Action URL / Redirect Link (Optional)</label>
+          <input type="text" id="popupActionUrl" placeholder="e.g. https://t.me/booyahrewards">
+        </div>
+        <img id="popupPreview" src="" style="display:none; width:100%; height:120px; object-fit:cover; border-radius:8px; margin-top:8px;">
+      </div>
+
+      <!-- 2. HOW TO PLAY VIDEO TUTORIAL -->
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+        <h4 style="color:var(--cyan); font-size:15px; margin-bottom:12px;">🎬 "How to Play" YouTube Video Guide</h4>
+        <div class="form-group">
+          <label>YouTube Video Link</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=...">
+            <button class="btn btn-outline" style="white-space:nowrap; padding:0 12px;" onclick="testPlayVideo()">▶️ Test Link</button>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Yeh video har naye user ko pehli baar app kholne par dikhegi aur Home screen par bhi button rahega.</div>
+        </div>
+        <div class="form-group">
+          <label>Tutorial Title</label>
+          <input type="text" id="videoTitle" placeholder="Free Fire Tournament Kaise Khelein & Code Kaise Jeetein">
+        </div>
+        <div class="form-group">
+          <label>Tutorial Description</label>
+          <textarea id="videoDesc" rows="3" placeholder="Slot book karne se lekar Custom Room join karne ka poora tareeqa!"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 8: 🕹️ ARCADE ZONE / MINI-GAME SETTINGS & 60s ANTI-CHEAT COOLDOWN -->
+  <div id="sec-minigame" class="card" style="border: 2px solid var(--cyan); background: linear-gradient(180deg, #0F172A 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>🕹️ ARCADE ZONE / MINI-GAME SETTINGS & 60s ANTI-CHEAT COOLDOWN</span>
+      </div>
+      <button class="btn btn-outline" style="border-color:var(--cyan); color:var(--cyan);" onclick="saveMiniGameSettings()">💾 Save Mini-Game Rules</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
+      User din bhar unlimited mini-games khel sakta hai. Har game session par <b>60 सेकंड Full Screen Ad Cooldown</b> aur minimum score check lagega taaki koi bot/cheat na kare aur aapka <b>₹0.11 Net Profit</b> har session par guaranteed rahe!
+    </p>
+    <div class="grid-2">
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+        <h4 style="color:var(--cyan); font-size:15px; margin-bottom:12px;">🛡️ Anti-Cheat & Cooldown Settings</h4>
+        <div class="form-group">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="mgEnabled" style="width:18px; height:18px;" checked>
+            <span style="color:#fff; font-weight:bold;">Enable Arcade Zone (Mini-Games Active in App)</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>⏱️ Full Screen Ad Cooldown (Default: 60 Seconds)</label>
+          <input type="number" id="mgCooldownSeconds" value="60" min="30" max="180">
+          <div style="font-size:11px; color:var(--gold); margin-top:4px;">User 60s se pehle dobara coin claim nahi kar sakega (Anti-Spam / Anti-Loss).</div>
+        </div>
+        <div class="form-group">
+          <label>🎯 Minimum Score for Coin (Default: 30 Points)</label>
+          <input type="number" id="mgMinScore" value="30" min="10" max="200">
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">0 score par turant marne wale bots ko coin nahi milega.</div>
+        </div>
+        <div class="form-group">
+          <label>💰 Coins Awarded Per Game Session (Default: 1 Coin = ₹0.02)</label>
+          <input type="number" id="mgRewardPerSession" value="1" min="1" max="5">
+          <div style="font-size:11px; color:var(--green); margin-top:4px;">User ko 1 session ka 1 Coin milega (2X ad dekhne par 2 coins).</div>
+        </div>
+      </div>
+
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+        <h4 style="color:var(--green); font-size:15px; margin-bottom:12px;">📊 1 Game Session Profit & Loss Breakdown</h4>
+        <div style="background:#0D131F; border:1px solid rgba(255,255,255,0.08); padding:14px; border-radius:10px; font-size:13px; line-height:1.7;">
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding-bottom:6px;">
+            <span>🎬 Full-Screen Ad Revenue:</span>
+            <span style="color:var(--green); font-weight:bold;">+₹0.12</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding:6px 0;">
+            <span>📱 Bottom Banner Ad Revenue:</span>
+            <span style="color:var(--green); font-weight:bold;">+₹0.01</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.08); padding:6px 0;">
+            <span>🪙 User Coin Cost (1 Coin):</span>
+            <span style="color:#EF4444; font-weight:bold;">-₹0.02</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; padding-top:8px; font-size:14px;">
+            <span style="color:var(--gold); font-weight:bold;">💵 Aapka Pure Net Profit:</span>
+            <span style="color:var(--gold); font-weight:900; font-size:16px;">+₹0.11 Per Session!</span>
+          </div>
+        </div>
+        <div style="margin-top:14px; font-size:12px; color:var(--text-muted); line-height:1.5;">
+          ✅ <b>Zero Loss Guarantee:</b> Chahe user din me 100 baar khele, 60s cooldown ki wajah se har baar pehle aapko ₹0.13 aayenge fir user ko ₹0.02 jayenge. Din bhar me 100 session = ₹11.00 Pure Profit!
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 5: COIN ECONOMY & SOCIAL SETTINGS -->
+  <div class="card" style="border: 1px solid var(--gold);">
+    <div class="card-title">
+      <span>⚙️ COIN ECONOMY & OFFICIAL SOCIAL CHANNELS</span>
+      <button class="btn btn-gold" onclick="saveSettings()">💾 Save Settings</button>
+    </div>
+    <div class="grid-2">
+      <div>
+        <h4 style="color:var(--gold); font-size:14px; margin-bottom:10px;">💰 Coin Economy Rates</h4>
+        <div class="form-group">
+          <label>1 Rewarded Ad = Coins Reward</label>
+          <input type="number" id="ecoAd" value="10">
+        </div>
+        <div class="form-group">
+          <label>Daily Rewarded Ad Limit per User</label>
+          <input type="number" id="ecoLimit" value="15">
+        </div>
+        <div class="form-group">
+          <label>New User Welcome Bonus Coins</label>
+          <input type="number" id="ecoWelcome" value="20">
+        </div>
+        <div class="form-group">
+          <label>Referral Bonus (Unlocked only after friend plays 1st match)</label>
+          <input type="number" id="ecoRef" value="50">
+        </div>
+      </div>
+      <div>
+        <h4 style="color:var(--cyan); font-size:14px; margin-bottom:10px;">🌐 Official Social Media Handles</h4>
+        <div class="form-group">
+          <label>Official YouTube Channel URL</label>
+          <input type="text" id="socYt" value="https://youtube.com/@booyahrewards">
+        </div>
+        <div class="form-group">
+          <label>Official Instagram Handle URL</label>
+          <input type="text" id="socInsta" value="https://instagram.com/booyahrewards">
+        </div>
+        <div class="form-group">
+          <label>Official Telegram Community Group URL</label>
+          <input type="text" id="socTg" value="https://t.me/booyahrewards">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 6: 📢 FCM PUSH NOTIFICATIONS BROADCAST CENTER -->
+  <div class="card" style="border: 2px solid var(--saffron); background: linear-gradient(180deg, #2D1405 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>📢 FCM PUSH NOTIFICATIONS BROADCAST CENTER</span>
+        <span class="badge badge-saffron" id="fcmDeviceBadge">CONNECTED TO VPS</span>
+      </div>
+      <button class="btn btn-outline" onclick="fetchNotifications()">🔄 Refresh Log</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 14px;">
+      App ke sabhi players ke phone par instant Push Notification bhejein! Room ID published hone par, naye match aane par ya free coins alert ke liye yahan se 1-click broadcast karein.
+    </p>
+    <div class="grid-2">
+      <div>
+        <div class="form-group">
+          <label>Notification Title</label>
+          <input type="text" id="notifTitle" placeholder="e.g. 🔥 Room ID Live! Claim Your Slot Now!">
+        </div>
+        <div class="form-group">
+          <label>Notification Message</label>
+          <textarea id="notifMessage" rows="3" placeholder="e.g. Bermuda Solo Room 8492019 pass is 1234. Match starts in 10 minutes! Join fast!"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Category / Type</label>
+          <select id="notifType">
+            <option value="MATCH_ROOM_LIVE">🔥 Custom Room Live Alert</option>
+            <option value="NEW_TOURNAMENT">🏆 New Tournament Announcement</option>
+            <option value="FREE_COINS_BONUS">🎁 Free Coins / Daily Bonus Reminder</option>
+            <option value="URGENT_NOTICE">⚠️ Important Notice</option>
+          </select>
+        </div>
+        <button class="btn btn-gold" style="width:100%; margin-top:10px;" onclick="broadcastNotification()">🚀 Send Push Notification to All Gamers</button>
+      </div>
+      <div>
+        <h4 style="color:var(--gold); font-size:14px; margin-bottom:10px;">📋 Sent Notifications Log</h4>
+        <div id="notifLogBox" style="max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+          <div style="color:var(--text-muted); font-size:12px;">Loading notifications...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- MODAL: CREATE MATCH -->
+  <div id="modalCreate" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding:20px; overflow-y:auto;">
+    <div style="background:#131B2A; border:2px solid var(--gold); border-radius:14px; width:100%; max-width:540px; padding:22px; max-height:90vh; overflow-y:auto;">
+      <h3 style="color:var(--gold); font-family:'Rajdhani',sans-serif; margin-bottom:14px; font-size:20px;">➕ Create Free Fire Tournament</h3>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" id="newTitle" placeholder="e.g. Bermuda Solo Night Cup">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Category / Mode</label>
+          <select id="newCat" onchange="onCategorySelect()">
+            <option value="BR">Battle Royale (Solo)</option>
+            <option value="CS">Clash Squad (4v4)</option>
+            <option value="LW">Lone Wolf (1v1)</option>
+            <option value="MEGA">Mega Cup ₹500 (Multi-Round)</option>
+            <option value="CUSTOM">🎮 Custom Game Mode...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Map</label>
+          <select id="newMap">
+            <option value="Bermuda">Bermuda</option>
+            <option value="Purgatory">Purgatory</option>
+            <option value="Kalahari">Kalahari</option>
+            <option value="Iron Cage">Iron Cage</option>
+          </select>
+        </div>
+      </div>
+      <div id="customModeBox" style="display:none;" class="form-group">
+        <label style="color:var(--gold);">🎮 Custom Mode Name</label>
+        <input type="text" id="newCustomMode" placeholder="e.g. Bermuda Sniper Only 2v2, Rush Hour 4v4">
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>Entry Fee (Coins)</label>
+          <input type="number" id="newEntry" value="20">
+        </div>
+        <div class="form-group">
+          <label>Slots</label>
+          <input type="number" id="newSlots" value="48">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="form-group">
+          <label>1st Prize (Winning Coins)</label>
+          <input type="number" id="newPrize" value="200">
+        </div>
+        <div class="form-group">
+          <label>Per Kill Bonus (Winning Coins)</label>
+          <input type="number" id="newKill" value="5">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Scheduling Mode</label>
+        <div style="display:flex; gap:16px; margin:4px 0 8px;">
+          <label style="cursor:pointer;"><input type="radio" name="newSchedType" value="dynamic" checked onchange="onSchedTypeChange()"> ⚡ On Slot Full</label>
+          <label style="cursor:pointer;"><input type="radio" name="newSchedType" value="scheduled" onchange="onSchedTypeChange()"> ⏰ Fixed Time Schedule</label>
+        </div>
+        <input type="text" id="newTime" value="Starts when 48 Slots Full">
+        <div id="schedTimePickGroup" style="display:none; margin-top:8px;">
+          <label>Exact Match Time (for Live Countdown Timer)</label>
+          <input type="datetime-local" id="newSchedTime">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Match Banner (Preset or Custom Upload)</label>
+        <select id="newBanner" onchange="onBannerSelect()">
+          <option value="https://vps.swgayanbhumi.in/uploads/br_banner.png">Bermuda Battle Royale Banner</option>
+          <option value="https://vps.swgayanbhumi.in/uploads/cs_banner.png">Clash Squad 4v4 Banner</option>
+          <option value="https://vps.swgayanbhumi.in/uploads/lonewolf_banner.png">Lone Wolf Banner</option>
+          <option value="UPLOAD">📁 Upload Custom Banner Image...</option>
+        </select>
+        <div id="customBannerUploadBox" style="display:none; margin-top:8px; padding:10px; border:1px dashed var(--gold); border-radius:8px;">
+          <input type="file" id="customBannerFile" accept="image/*" onchange="uploadCustomBanner()">
+          <div id="uploadStatus" style="font-size:11.5px; color:var(--text-muted); margin-top:4px;">Upload custom banner PNG/JPG (Max 15MB)</div>
+          <img id="bannerPreview" src="" style="display:none; width:100%; height:95px; object-fit:cover; border-radius:6px; margin-top:6px;">
+          <input type="hidden" id="uploadedBannerUrl">
+        </div>
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeModal('modalCreate')">Cancel</button>
+        <button class="btn btn-gold" onclick="submitCreateTourn()">🚀 Publish Match</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: UPDATE MATCH TIME -->
+  <div id="modalUpdateTime" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:#131B2A; border:2px solid var(--gold); border-radius:14px; width:100%; max-width:440px; padding:22px;">
+      <h3 style="color:var(--gold); font-family:'Rajdhani',sans-serif; margin-bottom:14px; font-size:20px;">⏰ Set / Update Match Time</h3>
+      <input type="hidden" id="updateTId">
+      <div class="form-group">
+        <label>Scheduling Mode</label>
+        <div style="display:flex; gap:16px; margin-top:6px;">
+          <label style="cursor:pointer;"><input type="radio" name="upSchedType" value="scheduled" checked onchange="onUpSchedChange()"> ⏰ Fixed Time</label>
+          <label style="cursor:pointer;"><input type="radio" name="upSchedType" value="dynamic" onchange="onUpSchedChange()"> ⚡ On Slot Full</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Display Text (What users see)</label>
+        <input type="text" id="upTimeText" placeholder="e.g. Tonight 09:30 PM IST or Starts when 48 Slots Full">
+      </div>
+      <div class="form-group" id="upExactGroup">
+        <label>Exact Date & Time (for Real-time Countdown Timer)</label>
+        <input type="datetime-local" id="upExactTime">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeModal('modalUpdateTime')">Cancel</button>
+        <button class="btn btn-gold" onclick="submitUpdateTime()">💾 Save & Broadcast Time</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: PUBLISH ROOM -->
+  <div id="modalRoom" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:#131B2A; border:2px solid var(--cyan); border-radius:14px; width:100%; max-width:420px; padding:22px;">
+      <h3 style="color:var(--cyan); font-family:'Rajdhani',sans-serif; margin-bottom:10px; font-size:20px;">🔑 Publish Custom Room</h3>
+      <div id="roomModalTitle" style="color:var(--text-muted); font-size:12px; margin-bottom:14px;">Tournament</div>
+      <input type="hidden" id="pubTId">
+      <input type="hidden" id="pubGId">
+      <div class="form-group">
+        <label>Free Fire Custom Room ID</label>
+        <input type="text" id="pubRoomId" placeholder="e.g. 8492019" style="font-size:16px; font-weight:bold; color:var(--cyan);">
+      </div>
+      <div class="form-group">
+        <label>Room Password</label>
+        <input type="text" id="pubPass" placeholder="e.g. 1234" style="font-size:16px; font-weight:bold; color:var(--gold);">
+      </div>
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeModal('modalRoom')">Cancel</button>
+        <button class="btn btn-cyan" onclick="submitPublishRoom()">🚀 Publish to Players</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DECLARE WINNERS -->
+  <div id="modalWin" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:999; justify-content:center; align-items:center; padding:20px;">
+    <div style="background:#131B2A; border:2px solid var(--gold); border-radius:14px; width:100%; max-width:620px; max-height:90vh; overflow-y:auto; padding:22px;">
+      <h3 style="color:var(--gold); font-family:'Rajdhani',sans-serif; margin-bottom:8px; font-size:20px;">👑 Spectate Result & Winner Auto-Payout</h3>
+      <p style="font-size:12px; color:var(--text-muted); margin-bottom:14px;">Click "Booyah Winner" on the winning player or squad. Prize coins will be divided equally & credited immediately!</p>
+      <input type="hidden" id="winTId">
+      <input type="hidden" id="winGId">
+      <div id="winRosterBox" style="margin-bottom:16px; max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08); border-radius:8px;"></div>
+      <div style="display:flex; justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('modalWin')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    var allTournaments = [];
+    var allUsers = [];
+
+    function updateIstClock() {
+      var d = new Date();
+      var utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+      var ist = new Date(utc + (3600000 * 5.5));
+      document.getElementById('clockIst').innerText = 'IST: ' + ist.toLocaleTimeString('en-IN') + ' (' + ist.toLocaleDateString('en-IN') + ')';
+    }
+    setInterval(updateIstClock, 1000);
+    updateIstClock();
+
+    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    // ── STATS & USERS ──
+    async function fetchStats() {
+      try {
+        var res = await fetch('/api/admin/stats');
+        var data = await res.json();
+        if (data.success) {
+          document.getElementById('statLive').innerText = data.liveActiveCount || 0;
+          document.getElementById('statDauToday').innerText = data.dauTodayCount || 0;
+          document.getElementById('statDauYest').innerText = data.dauYesterdayCount || 0;
+          document.getElementById('statUsers').innerText = data.realUsersCount || 0;
+          document.getElementById('statNewToday').innerText = data.newPlayersToday || 0;
+          document.getElementById('statMatches').innerText = (data.liveMatches || 0) + ' Live / ' + (data.totalMatches || 0);
+          document.getElementById('statMatchesSub').innerText = (data.openMatches || 0) + ' open for registration';
+          document.getElementById('statSlotsJoined').innerText = data.totalSlotsJoined || 0;
+          document.getElementById('statTickets').innerText = data.supportTicketsCount || 0;
+          document.getElementById('statPendingRedeems').innerText = data.pendingRedeemCount || 0;
+          document.getElementById('statDeliveredVal').innerText = data.totalDeliveredVal || '₹0';
+          document.getElementById('userCountBadge').innerText = (data.realUsersCount || 0) + ' Players';
+
+          allUsers = data.usersList || [];
+          renderUsers(allUsers);
+        }
+      } catch (e) { console.error('Stats error:', e); }
+    }
+
+    function renderUsers(list) {
+      var tbody = document.getElementById('userTableBody');
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:16px;">No players yet.</td></tr>';
+        return;
+      }
+      var html = list.map(function(u) {
+        var timeStr = u.lastActive ? new Date(u.lastActive).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '—';
+        return '<tr>' +
+          '<td style="font-weight:bold; color:#fff;">' + (u.inGameName || u.displayName || 'Gamer') + '</td>' +
+          '<td style="color:var(--cyan);">' + (u.inGameId || '—') + '</td>' +
+          '<td style="font-weight:bold; color:var(--gold);">' + (u.adCoins || 0) + '</td>' +
+          '<td style="color:var(--green); font-weight:bold;">' + (u.totalWins || 0) + '</td>' +
+          '<td style="color:var(--saffron); font-weight:bold;">' + (u.totalKills || 0) + '</td>' +
+          '<td style="font-size:11px; color:var(--text-muted);">' + (u.uid || '') + '</td>' +
+          '<td style="font-size:11px; color:var(--text-muted);">' + timeStr + '</td>' +
+        '</tr>';
+      }).join('');
+      tbody.innerHTML = html;
+    }
+
+    function filterUsers() {
+      var q = document.getElementById('userSearch').value.toLowerCase().trim();
+      if (!q) { renderUsers(allUsers); return; }
+      var filtered = allUsers.filter(function(u) {
+        return (u.inGameName || '').toLowerCase().includes(q) ||
+               (u.inGameId || '').toLowerCase().includes(q) ||
+               (u.displayName || '').toLowerCase().includes(q) ||
+               (u.uid || '').toLowerCase().includes(q);
+      });
+      renderUsers(filtered);
+    }
+
+    // ── TOURNAMENTS ──
+    async function fetchTournaments() {
+      try {
+        var res = await fetch('/api/ff/tournaments');
+        var data = await res.json();
+        if (data.success && data.tournaments) {
+          allTournaments = data.tournaments;
+          renderTournaments(data.tournaments);
+        }
+        if (data.coinEconomy) {
+          document.getElementById('ecoAd').value = data.coinEconomy.adCoinReward || 10;
+          document.getElementById('ecoLimit').value = data.coinEconomy.dailyAdLimit || 15;
+          document.getElementById('ecoWelcome').value = data.coinEconomy.welcomeBonus || 20;
+          document.getElementById('ecoRef').value = data.coinEconomy.referralReward || 50;
+        }
+      } catch (e) { console.error('Tournaments error:', e); }
+    }
+
+    function renderTournaments(tourns) {
+      var container = document.getElementById('tournContainer');
+      if (!tourns || tourns.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); padding:20px;">No tournaments created yet.</div>';
+        return;
+      }
+      var html = tourns.map(function(t) {
+        var g = (t.groups && t.groups[0]) || { groupId: '', roomId: '', roomPassword: '', isCredentialsPublished: false, filledSlots: 0 };
+        var isPub = g.isCredentialsPublished && g.roomId;
+        var statusColor = t.status === 'LIVE' ? 'var(--danger)' : (t.status === 'ENDED' ? '#6B7280' : 'var(--green)');
+        var pct = Math.min(100, Math.round(((t.filledSlots || 0) / (t.totalSlots || 48)) * 100));
+
+        var schedBadge = t.scheduleType === 'scheduled' ?
+          '<span class="badge" style="background:rgba(56,189,248,0.2); color:var(--cyan); border:1px solid var(--cyan);">⏰ ' + (t.matchTimeText || 'Scheduled') + '</span>' :
+          '<span class="badge" style="background:rgba(255,185,0,0.15); color:var(--gold); border:1px solid var(--gold);">⚡ ' + (t.matchTimeText || 'On Slot Full') + '</span>';
+
+        return '<div style="background:#1A2333; border:1px solid rgba(255,255,255,0.08); border-radius:12px; overflow:hidden;">' +
+          '<div style="height:115px; background:url(' + (t.bannerUrl || 'https://vps.swgayanbhumi.in/uploads/br_banner.png') + ') center/cover; position:relative; padding:10px;">' +
+            '<span class="badge" style="background:rgba(0,0,0,0.8); color:' + statusColor + '; border:1px solid ' + statusColor + ';">● ' + t.status + '</span>' +
+            '<span class="badge" style="position:absolute; right:10px; top:10px; background:rgba(0,0,0,0.8); color:var(--cyan); border:1px solid var(--cyan);">' + t.map + '</span>' +
+          '</div>' +
+          '<div style="padding:14px;">' +
+            '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">' +
+              '<div style="font-family:\'Rajdhani\',sans-serif; font-size:17px; font-weight:bold; color:#fff;">' + t.title + '</div>' +
+            '</div>' +
+            '<div style="margin-bottom:8px;">' + schedBadge + '</div>' +
+            '<div style="font-size:12px; color:var(--text-muted); margin-bottom:10px;">Mode: <b>' + t.mode + '</b> • Entry: <b style="color:var(--gold);">' + t.entryFeeCoins + ' Coins</b> • Pool: <b style="color:var(--green);">' + (t.prizePool ? t.prizePool.totalCoins : 200) + ' Coins</b></div>' +
+            '<div style="margin-bottom:12px;">' +
+              '<div style="display:flex; justify-content:space-between; font-size:11px; color:var(--text-muted); margin-bottom:3px;">' +
+                '<span>Slots: ' + (t.filledSlots || 0) + ' / ' + t.totalSlots + '</span>' +
+                '<span>' + pct + '%</span>' +
+              '</div>' +
+              '<div style="background:rgba(255,255,255,0.08); height:6px; border-radius:3px; overflow:hidden;">' +
+                '<div style="background:var(--gold); height:100%; width:' + pct + '%;"></div>' +
+              '</div>' +
+            '</div>' +
+            (isPub ?
+              '<div style="background:rgba(16,185,129,0.15); border:1px solid var(--green); border-radius:6px; padding:6px 10px; font-size:12px; color:var(--green); margin-bottom:12px;">' +
+                '🔑 Room: <b>' + g.roomId + '</b> | Pass: <b>' + g.roomPassword + '</b>' +
+              '</div>' :
+              '<div style="background:rgba(255,153,51,0.1); border:1px dashed var(--saffron); border-radius:6px; padding:6px 10px; font-size:12px; color:var(--saffron); margin-bottom:12px;">' +
+                '⏳ Room ID pending publication' +
+              '</div>'
+            ) +
+            '<div style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">' +
+              '<button class="btn btn-cyan" style="font-size:12px; padding:6px;" onclick="openRoomModal(\'' + t.id + '\', \'' + g.groupId + '\', \'' + t.title.replace(/'/g, "\\'") + '\')">🔑 ' + (isPub ? 'Edit Room' : 'Publish Room') + '</button>' +
+              '<button class="btn btn-gold" style="font-size:12px; padding:6px;" onclick="openWinModal(\'' + t.id + '\', \'' + g.groupId + '\')">👑 Spectate/Win</button>' +
+              '<button class="btn btn-outline" style="font-size:12px; padding:6px; grid-column:span 2;" onclick="openUpdateTimeModal(\'' + t.id + '\', \'' + (t.scheduleType || 'dynamic') + '\', \'' + (t.matchTimeText || '').replace(/'/g, "\\'") + '\', \'' + (t.scheduledTime || '') + '\')">⏰ Set / Update Match Time</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      container.innerHTML = html;
+    }
+
+    function openCreateTournModal() { document.getElementById('modalCreate').style.display = 'flex'; }
+    function onCategorySelect() {
+      var c = document.getElementById('newCat').value;
+      if (c === 'CS') {
+        document.getElementById('newSlots').value = 8;
+        document.getElementById('newEntry').value = 15;
+        document.getElementById('newPrize').value = 200;
+        document.getElementById('newBanner').value = 'https://vps.swgayanbhumi.in/uploads/cs_banner.png';
+      } else if (c === 'LW') {
+        document.getElementById('newSlots').value = 2;
+        document.getElementById('newEntry').value = 10;
+        document.getElementById('newPrize').value = 25;
+        document.getElementById('newBanner').value = 'https://vps.swgayanbhumi.in/uploads/lonewolf_banner.png';
+      } else if (c === 'MEGA') {
+        document.getElementById('newSlots').value = 480;
+        document.getElementById('newEntry').value = 50;
+        document.getElementById('newPrize').value = 2500;
+        document.getElementById('newBanner').value = 'https://vps.swgayanbhumi.in/uploads/br_banner.png';
+      } else if (c === 'CUSTOM') {
+        document.getElementById('customModeBox').style.display = 'block';
+        document.getElementById('newSlots').value = 48;
+        document.getElementById('newEntry').value = 20;
+        document.getElementById('newPrize').value = 300;
+      } else {
+        document.getElementById('customModeBox').style.display = 'none';
+        document.getElementById('newSlots').value = 48;
+        document.getElementById('newEntry').value = 20;
+        document.getElementById('newPrize').value = 200;
+        document.getElementById('newBanner').value = 'https://vps.swgayanbhumi.in/uploads/br_banner.png';
+      }
+    }
+
+    function onSchedTypeChange() {
+      var isSched = document.querySelector('input[name="newSchedType"]:checked').value === 'scheduled';
+      document.getElementById('schedTimePickGroup').style.display = isSched ? 'block' : 'none';
+      if (isSched) {
+        document.getElementById('newTime').value = 'Tonight 09:30 PM IST';
+      } else {
+        document.getElementById('newTime').value = 'Starts when ' + (document.getElementById('newSlots').value || 48) + ' Slots Full';
+      }
+    }
+
+    function onBannerSelect() {
+      var b = document.getElementById('newBanner').value;
+      document.getElementById('customBannerUploadBox').style.display = b === 'UPLOAD' ? 'block' : 'none';
+    }
+
+    async function uploadCustomBanner() {
+      var fileInput = document.getElementById('customBannerFile');
+      if (!fileInput.files || fileInput.files.length === 0) return;
+      var file = fileInput.files[0];
+      var status = document.getElementById('uploadStatus');
+      var preview = document.getElementById('bannerPreview');
+      status.innerText = '⏳ Uploading ' + file.name + '...';
+
+      var fd = new FormData();
+      fd.append('banner', file);
+
+      try {
+        var res = await fetch('/api/admin/upload-banner', { method: 'POST', body: fd });
+        var data = await res.json();
+        if (data.success && data.bannerUrl) {
+          document.getElementById('uploadedBannerUrl').value = data.bannerUrl;
+          status.innerText = '✅ Uploaded: ' + data.filename;
+          status.style.color = 'var(--green)';
+          preview.src = data.bannerUrl;
+          preview.style.display = 'block';
+        } else {
+          status.innerText = '❌ Upload failed: ' + (data.error || 'Server error');
+          status.style.color = 'var(--danger)';
+        }
+      } catch (e) {
+        status.innerText = '❌ Upload error: ' + e.message;
+        status.style.color = 'var(--danger)';
+      }
+    }
+
+    async function submitCreateTourn() {
+      var title = document.getElementById('newTitle').value;
+      var cat = document.getElementById('newCat').value;
+      var map = document.getElementById('newMap').value;
+      var entry = document.getElementById('newEntry').value;
+      var slots = document.getElementById('newSlots').value;
+      var prize = document.getElementById('newPrize').value;
+      var kill = document.getElementById('newKill').value;
+      var timeText = document.getElementById('newTime').value;
+      var schedType = document.querySelector('input[name="newSchedType"]:checked').value;
+      var schedTime = document.getElementById('newSchedTime').value ? new Date(document.getElementById('newSchedTime').value).toISOString() : '';
+
+      var bannerChoice = document.getElementById('newBanner').value;
+      var banner = bannerChoice === 'UPLOAD' ? (document.getElementById('uploadedBannerUrl').value || 'https://vps.swgayanbhumi.in/uploads/br_banner.png') : bannerChoice;
+
+      if (!title) { alert('Enter match title'); return; }
+      var mode = cat === 'CS' ? 'Clash Squad (4v4)' :
+                (cat === 'LW' ? 'Lone Wolf (1v1)' :
+                (cat === 'MEGA' ? 'Mega Tournament (Multi-Round)' :
+                (cat === 'CUSTOM' ? (document.getElementById('newCustomMode').value.trim() || 'Custom Tournament Mode') : 'Battle Royale (Solo)')));
+
+      try {
+        var res = await fetch('/api/admin/ff/create-tournament', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({
+            title: title, category: cat, mode: mode, map: map, bannerUrl: banner,
+            entryFeeCoins: entry, totalSlots: slots, firstPlace: prize, perKill: kill,
+            scheduleType: schedType, matchTimeText: timeText, scheduledTime: schedTime,
+            isMega: cat === 'MEGA'
+          })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('🚀 Match published to app!');
+          closeModal('modalCreate');
+          fetchTournaments();
+          fetchStats();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // --- TIME UPDATE MODAL ---
+    function openUpdateTimeModal(tId, schedType, timeText, schedTime) {
+      document.getElementById('updateTId').value = tId;
+      document.getElementById('upTimeText').value = timeText || '';
+      var radios = document.getElementsByName('upSchedType');
+      for (var i = 0; i < radios.length; i++) {
+        radios[i].checked = radios[i].value === schedType;
+      }
+      onUpSchedChange();
+      document.getElementById('modalUpdateTime').style.display = 'flex';
+    }
+
+    function onUpSchedChange() {
+      var isSched = document.querySelector('input[name="upSchedType"]:checked').value === 'scheduled';
+      document.getElementById('upExactGroup').style.display = isSched ? 'block' : 'none';
+    }
+
+    async function submitUpdateTime() {
+      var tId = document.getElementById('updateTId').value;
+      var schedType = document.querySelector('input[name="upSchedType"]:checked').value;
+      var timeText = document.getElementById('upTimeText').value;
+      var exactInput = document.getElementById('upExactTime').value;
+      var schedTime = exactInput ? new Date(exactInput).toISOString() : '';
+
+      try {
+        var res = await fetch('/api/admin/ff/update-time', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({
+            tournamentId: tId,
+            scheduleType: schedType,
+            matchTimeText: timeText,
+            scheduledTime: schedTime
+          })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          closeModal('modalUpdateTime');
+          fetchTournaments();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // --- PUSH NOTIFICATIONS ---
+    async function broadcastNotification() {
+      var title = document.getElementById('notifTitle').value.trim();
+      var message = document.getElementById('notifMessage').value.trim();
+      var type = document.getElementById('notifType').value;
+      if (!title || !message) { alert('Please enter both notification title and message'); return; }
+
+      try {
+        var res = await fetch('/api/admin/broadcast-notification', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ title: title, message: message, type: type })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('📢 ' + data.message);
+          document.getElementById('notifTitle').value = '';
+          document.getElementById('notifMessage').value = '';
+          fetchNotifications();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    async function fetchNotifications() {
+      try {
+        var res = await fetch('/api/notifications');
+        var data = await res.json();
+        if (data.success && data.notifications) {
+          renderNotifications(data.notifications);
+        }
+      } catch (e) { console.error('Notifications error:', e); }
+    }
+
+    function renderNotifications(notifs) {
+      var box = document.getElementById('notifLogBox');
+      if (!notifs || notifs.length === 0) {
+        box.innerHTML = '<div style="color:var(--text-muted); font-size:12px;">No notifications sent yet.</div>';
+        return;
+      }
+      box.innerHTML = notifs.slice(0, 15).map(function(n) {
+        var date = new Date(n.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+        return '<div style="background:rgba(255,255,255,0.04); border-left:3px solid var(--gold); border-radius:4px; padding:8px 10px;">' +
+          '<div style="font-weight:bold; font-size:12px; color:#fff; display:flex; justify-content:space-between;">' +
+            '<span>' + n.title + '</span>' +
+            '<span style="font-size:10px; color:var(--text-muted);">' + date + '</span>' +
+          '</div>' +
+          '<div style="font-size:11px; color:var(--text-muted); margin-top:2px;">' + n.message + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function openRoomModal(tId, gId, title) {
+      document.getElementById('pubTId').value = tId;
+      document.getElementById('pubGId').value = gId;
+      document.getElementById('roomModalTitle').innerText = title;
+      document.getElementById('pubRoomId').value = '';
+      document.getElementById('pubPass').value = '';
+      document.getElementById('modalRoom').style.display = 'flex';
+    }
+
+    async function submitPublishRoom() {
+      var tId = document.getElementById('pubTId').value;
+      var gId = document.getElementById('pubGId').value;
+      var roomId = document.getElementById('pubRoomId').value;
+      var pass = document.getElementById('pubPass').value;
+
+      if (!roomId || !pass) { alert('Enter Room ID and Password!'); return; }
+
+      try {
+        var res = await fetch('/api/admin/ff/publish-room', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ tournamentId: tId, groupId: gId, roomId: roomId, roomPassword: pass })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+          closeModal('modalRoom');
+          fetchTournaments();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    function openWinModal(tId, gId) {
+      document.getElementById('winTId').value = tId;
+      document.getElementById('winGId').value = gId;
+      var tourn = allTournaments.find(function(x) { return x.id === tId; });
+      var group = tourn && tourn.groups ? (tourn.groups.find(function(g) { return g.groupId === gId; }) || tourn.groups[0]) : null;
+
+      var box = document.getElementById('winRosterBox');
+      if (!group || !group.participants || group.participants.length === 0) {
+        box.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No registered players in this group yet.</div>';
+      } else {
+        var html = '<table><thead><tr><th>Slot</th><th>IGN</th><th>FF UID</th><th>Team</th><th>Action</th></tr></thead><tbody>';
+        group.participants.forEach(function(p) {
+          html += '<tr>' +
+            '<td>#' + (p.slotNo || 1) + '</td>' +
+            '<td style="font-weight:bold; color:#fff;">' + p.inGameName + '</td>' +
+            '<td>' + (p.inGameId || '—') + '</td>' +
+            '<td>' + (p.teamName ? p.teamName + ' (' + p.teamCode + ')' : 'Solo') + '</td>' +
+            '<td><button class="btn btn-gold" style="font-size:11px; padding:4px 8px;" onclick="declareWinnerDirect(\'' + tId + '\', \'' + gId + '\', \'' + (p.teamCode ? 'team' : 'player') + '\', \'' + (p.teamCode || p.uid) + '\')">👑 Booyah Winner</button></td>' +
+          '</tr>';
+        });
+        html += '</tbody></table>';
+        box.innerHTML = html;
+      }
+      document.getElementById('modalWin').style.display = 'flex';
+    }
+
+    async function declareWinnerDirect(tId, gId, winnerType, winnerId) {
+      if (!confirm('Mark as winner and auto-credit prize coins to wallet?')) return;
+      try {
+        var payload = { tournamentId: tId, groupId: gId, winnerType: winnerType };
+        if (winnerType === 'team') payload.winningTeamCode = winnerId;
+        else payload.winnerUid = winnerId;
+
+        var res = await fetch('/api/admin/ff/declare-winners', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('🎉 ' + data.message);
+          closeModal('modalWin');
+          fetchTournaments();
+          fetchStats();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // ── IN-APP SUPPORT ──
+    async function fetchTickets() {
+      try {
+        var res = await fetch('/api/admin/support/tickets', {
+          headers: { 'x-admin-source': 'vps-web-dashboard' }
+        });
+        var data = await res.json();
+        if (data.success && data.tickets) {
+          renderTickets(data.tickets);
+        }
+      } catch (e) { console.error('Tickets error:', e); }
+    }
+
+    function renderTickets(tickets) {
+      var badge = document.getElementById('ticketCountBadge');
+      var container = document.getElementById('ticketContainer');
+      var openCount = tickets.filter(function(t) { return t.status === 'OPEN'; }).length;
+      badge.innerText = openCount + ' PENDING';
+
+      if (!tickets || tickets.length === 0) {
+        container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:16px;">No support tickets received.</div>';
+        return;
+      }
+      var html = tickets.map(function(t) {
+        var statusColor = t.status === 'OPEN' ? 'var(--danger)' : 'var(--green)';
+        var msgsHtml = (t.messages || []).map(function(m) {
+          var isUser = m.sender === 'user';
+          return '<div style="margin-bottom:6px; display:flex; flex-direction:column; align-items:' + (isUser ? 'flex-start' : 'flex-end') + ';">' +
+            '<div style="background:' + (isUser ? '#1E293B' : '#047857') + '; color:#fff; padding:6px 10px; border-radius:8px; font-size:12px; max-width:85%;">' +
+              '<b style="color:' + (isUser ? 'var(--cyan)' : 'var(--gold)') + ';">' + (isUser ? t.userName : 'Admin') + ': </b>' + m.text +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        return '<div style="background:#172033; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px;">' +
+          '<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+            '<div>' +
+              '<span style="font-weight:bold; color:#fff; font-size:13px;">' + t.userName + '</span> ' +
+              '<span style="font-size:11px; color:var(--text-muted);">(' + t.uid + ')</span> • ' +
+              '<span style="font-size:11px; color:var(--gold); background:rgba(255,185,0,0.1); padding:2px 6px; border-radius:4px;">' + t.category + '</span>' +
+            '</div>' +
+            '<span style="color:' + statusColor + '; font-weight:bold; font-size:11px;">● ' + t.status + '</span>' +
+          '</div>' +
+          '<div style="background:rgba(0,0,0,0.3); border-radius:8px; padding:10px; margin-bottom:10px; max-height:160px; overflow-y:auto;">' + msgsHtml + '</div>' +
+          '<div style="display:flex; gap:8px;">' +
+            '<input type="text" id="reply_' + t.ticketId + '" placeholder="Type in-app reply to ' + t.userName + '..." style="font-size:12px;">' +
+            '<button class="btn btn-cyan" style="font-size:12px; padding:6px 12px; white-space:nowrap;" onclick="sendReply(\'' + t.ticketId + '\')">✉️ Send Reply</button>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      container.innerHTML = html;
+    }
+
+    async function sendReply(ticketId) {
+      var input = document.getElementById('reply_' + ticketId);
+      var text = input ? input.value : '';
+      if (!text || !text.trim()) { alert('Type a reply first!'); return; }
+
+      try {
+        var res = await fetch('/api/admin/support/reply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ ticketId: ticketId, replyText: text })
+        });
+        var data = await res.json();
+        if (data.success) {
+          input.value = '';
+          fetchTickets();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // ── REDEEM REQUESTS ──
+    async function fetchRedeems() {
+      try {
+        var res = await fetch('/api/admin/redeem-requests', {
+          headers: { 'x-admin-source': 'vps-web-dashboard' }
+        });
+        var data = await res.json();
+        if (data.success && data.requests) {
+          renderRedeems(data.requests);
+        }
+      } catch (e) { console.error('Redeems error:', e); }
+    }
+
+    function renderRedeems(requests) {
+      var tbody = document.getElementById('redeemTableBody');
+      if (!requests || requests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:16px;">No redemption requests.</td></tr>';
+        return;
+      }
+      var html = requests.map(function(r) {
+        var isDelivered = r.status === 'DELIVERED';
+        var isPending = r.status === 'PENDING';
+        var statusColor = isDelivered ? 'var(--green)' : (isPending ? 'var(--saffron)' : 'var(--danger)');
+
+        var actionHtml = isPending ?
+          '<div style="display:flex; gap:6px;">' +
+            '<input type="text" id="code_' + r.id + '" placeholder="Code or UPI UTR" style="font-size:11px; padding:4px 6px;">' +
+            '<button class="btn btn-green" style="font-size:11px; padding:4px 8px; white-space:nowrap;" onclick="deliverRedeem(\'' + r.id + '\')">Deliver</button>' +
+            '<button class="btn btn-danger" style="font-size:11px; padding:4px 8px; white-space:nowrap;" onclick="refundRedeem(\'' + r.id + '\')">Refund</button>' +
+          '</div>' :
+          '<span style="font-size:11px; color:var(--text-muted);">' + (r.redeemCode || 'COMPLETED') + '</span>';
+
+        return '<tr>' +
+          '<td style="font-size:11px; color:var(--text-muted);">' + new Date(r.createdAt).toLocaleDateString('en-IN') + '</td>' +
+          '<td style="font-weight:bold; color:#fff;">' + (r.displayName || 'Gamer') + '</td>' +
+          '<td style="color:var(--green); font-weight:bold;">₹' + r.amount + '</td>' +
+          '<td style="color:var(--gold);">' + r.pointsCost + '</td>' +
+          '<td style="font-size:11px;">' + (r.upiId || r.phone || r.email || '—') + '</td>' +
+          '<td><span style="color:' + statusColor + '; font-weight:bold;">' + r.status + '</span></td>' +
+          '<td>' + actionHtml + '</td>' +
+        '</tr>';
+      }).join('');
+      tbody.innerHTML = html;
+    }
+
+    async function deliverRedeem(id) {
+      var code = (document.getElementById('code_' + id) || {}).value || '';
+      if (!code) { alert('Enter the Redeem Code or UPI UTR number!'); return; }
+      try {
+        var res = await fetch('/api/admin/redeem-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ requestId: id, action: 'APPROVE', code: code })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ Marked as delivered! User can view code in app.');
+          fetchRedeems();
+          fetchStats();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    async function refundRedeem(id) {
+      var reason = prompt('Reason for rejection/refund:');
+      if (!reason) return;
+      try {
+        var res = await fetch('/api/admin/redeem-action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ requestId: id, action: 'REFUND', reason: reason })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ Request refunded back to user wallet.');
+          fetchRedeems();
+          fetchStats();
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // ── ECONOMY SETTINGS ──
+    async function saveSettings() {
+      var ad = document.getElementById('ecoAd').value;
+      var limit = document.getElementById('ecoLimit').value;
+      var welcome = document.getElementById('ecoWelcome').value;
+      var ref = document.getElementById('ecoRef').value;
+      var yt = document.getElementById('socYt').value;
+      var insta = document.getElementById('socInsta').value;
+      var tg = document.getElementById('socTg').value;
+
+      try {
+        var res = await fetch('/api/admin/config/economy-social', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({
+            coinEconomy: { adCoinReward: Number(ad), dailyAdLimit: Number(limit), welcomeBonus: Number(welcome), referralReward: Number(ref) },
+            socialLinks: { youtube: yt, instagram: insta, telegram: tg }
+          })
+        });
+        var data = await res.json();
+        if (data.success) { alert('✅ Economy & Social handles updated successfully!'); }
+        else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    // ── APP MANAGEMENT (POPUP BANNER & VIDEO TUTORIAL) ──
+    async function fetchAppConfig() {
+      try {
+        var res = await fetch('/api/app-config');
+        var data = await res.json();
+        if (data.success && data.appSettings) {
+          var pop = data.appSettings.popupBanner || {};
+          document.getElementById('popupEnabled').checked = !!pop.enabled;
+          document.getElementById('popupImageUrl').value = pop.imageUrl || '';
+          document.getElementById('popupActionUrl').value = pop.actionUrl || '';
+          if (pop.imageUrl) {
+            document.getElementById('popupPreview').src = pop.imageUrl;
+            document.getElementById('popupPreview').style.display = 'block';
+          }
+          var vid = data.appSettings.howToPlayVideo || {};
+          document.getElementById('videoUrl').value = vid.youtubeUrl || '';
+          document.getElementById('videoTitle').value = vid.title || '';
+          document.getElementById('videoDesc').value = vid.description || '';
+
+          var mg = data.appSettings.miniGameConfig || {};
+          document.getElementById('mgEnabled').checked = mg.enabled !== false;
+          if (mg.cooldownSeconds) document.getElementById('mgCooldownSeconds').value = mg.cooldownSeconds;
+          if (mg.minScoreForCoin) document.getElementById('mgMinScore').value = mg.minScoreForCoin;
+          if (mg.rewardPerSession) document.getElementById('mgRewardPerSession').value = mg.rewardPerSession;
+        }
+      } catch (e) { console.error('App config error:', e); }
+    }
+
+    function testPlayVideo() {
+      var vUrl = document.getElementById('videoUrl').value.trim();
+      if (!vUrl) { alert('Pehle YouTube Video Link enter karein!'); return; }
+      window.open(vUrl, '_blank');
+    }
+
+    async function uploadPopupBannerImage() {
+      var fileInput = document.getElementById('popupImageFile');
+      if (!fileInput.files || fileInput.files.length === 0) return;
+      var file = fileInput.files[0];
+      var status = document.getElementById('popupUploadStatus');
+      status.innerText = '⏳ Uploading ' + file.name + '...';
+
+      var fd = new FormData();
+      fd.append('banner', file);
+
+      try {
+        var res = await fetch('/api/admin/upload-banner', { method: 'POST', body: fd });
+        var data = await res.json();
+        if (data.success && data.bannerUrl) {
+          document.getElementById('popupImageUrl').value = data.bannerUrl;
+          status.innerText = '✅ Uploaded: ' + data.filename;
+          status.style.color = 'var(--green)';
+          var prev = document.getElementById('popupPreview');
+          prev.src = data.bannerUrl;
+          prev.style.display = 'block';
+        } else {
+          status.innerText = '❌ Failed: ' + (data.error || 'Upload error');
+          status.style.color = 'var(--danger)';
+        }
+      } catch (e) {
+        status.innerText = '❌ Error: ' + e.message;
+        status.style.color = 'var(--danger)';
+      }
+    }
+
+    async function saveAppSettings() {
+      var popEnabled = document.getElementById('popupEnabled').checked;
+      var popUrl = document.getElementById('popupImageUrl').value.trim();
+      var popAction = document.getElementById('popupActionUrl').value.trim();
+      var vUrl = document.getElementById('videoUrl').value.trim();
+      var vTitle = document.getElementById('videoTitle').value.trim();
+      var vDesc = document.getElementById('videoDesc').value.trim();
+
+      try {
+        var res = await fetch('/api/admin/config/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({
+            popupBanner: {
+              enabled: popEnabled,
+              imageUrl: popUrl,
+              actionUrl: popAction,
+              title: 'Special Event Banner'
+            },
+            howToPlayVideo: {
+              enabled: true,
+              youtubeUrl: vUrl,
+              title: vTitle,
+              description: vDesc
+            }
+          })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ ' + data.message);
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    async function saveMiniGameSettings() {
+      var mgEnabled = document.getElementById('mgEnabled').checked;
+      var mgCooldown = parseInt(document.getElementById('mgCooldownSeconds').value) || 60;
+      var mgMinScore = parseInt(document.getElementById('mgMinScore').value) || 30;
+      var mgReward = parseInt(document.getElementById('mgRewardPerSession').value) || 1;
+
+      try {
+        var res = await fetch('/api/admin/config/app-settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({
+            miniGameConfig: {
+              enabled: mgEnabled,
+              cooldownSeconds: mgCooldown,
+              minScoreForCoin: mgMinScore,
+              rewardPerSession: mgReward
+            }
+          })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ Mini-Game Arcade rules, 60s cooldown, and ₹0.11 profit protection updated!');
+        } else { alert('Error: ' + data.error); }
+      } catch (e) { alert('Server error: ' + e.message); }
+    }
+
+    function refreshAll(force) {
+      fetchStats();
+      fetchTournaments();
+      fetchTickets();
+      fetchRedeems();
+      fetchNotifications();
+      fetchAppConfig();
+    }
+
+    // Initial Load & 15s refresh
+    refreshAll(true);
+    setInterval(refreshAll, 15000);
+  </script>
+</body>
+</html>

@@ -2,100 +2,149 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // Primary Master Amber/Yellow Palette
-  static const Color primaryAmber = Color(0xFFFFB900);
-  static const Color amberDark = Color(0xFFE5A600);
-  static const Color amberLight = Color(0xFFFFF7DB);
+  static const primaryGold = Color(0xFFFFB900);
+  static const goldDark = Color(0xFFD97706);
+  static const bgDark = Color(0xFF0F172A);
+  static const bgCard = Color(0xFF1E293B);
+  static const bgCardLight = Color(0xFF334155);
+  static const textWhite = Color(0xFFF8FAFC);
+  static const textMuted = Color(0xFF94A3B8);
+  static const successGreen = Color(0xFF10B981);
+  static const errorRed = Color(0xFFE11D48);
+  static const saffronOrange = Color(0xFFFF9933);
+  static const indiaGreen = Color(0xFF138808);
+  static const cyanAccent = Color(0xFF38BDF8);
 
-  // Clean Light Backgrounds
-  static const Color bgLight = Color(0xFFF8FAFC);
-  static const Color cardWhite = Color(0xFFFFFFFF);
-  static const Color borderSubtle = Color(0xFFE2E8F0);
-
-  // 4-Wallet & Palette Colors
-  static const Color adCoinsGold = Color(0xFFFFB900);
-  static const Color rewardCoinsAmber = Color(0xFFD97706);
-  static const Color depositBlue = Color(0xFF2563EB);
-  static const Color winningGreen = Color(0xFF10B981);
-  static const Color roseRed = Color(0xFFE11D48);
-
-  // Text colors
-  static const Color textDark = Color(0xFF0F172A);
-  static const Color textMuted = Color(0xFF64748B);
-
-  static ThemeData get lightTheme {
+  static ThemeData get darkTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: bgLight,
-      colorScheme: const ColorScheme.light(
-        primary: primaryAmber,
-        onPrimary: textDark,
-        secondary: winningGreen,
-        surface: cardWhite,
-        onSurface: textDark,
+      brightness: Brightness.dark,
+      primaryColor: primaryGold,
+      scaffoldBackgroundColor: bgDark,
+      colorScheme: const ColorScheme.dark(
+        primary: primaryGold,
+        secondary: goldDark,
+        surface: bgCard,
+        error: errorRed,
+        onPrimary: bgDark,
+        onSecondary: textWhite,
+        onSurface: textWhite,
+        onError: textWhite,
       ),
-      textTheme: GoogleFonts.interTextTheme().copyWith(
-        displayLarge: GoogleFonts.rajdhani(
-          fontWeight: FontWeight.w900,
-          fontStyle: FontStyle.italic,
-          color: textDark,
-        ),
-        displayMedium: GoogleFonts.rajdhani(
-          fontWeight: FontWeight.w800,
-          fontStyle: FontStyle.italic,
-          color: textDark,
-        ),
-        titleLarge: GoogleFonts.rajdhani(
-          fontWeight: FontWeight.w800,
-          fontStyle: FontStyle.italic,
-          color: textDark,
-          fontSize: 20,
-        ),
-        titleMedium: GoogleFonts.rajdhani(
-          fontWeight: FontWeight.w700,
-          color: textDark,
-          fontSize: 16,
-        ),
+      textTheme: GoogleFonts.interTextTheme(
+        ThemeData.dark().textTheme,
+      ).apply(
+        bodyColor: textWhite,
+        displayColor: textWhite,
       ),
-      appBarTheme: const AppBarTheme(
-        backgroundColor: cardWhite,
-        elevation: 0.5,
-        iconTheme: IconThemeData(color: textDark),
-        centerTitle: false,
+      appBarTheme: AppBarTheme(
+        backgroundColor: bgDark,
+        elevation: 0,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.rajdhani(
+          fontSize: 22,
+          fontWeight: FontWeight.bold,
+          color: primaryGold,
+          letterSpacing: 1.2,
+        ),
+        iconTheme: const IconThemeData(color: primaryGold),
       ),
       cardTheme: CardThemeData(
-        color: cardWhite,
-        elevation: 1,
+        color: bgCard,
+        elevation: 4,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderSubtle, width: 1),
+          side: const BorderSide(color: bgCardLight, width: 1),
         ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryGold,
+          foregroundColor: bgDark,
+          textStyle: GoogleFonts.rajdhani(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 3,
+        ),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: bgDark,
+        selectedItemColor: primaryGold,
+        unselectedItemColor: textMuted,
+        type: BottomNavigationBarType.fixed,
+        elevation: 8,
       ),
     );
   }
 
   static TextStyle gamingTitle({
     double fontSize = 22,
-    Color color = textDark,
-    bool isItalic = true,
+    Color color = textWhite,
+    FontWeight fontWeight = FontWeight.bold,
   }) {
     return GoogleFonts.rajdhani(
       fontSize: fontSize,
-      fontWeight: FontWeight.w900,
-      fontStyle: isItalic ? FontStyle.italic : FontStyle.normal,
+      fontWeight: fontWeight,
       color: color,
-      letterSpacing: 0.5,
+      letterSpacing: 1.2,
     );
   }
 
   static TextStyle gamingNumber({
     double fontSize = 18,
-    Color color = textDark,
+    Color color = primaryGold,
+    FontWeight fontWeight = FontWeight.bold,
   }) {
-    return GoogleFonts.russoOne(
+    return GoogleFonts.rajdhani(
       fontSize: fontSize,
+      fontWeight: fontWeight,
       color: color,
-      letterSpacing: 0.5,
+      letterSpacing: 0.8,
+    );
+  }
+
+  static BoxDecoration cardDecoration({
+    Color color = bgCard,
+    BorderRadius? borderRadius,
+    Border? border,
+  }) {
+    return BoxDecoration(
+      color: color,
+      borderRadius: borderRadius ?? BorderRadius.circular(16),
+      border: border ?? Border.all(color: bgCardLight, width: 1),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.3),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  static BoxDecoration goldGradientDecoration({
+    BorderRadius? borderRadius,
+  }) {
+    return BoxDecoration(
+      gradient: const LinearGradient(
+        colors: [primaryGold, goldDark],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: borderRadius ?? BorderRadius.circular(16),
+      boxShadow: [
+        BoxShadow(
+          color: primaryGold.withValues(alpha: 0.35),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
     );
   }
 }

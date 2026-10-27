@@ -1,3818 +1,1190 @@
-import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
-import '../models/match_model.dart';
-import '../models/team_model.dart';
-import '../models/transaction_model.dart';
-import '../models/withdrawal_model.dart';
-import '../models/voucher_model.dart';
-import '../models/banner_model.dart';
-import '../models/notification_model.dart';
-import '../models/leaderboard_model.dart';
-import '../models/referral_record.dart';
-import '../models/notice_board_model.dart';
-import '../models/daily_task_model.dart';
-import 'firestore_rest_service.dart';
-import 'firebase_config.dart';
-import 'auth_service.dart';
-import 'notification_service.dart';
-import 'notification_bridge/notification_bridge.dart';
-import 'web_storage/web_storage.dart';
+import '../models/tournament_model.dart';
+import '../models/chat_model.dart';
+import '../models/support_ticket_model.dart';
+import 'fcm_service.dart';
+
+class RedeemPackage {
+  final String id;
+  final int amount;
+  final int points;
+  final String title;
+  final String badge;
+  final String description;
+  final String colorHex;
+
+  RedeemPackage({
+    required this.id,
+    required this.amount,
+    required this.points,
+    required this.title,
+    required this.badge,
+    required this.description,
+    required this.colorHex,
+  });
+
+  factory RedeemPackage.fromJson(Map<String, dynamic> json) {
+    return RedeemPackage(
+      id: json['id'] as String? ?? 'play_50',
+      amount: (json['amount'] as num?)?.toInt() ?? 50,
+      points: (json['points'] as num?)?.toInt() ?? 10000,
+      title: json['title'] as String? ?? '₹50 Google Play Redeem Code',
+      badge: json['badge'] as String? ?? 'न्यूनतम रिडीम',
+      description: json['description'] as String? ?? '',
+      colorHex: json['color'] as String? ?? '#10B981',
+    );
+  }
+}
+
+class RedeemRequestItem {
+  final String id;
+  final int amount;
+  final int pointsCost;
+  final String email;
+  final String phone;
+  final String status; // PENDING | DELIVERED | REJECTED
+  final String redeemCode;
+  final String adminNotes;
+  final String createdAt;
+  final String? deliveredAt;
+  final String deliveryEta;
+
+  RedeemRequestItem({
+    required this.id,
+    required this.amount,
+    required this.pointsCost,
+    required this.email,
+    required this.phone,
+    required this.status,
+    required this.redeemCode,
+    required this.adminNotes,
+    required this.createdAt,
+    this.deliveredAt,
+    required this.deliveryEta,
+  });
+
+  factory RedeemRequestItem.fromJson(Map<String, dynamic> json) {
+    return RedeemRequestItem(
+      id: json['id'] as String? ?? '',
+      amount: (json['amount'] as num?)?.toInt() ?? 50,
+      pointsCost: (json['pointsCost'] as num?)?.toInt() ?? 10000,
+      email: json['email'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      status: json['status'] as String? ?? 'PENDING',
+      redeemCode: json['redeemCode'] as String? ?? '',
+      adminNotes: json['adminNotes'] as String? ?? '',
+      createdAt: json['createdAt'] as String? ?? '',
+      deliveredAt: json['deliveredAt'] as String?,
+      deliveryEta: json['deliveryEta'] as String? ?? '24-48 Hours',
+    );
+  }
+}
+
+class LeaderboardEntry {
+  final String uid;
+  final String name;
+  final int weeklyScore;
+  final int rank;
+  final String prize;
+
+  LeaderboardEntry({
+    this.uid = '',
+    required this.name,
+    required this.weeklyScore,
+    required this.rank,
+    this.prize = '',
+  });
+
+  factory LeaderboardEntry.fromJson(Map<String, dynamic> json) {
+    return LeaderboardEntry(
+      uid: json['uid'] as String? ?? '',
+      name: json['name'] as String? ?? 'Player',
+      weeklyScore: (json['score'] as num?)?.toInt() ?? 0,
+      rank: (json['rank'] as num?)?.toInt() ?? 1,
+      prize: json['prize'] as String? ?? '',
+    );
+  }
+}
+
+class WinnerProofItem {
+  final String id;
+  final String title;
+  final String winnerName;
+  final String tag;
+  final String date;
+  final String mediaUrl;
+  final String review;
+
+  WinnerProofItem({
+    required this.id,
+    required this.title,
+    required this.winnerName,
+    required this.tag,
+    required this.date,
+    this.mediaUrl = '',
+    this.review = '',
+  });
+
+  factory WinnerProofItem.fromJson(Map<String, dynamic> json) {
+    return WinnerProofItem(
+      id: json['id'] as String? ?? '',
+      title: json['title'] as String? ?? 'Prize Verified',
+      winnerName: json['winnerName'] as String? ?? 'Winner',
+      tag: json['tag'] as String? ?? 'Verified ⚡',
+      date: json['date'] as String? ?? '',
+      mediaUrl: json['mediaUrl'] as String? ?? '',
+      review: json['review'] as String? ?? '',
+    );
+  }
+}
+
+class PastSeasonWinner {
+  final int rank;
+  final String name;
+  final int score;
+  final String prize;
+  final String status;
+
+  PastSeasonWinner({
+    required this.rank,
+    required this.name,
+    required this.score,
+    required this.prize,
+    required this.status,
+  });
+
+  factory PastSeasonWinner.fromJson(Map<String, dynamic> json) {
+    return PastSeasonWinner(
+      rank: (json['rank'] as num?)?.toInt() ?? 1,
+      name: json['name'] as String? ?? 'Winner',
+      score: (json['score'] as num?)?.toInt() ?? 0,
+      prize: json['prize'] as String? ?? 'Prize Eligible',
+      status: json['status'] as String? ?? 'Credited to Wallet',
+    );
+  }
+}
+
+class PastSeasonArchive {
+  final int season;
+  final String seasonName;
+  final String archivedDate;
+  final String payoutDue;
+  final List<PastSeasonWinner> winners;
+
+  PastSeasonArchive({
+    required this.season,
+    required this.seasonName,
+    required this.archivedDate,
+    required this.payoutDue,
+    required this.winners,
+  });
+
+  factory PastSeasonArchive.fromJson(Map<String, dynamic> json) {
+    return PastSeasonArchive(
+      season: (json['season'] as num?)?.toInt() ?? 1,
+      seasonName: json['seasonName'] as String? ?? 'Season 1',
+      archivedDate: json['archivedDate'] as String? ?? 'Recent',
+      payoutDue: json['payoutDue'] as String? ?? 'Daily Auto-Credit',
+      winners: (json['winners'] as List? ?? [])
+          .map((w) => PastSeasonWinner.fromJson(Map<String, dynamic>.from(w as Map)))
+          .toList(),
+    );
+  }
+}
 
 class AppState extends ChangeNotifier {
-  late UserModel user;
-  NoticeBoardData noticeBoard = NoticeBoardData();
-  UserDailyTaskData dailyTaskData = UserDailyTaskData.createInitial();
-  final NotificationService _notificationService = NotificationService();
-  NotificationService get notificationService => _notificationService;
-
-  Timer? _liveSyncTimer;
-  final Set<String> _alertedNotifIds = {};
-
-  List<MatchModel> matches = [];
-  List<TransactionModel> transactions = [];
-  List<TransactionModel> allGlobalTransactions = [];
-  List<WithdrawalModel> withdrawals = [];
-  List<WithdrawalModel> allGlobalWithdrawals = [];
-  List<VoucherClaim> voucherClaims = [];
-  List<VoucherClaim> allGlobalVoucherClaims = [];
-  List<AppNotification> notifications = [];
-  List<AppNotification> allGlobalNotifications = [];
-  List<WeeklyDistributionRecord> weeklyDistributions = [];
-  List<ReferralRecord> referralRecords = [];
-  List<ReferralRecord> allGlobalReferralRecords = [];
-  List<UserModel> allGlobalUsers = [];
-  List<BannerModel> banners = [];
   static const String vpsBaseUrl = 'https://vps.swgayanbhumi.in';
-  static const String vpsApiUrl = '$vpsBaseUrl/api';
-  String brBannerUrl = 'https://i.ibb.co/PvV4vz0X/brhomescreen.png';
-  String csBannerUrl = 'https://i.ibb.co/S4qX9RW5/cshomescreen.png';
-  String lwBannerUrl = 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png';
-  String get brCategoryBanner => brBannerUrl.isNotEmpty ? brBannerUrl : 'https://i.ibb.co/PvV4vz0X/brhomescreen.png';
-  String get csCategoryBanner => csBannerUrl.isNotEmpty ? csBannerUrl : 'https://i.ibb.co/S4qX9RW5/cshomescreen.png';
-  String get lwCategoryBanner => lwBannerUrl.isNotEmpty ? lwBannerUrl : 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png';
-  
-  List<TournamentModeItem> tournamentModes = [
-    TournamentModeItem(key: 'BR', title: 'Full Map (BR)', bannerUrl: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png', defaultSlots: 48, mode: 'br', enabled: true),
-    TournamentModeItem(key: 'CS', title: 'Clash Squad (CS)', bannerUrl: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png', defaultSlots: 8, mode: 'cs', enabled: true),
-    TournamentModeItem(key: 'LONE_WOLF', title: 'Lone Wolf', bannerUrl: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png', defaultSlots: 2, mode: 'loneWolf', enabled: true),
-  ];
-  List<TournamentModeItem> get activeTournamentModes => tournamentModes.where((m) => m.enabled).toList();
-  
-  String telegramSupportUrl = 'http://t.me/booyahrewardofficial';
-  bool isRealCashModeEnabled = false; // Off: Deposit disabled, Free Tournament Withdrawals (₹100 Min) Active
-  double coinToRupeeRate = 1.0; // 1 Coin = ₹1.00 Real Cash (1:1 Ratio)
-  int minWithdrawalCoins = 100; // Minimum ₹100 for instant UPI / Redeem Code withdrawal
+  static const String _userPrefsKey = 'arena_user_data_v2';
 
-  // Dynamic Weekly Leaderboard Prize Pool (Configured from Admin Panel)
-  double weeklyRank1Prize = 200.0;
-  double weeklyRank2Prize = 150.0;
-  double weeklyRank3Prize = 100.0;
-  double get weeklyTotalPrizePool => weeklyRank1Prize + weeklyRank2Prize + weeklyRank3Prize;
-
-  // App Version & Remote Force Update System
-  static const int currentAppBuildNumber = 35;
-  static const String currentAppVersion = '1.3.5';
-  int minBuildNumber = 35;
-  String minAppVersion = '1.3.5';
-  bool isForceUpdateEnabled = false;
-  String playStoreUrl = 'https://play.google.com/store/apps/details?id=com.swgayanbhumi.app';
-  String updateTitle = '⚡ App Update Required';
-  String updateMessage = 'Booyah Rewards ka naya version Play Store par live hai. Kripya continue karne ke liye update karein!';
-  bool get isUpdateRequired => !kIsWeb && isForceUpdateEnabled && (currentAppBuildNumber < minBuildNumber);
-
-  bool isLiveSyncing = false;
+  late UserModel user;
   bool isAuthenticated = false;
-  bool isLoadingAuth = true;
-  int globalTotalAdsWatched = 0;
+  int season = 1;
+  String tournamentType = 'daily';
+  bool get isDailyTournament => tournamentType == 'daily';
+  String prizePool = '₹1,000';
+  List<Map<String, dynamic>> prizesBreakdown = [];
+  List<LeaderboardEntry> weeklyLeaderboard = [];
+  List<WinnerProofItem> winnerProofs = [];
+  List<PastSeasonArchive> pastWinners = [];
+  String tournamentNotice = '📢 दैनिक चैंपियनशिप लाइव! हर रोज़ रात 12:00 बजे ₹1,000 का प्राइज़ पूल!';
 
-  // Rewards Store: Real Cash (₹) to Google Play Redeem Codes (1:1 with rupees, Min ₹100)
-  List<StoreItem> storeItems = [
-    StoreItem(
-      id: 'store_gp_100',
+  // ── 🏆 FREE FIRE INDIA STATE ──
+  List<FFTournament> ffTournaments = [];
+  bool isLoadingTournaments = false;
+  String activeCategory = 'ALL';
+
+  List<ChatMessage> chatMessages = [];
+  bool isChatLoading = false;
+
+  List<SupportTicket> mySupportTickets = [];
+  bool isSupportLoading = false;
+
+  Map<String, dynamic> coinEconomy = {
+    'adCoinReward': 10,
+    'dailyAdLimit': 15,
+    'welcomeBonus': 20,
+    'referralReward': 50,
+  };
+
+  Map<String, dynamic> socialLinks = {
+    'youtube': 'https://youtube.com/@booyahrewards',
+    'instagram': 'https://instagram.com/booyahrewards',
+    'telegram': 'https://t.me/booyahrewards',
+  };
+
+  Map<String, dynamic> branding = {
+    'gameName': 'FREE FIRE INDIA',
+    'tagline': 'India Ka Apna Battle Royale',
+    'subTagline': 'India Ka Apna Esports Platform',
+  };
+
+  List<RedeemPackage> redeemPackages = [
+    RedeemPackage(
+      id: 'play_50',
+      amount: 50,
+      points: 5000,
+      title: '₹50 Google Play Redeem Code',
+      badge: 'न्यूनतम रिडीम (MIN)',
+      description: 'Google Play Store बैलेंस में ₹50 सीधे जोड़ें।',
+      colorHex: '#10B981',
+    ),
+    RedeemPackage(
+      id: 'play_100',
+      amount: 100,
+      points: 10000,
       title: '₹100 Google Play Redeem Code',
-      description: '₹100 Winning Cash = ₹100 Google Play Code sent to your WhatsApp.',
-      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '🎟️',
-      rewardCoinsPrice: 100,
-      rewardValue: '₹100 Play Code',
+      badge: 'पॉपुलर (MOST POPULAR)',
+      description: 'Google Play Store बैलेंस में ₹100 सीधे जोड़ें।',
+      colorHex: '#F59E0B',
     ),
-    StoreItem(
-      id: 'store_gp_200',
-      title: '₹200 Google Play Redeem Code',
-      description: '₹200 Winning Cash = ₹200 Google Play Code sent to your WhatsApp.',
-      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '🎟️',
-      rewardCoinsPrice: 200,
-      rewardValue: '₹200 Play Code',
+    RedeemPackage(
+      id: 'play_250',
+      amount: 250,
+      points: 25000,
+      title: '₹250 Google Play Redeem Code',
+      badge: 'बेस्ट वैल्यू (PRO)',
+      description: 'Google Play Store बैलेंस में ₹250 सीधे जोड़ें।',
+      colorHex: '#8B5CF6',
     ),
-    StoreItem(
-      id: 'store_gp_500',
+    RedeemPackage(
+      id: 'play_500',
+      amount: 500,
+      points: 50000,
       title: '₹500 Google Play Redeem Code',
-      description: '₹500 Winning Cash = ₹500 Google Play Code sent to your WhatsApp.',
-      imageUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: '🎟️',
-      rewardCoinsPrice: 500,
-      rewardValue: '₹500 Play Code',
+      badge: 'मेगा बंडल (VIP)',
+      description: 'Google Play Store बैलेंस में ₹500 सीधे जोड़ें।',
+      colorHex: '#EC4899',
     ),
   ];
+  List<RedeemRequestItem> myRedeemRequests = [];
+  List<Map<String, dynamic>> liveRedeemFeed = [];
+  bool isRedeemLoading = false;
 
-  String selectedFilter = 'ALL';
-  String selectedFormat = 'ALL';
-  String selectedMode = 'ALL'; // 'ALL', 'BR', 'CS', 'LONE_WOLF'
-  String selectedTeamType = 'ALL'; // 'ALL', 'SOLO', 'DUO', 'SQUAD'
-  String selectedStatus = 'ALL'; // 'ALL', 'UPCOMING', 'ONGOING', 'COMPLETED'
-
-  void setStatusFilter(String status) {
-    selectedStatus = status;
-    notifyListeners();
-  }
-
-  void setMode(String mode) {
-    selectedMode = mode;
-    notifyListeners();
-  }
-
-  void setTeamType(String teamType) {
-    selectedTeamType = teamType;
-    notifyListeners();
-  }
-
-  void setFilter(String filter) {
-    selectedFilter = filter;
-    notifyListeners();
-  }
-
-  void setFormat(String format) {
-    selectedFormat = format;
-    notifyListeners();
-  }
+  static final List<WinnerProofItem> defaultProofs = [];
 
   AppState() {
-    _initData();
-    _loadLocalDataCache();
-    _initNotifications();
-    _syncWithFirestore();
-    _startLiveSyncTimer();
+    user = UserModel.guest();
+    _initUser();
   }
 
-  void _startLiveSyncTimer() {
-    _liveSyncTimer?.cancel();
-    _liveSyncTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _syncWithFirestore();
-    });
+  Map<String, dynamic>? appSettings;
+
+  Future<void> fetchAppConfig() async {
+    try {
+      final url = Uri.parse('https://vps.swgayanbhumi.in/api/app-config');
+      final res = await http.get(url).timeout(const Duration(seconds: 5));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['appSettings'] != null) {
+          appSettings = Map<String, dynamic>.from(data['appSettings']);
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching app config: $e');
+    }
   }
 
-  Future<void> _loadLocalDataCache() async {
+  Future<void> _initUser() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final cachedMatchesJson = WebStorageHelper.getItem('booyah_cached_matches') ?? prefs.getString('booyah_cached_matches');
-      if (cachedMatchesJson != null && cachedMatchesJson.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(cachedMatchesJson);
-        if (list.isNotEmpty && matches.isEmpty) {
-          matches = list.map((d) => MatchModel.fromJson(Map<String, dynamic>.from(d))).toList();
-          notifyListeners();
-        }
+      final savedNotice = prefs.getString('tournament_admin_notice');
+      if (savedNotice != null && savedNotice.isNotEmpty) {
+        tournamentNotice = savedNotice;
       }
-
-      final cachedTxnsJson = WebStorageHelper.getItem('booyah_cached_txns') ?? prefs.getString('booyah_cached_txns');
-      if (cachedTxnsJson != null && cachedTxnsJson.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(cachedTxnsJson);
-        if (list.isNotEmpty && allGlobalTransactions.isEmpty) {
-          allGlobalTransactions = list.map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
-          transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
-          notifyListeners();
-        }
-      }
-
-      final cachedSafeMode = WebStorageHelper.getItem('booyah_safe_mode_cash_enabled') ?? prefs.getString('booyah_safe_mode_cash_enabled');
-      if (cachedSafeMode != null) {
-        isRealCashModeEnabled = cachedSafeMode == 'true';
-        notifyListeners();
-      }
-
-      final cachedTasks = WebStorageHelper.getItem('booyah_daily_tasks_${user.uid}') ?? prefs.getString('booyah_daily_tasks_${user.uid}');
-      if (cachedTasks != null && cachedTasks.isNotEmpty) {
-        dailyTaskData = UserDailyTaskData.fromJson(jsonDecode(cachedTasks));
+      final savedSeason = prefs.getInt('tournament_season');
+      if (savedSeason != null) season = savedSeason;
+      final savedPrize = prefs.getString('tournament_prize_pool');
+      if (savedPrize != null && savedPrize.isNotEmpty) prizePool = savedPrize;
+      final userJson = prefs.getString(_userPrefsKey);
+      if (userJson != null) {
+        final Map<String, dynamic> data = jsonDecode(userJson);
+        user = UserModel.fromJson(data);
       } else {
-        dailyTaskData = UserDailyTaskData.createInitial();
+        user = UserModel.guest();
+        await saveUser();
       }
-      dailyTaskData.checkAndResetForNewDay();
-      notifyListeners();
+
+      // 🛡️ Season 2 Financial Safeguard: Reset all wallet coins to 0 immediately
+      final hasResetSeason2 = prefs.getBool('season2_wallet_hard_zero_v3') ?? false;
+      if (!hasResetSeason2) {
+        user.adCoins = 0;
+        user.weeklyScore = 0;
+        await prefs.setBool('season2_wallet_hard_zero_v3', true);
+        await saveUser();
+      }
     } catch (e) {
-      debugPrint('[AppState] Load local cache error: $e');
+      debugPrint('Error loading user from prefs: $e');
+      user = UserModel.guest();
     }
+    notifyListeners();
+
+    // Fetch live leaderboard, proofs, past winners, redeem data, and sync user with VPS
+    await fetchLeaderboard();
+    await fetchWinnerProofs();
+    await fetchPastWinners();
+    await fetchRedeemPackages();
+    await fetchMyRedeemRequests();
+    await fetchLiveRedeemFeed();
+    await syncUserWithVPS();
+    await fetchAppConfig();
+    await FCMService.initialize(uid: user.uid);
+    await fetchFFTournaments();
+    await fetchWorldChat();
+    await fetchMySupportTickets();
   }
 
-  void _saveLocalDailyTasksCache() {
+  Future<void> saveUser() async {
     try {
-      final jsonStr = jsonEncode(dailyTaskData.toJson());
-      WebStorageHelper.setItem('booyah_daily_tasks_${user.uid}', jsonStr);
-      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_daily_tasks_${user.uid}', jsonStr));
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = jsonEncode(user.toJson());
+      await prefs.setString(_userPrefsKey, userJson);
     } catch (e) {
-      debugPrint('[AppState] Save local daily tasks cache error: $e');
+      debugPrint('Error saving user to prefs: $e');
     }
+    notifyListeners();
   }
 
-  void _saveLocalMatchesCache() {
+  void _updateConfig(Map<String, dynamic>? config) {
+    if (config == null) return;
+    if (config['season'] != null) {
+      season = (config['season'] as num).toInt();
+    }
+    if (config['tournamentType'] != null) {
+      tournamentType = config['tournamentType'].toString();
+    }
+    if (config['prizePool'] != null) {
+      prizePool = config['prizePool'].toString();
+    }
+    if (config['prizesBreakdown'] != null) {
+      prizesBreakdown = (config['prizesBreakdown'] as List)
+          .map((item) => Map<String, dynamic>.from(item as Map))
+          .toList();
+    }
+    if (config['notice'] != null && config['notice'].toString().trim().isNotEmpty) {
+      tournamentNotice = config['notice'].toString().trim();
+      SharedPreferences.getInstance().then((prefs) {
+        prefs.setString('tournament_admin_notice', tournamentNotice);
+      }).catchError((_) {});
+    }
+    notifyListeners();
+  }
+
+  // ── Sync Guest User with VPS Backend (Device ID based, No Password Needed) ──
+  Future<void> syncUserWithVPS({int scoreToAdd = 0, int coinsToAdd = 0, String referralCode = ''}) async {
     try {
-      final list = matches.map((m) => m.toJson()).toList();
-      final jsonStr = jsonEncode(list);
-      WebStorageHelper.setItem('booyah_cached_matches', jsonStr);
-      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_matches', jsonStr));
-    } catch (e) {
-      debugPrint('[AppState] Save local matches cache error: $e');
-    }
-  }
-
-  void _saveLocalTxnCache() {
-    try {
-      final list = allGlobalTransactions.map((t) => t.toJson()).toList();
-      final jsonStr = jsonEncode(list);
-      WebStorageHelper.setItem('booyah_cached_txns', jsonStr);
-      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_txns', jsonStr));
-    } catch (e) {
-      debugPrint('[AppState] Save local txn cache error: $e');
-    }
-  }
-
-  void _initNotifications() {
-    _notificationService.initialize(userId: user.uid);
-    _notificationService.onNotificationReceived.listen((notif) {
-      _alertedNotifIds.add(notif.id);
-      allGlobalNotifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
-      allGlobalNotifications.insert(0, notif);
-
-      final bool isRelevant = notif.targetType == 'all' ||
-          (notif.targetType == 'match' && matches.any((m) => m.id == notif.targetId && m.participants.any((p) => p.uid == user.uid))) ||
-          (notif.targetType == 'user' && notif.targetId == user.uid) ||
-          (notif.targetType == 'admin' && user.role == 'admin');
-      if (isRelevant) {
-        notifications.removeWhere((n) => n.id == notif.id || (n.title == notif.title && n.body == notif.body));
-        notifications.insert(0, notif);
-        if (kIsWeb) {
-          showBrowserNotification(notif.title, notif.body, imageUrl: notif.imageUrl);
-        }
-      }
-      notifyListeners();
-    });
-  }
-
-  void _checkAndTriggerMatchAutoStart(MatchModel match) {
-    if (match.isFull && (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling)) {
-      if (match.status != MatchStatus.roomFilling || match.roomFillingStartedAt == null) {
-        match.status = MatchStatus.roomFilling;
-        match.roomFillingStartedAt = DateTime.now();
-        _syncMatch(match);
-        _notificationService.triggerMatchFullAutoAlert(match: match);
-        debugPrint('🚀 [Dynamic Auto-Start] Triggered for Match ${match.id} (${match.title}) - 15m Countdown Active');
-      }
-    }
-  }
-
-  void setUser(UserModel u) {
-    if (u.wallet.rewardCoins > 0) {
-      u.wallet.winningCash += u.wallet.rewardCoins;
-      u.wallet.rewardCoins = 0;
-    }
-    user = u;
-    isAuthenticated = true;
-    _notificationService.initialize(userId: u.uid);
-    notifyListeners();
-    _syncUser();
-    AuthService.saveUser(u);
-  }
-
-  Future<void> logout() async {
-    await AuthService.logout();
-    isAuthenticated = false;
-    _initData();
-    notifyListeners();
-  }
-
-  void _initData() {
-    // 1. Initial Default Placeholder User
-    user = UserModel(
-      uid: 'user_guest',
-      displayName: 'Free Fire Gamer',
-      email: 'gamer@booyah.com',
-      phoneNumber: '',
-      inGameName: '⚡BOOYAH_WARRIOR⚡',
-      inGameUid: '284719284',
-      inGameLevel: 52,
-      wallet: UserWallet(
-        adCoins: 5,        // 5 Ad Coins Welcome Bonus
-        rewardCoins: 0,
-        depositCash: 0.0,
-        winningCash: 0.0,
-      ),
-      adTracker: AdTracker(
-        adsWatchedToday: 0,
-        adsWatchedSinceLastCoin: 0,
-        dailyLimitRemaining: 30,
-      ),
-      stats: UserStats(
-        matchesPlayed: 0,
-        matchesWon: 0,
-        totalKills: 0,
-        totalWinningsCash: 0.0,
-        totalRewardCoinsWon: 0,
-        totalCoinsEarned: 5,
-      ),
-      role: 'user',
-    );
-
-    matches = _getDefaultMatches();
-    banners = _getDefaultBanners();
-    transactions = [];
-    withdrawals = [];
-    voucherClaims = [];
-  }
-
-  List<BannerModel> _getDefaultBanners() => [
-    BannerModel(
-      id: 'banner_welcome_01',
-      title: '🔥 Official Telegram Support & Daily Updates',
-      imageUrl: 'https://i.ibb.co/W43nNfnY/Chat-GPT-Image-Oct-7-2026-10-03-53-AM-1.png',
-      clickUrl: 'http://t.me/booyahrewardofficial',
-      isActive: true,
-      createdAt: DateTime.now(),
-    ),
-  ];
-
-  List<MatchModel> _getDefaultMatches() => [
-    // 1. FREE FIRE BATTLE ROYALE (Watch Ads to Enter)
-    MatchModel(
-      id: 'FREE-BR-01',
-      title: '⚡ Free Fire BR Solo Championship',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.br,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.solo,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 1, // 1 Ad to Join
-      prizePool: PrizePool(totalPool: 500, firstPlace: 250, secondPlace: 150, thirdPlace: 100, perKill: 20),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 45)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-    MatchModel(
-      id: 'FREE-BR-02',
-      title: '🔥 Free Fire BR Squad Mega Showdown',
-      bannerImage: 'https://i.ibb.co/PvV4vz0X/brhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.br,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.squad,
-      map: MapType.purgatory,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 2, // 2 Ads to Join
-      prizePool: PrizePool(totalPool: 1000, firstPlace: 500, secondPlace: 300, thirdPlace: 200, perKill: 30),
-      maxSlots: 48,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(hours: 2)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-
-    // 2. CLASH SQUAD (4v4)
-    MatchModel(
-      id: 'FREE-CS-01',
-      title: '🎯 Free Fire CS 4v4 Squad Clash',
-      bannerImage: 'https://i.ibb.co/S4qX9RW5/cshomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.cs,
-      teamType: TeamType.squad,
-      matchFormat: MatchFormat.cs4v4,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 1, // 1 Ad to Join
-      prizePool: PrizePool(totalPool: 400, firstPlace: 400, perKill: 0),
-      maxSlots: 8,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 60)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-
-    // 3. LONE WOLF (1v1)
-    MatchModel(
-      id: 'FREE-LW-01',
-      title: '🐺 Lone Wolf 1v1 Battle Master',
-      bannerImage: 'https://i.ibb.co/9ktcjYSX/lonewolfhomescreen.png',
-      gameType: GameType.freeFire,
-      matchType: MatchType.free,
-      mode: MatchMode.loneWolf,
-      teamType: TeamType.solo,
-      matchFormat: MatchFormat.loneWolf1v1,
-      map: MapType.bermuda,
-      entryFeeType: EntryFeeType.adCoins,
-      entryFee: 1, // 1 Ad to Join
-      prizePool: PrizePool(totalPool: 150, firstPlace: 150, perKill: 0),
-      maxSlots: 2,
-      filledSlots: 0,
-      status: MatchStatus.upcoming,
-      matchTime: DateTime.now().add(const Duration(minutes: 30)),
-      credentials: MatchCredentials(roomId: '', roomPassword: ''),
-      participants: [],
-    ),
-  ];
-
-  List<BannerModel> get activeBanners {
-    if (!isRealCashModeEnabled) {
-      return banners.map((b) {
-        final sanitizedTitle = b.title.replaceAll(RegExp(r'Real Cash|₹\d+|75/25|Instant UPI', caseSensitive: false), 'Redeem Codes & Diamonds');
-        return BannerModel(
-          id: b.id,
-          title: sanitizedTitle,
-          imageUrl: b.imageUrl,
-          clickUrl: b.clickUrl,
-          isActive: b.isActive,
-          createdAt: b.createdAt,
-        );
-      }).toList();
-    }
-    return banners;
-  }
-
-  // --- GETTERS ---
-  List<MatchModel> get myMatches {
-    return matches.where((m) => m.participants.any((p) => p.uid == user.uid)).toList();
-  }
-
-  List<MatchModel> get filteredMatches {
-    final list = matches.where((m) {
-      // 0. If Real Cash Mode is disabled (Safe Mode), NEVER show Paid/Cash matches
-      if (!isRealCashModeEnabled && (m.matchType == MatchType.paid || m.entryFeeType == EntryFeeType.cash || m.prizePool.isCashPrize)) {
-        return false;
-      }
-
-      // 1. WinCoin / Reward Coin / Free / Paid Filter
-      final filter = selectedFilter.toUpperCase();
-      if ((filter == 'WIN_COIN' || filter == 'WINCOIN') && !m.prizePool.isCashPrize) return false;
-      if ((filter == 'REWARD_COIN' || filter == 'REWARDCOIN') && m.prizePool.isCashPrize) return false;
-      if (filter == 'FREE' && m.matchType != MatchType.free) return false;
-      if (filter == 'PAID' && m.matchType != MatchType.paid) return false;
-
-      // 2. Mode Filter (BR, CS, Lone Wolf)
-      final modeFilter = selectedMode.toUpperCase();
-      if (modeFilter == 'BR' && m.mode != MatchMode.br) return false;
-      if (modeFilter == 'CS' && m.mode != MatchMode.cs) return false;
-      if ((modeFilter == 'LONE_WOLF' || modeFilter == 'LONEWOLF') && m.mode != MatchMode.loneWolf) return false;
-
-      // 3. Team Type Filter (Solo, Duo, Squad)
-      final teamFilter = selectedTeamType.toUpperCase();
-      if (teamFilter == 'SOLO' && m.teamType != TeamType.solo) return false;
-      if (teamFilter == 'DUO' && m.teamType != TeamType.duo) return false;
-      if (teamFilter == 'SQUAD' && m.teamType != TeamType.squad) return false;
-
-      // 4. Status Filter (Upcoming, Ongoing, Completed/Resulted)
-      final statusFilter = selectedStatus.toUpperCase();
-      if (statusFilter == 'UPCOMING' && m.status != MatchStatus.upcoming && m.status != MatchStatus.roomFilling) return false;
-      if (statusFilter == 'ONGOING' && m.status != MatchStatus.ongoing) return false;
-      if (statusFilter == 'COMPLETED' && m.status != MatchStatus.completed) return false;
-      // In main 'ALL' lobby, only show active joinable matches (Upcoming, RoomFilling & Live), completed matches are in Resulted tab
-      if (statusFilter == 'ALL' && m.status == MatchStatus.completed) return false;
-
-      return true;
-    }).toList();
-
-    // Sort: Upcoming & Ongoing first, Completed at end
-    list.sort((a, b) {
-      int scoreA = a.status == MatchStatus.upcoming ? 0 : (a.status == MatchStatus.ongoing ? 1 : 2);
-      int scoreB = b.status == MatchStatus.upcoming ? 0 : (b.status == MatchStatus.ongoing ? 1 : 2);
-      return scoreA.compareTo(scoreB);
-    });
-
-    return list;
-  }
-
-  // --- JOIN MATCH WITH SPECIFIC SLOT SELECTION ---
-  Map<String, dynamic> joinMatchWithSlot({
-    required String matchId,
-    required int chosenSlot,
-    required String inGameName,
-    required String inGameUid,
-  }) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) {
-      return {'success': false, 'message': 'Match not found'};
-    }
-
-    final match = matches[matchIndex];
-
-    if (match.isSlotTaken(chosenSlot)) {
-      return {'success': false, 'message': 'Slot #$chosenSlot is already taken! Please choose another slot.'};
-    }
-
-    if (match.participants.any((p) => p.uid == user.uid)) {
-      return {'success': false, 'message': 'You have already joined this match!'};
-    }
-
-    user.inGameName = inGameName;
-    user.inGameUid = inGameUid;
-
-    double balBefore = 0.0;
-    double balAfter = 0.0;
-    String walletUsed = '';
-    final isCashMatch = match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid;
-    final fee = match.entryFee;
-
-    if (fee > 0) {
-      if (isCashMatch) {
-        if (user.wallet.depositCash < fee) {
-          return {
-            'success': false,
-            'message': 'Insufficient Deposit Cash! You need ₹${fee.toInt()} to join. Please add cash via Razorpay UPI.'
-          };
-        }
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
-        final reqCoins = fee.toInt();
-        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
-        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
-
-        if (user.wallet.adCoins < adCoinsNeeded) {
-          final maxHalf = (reqCoins * 0.50).floor();
-          return {
-            'success': false,
-            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
-          };
-        }
-        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        user.wallet.referralCoins -= refCoinsToUse;
-        user.wallet.adCoins -= adCoinsNeeded;
-        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
-      }
-    } else {
-      balBefore = user.wallet.adCoins.toDouble();
-      balAfter = balBefore;
-      walletUsed = 'FREE';
-    }
-
-    final participant = MatchParticipant(
-      uid: user.uid,
-      inGameName: user.inGameName ?? inGameName,
-      inGameUid: user.inGameUid ?? inGameUid,
-      slotNumber: chosenSlot,
-      paidWith: walletUsed,
-      amountPaid: match.entryFee,
-      joinedAt: DateTime.now(),
-    );
-
-    match.participants.add(participant);
-    match.filledSlots += 1;
-    user.stats.matchesPlayed += 1;
-    dailyTaskData.checkAndResetForNewDay();
-    dailyTaskData.matchesJoinedToday += 1;
-    _saveLocalDailyTasksCache();
-
-    if (fee > 0) {
-      final newTxn = TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.matchEntryFee,
-        walletAffected: isCashMatch ? WalletType.depositCash : WalletType.adCoins,
-        amount: -fee,
-        currency: isCashMatch ? 'INR' : 'AD_COINS',
-        balanceBefore: balBefore,
-        balanceAfter: balAfter,
-        status: 'SUCCESS',
-        description: 'Joined ${match.title} (Slot #$chosenSlot)',
-        createdAt: DateTime.now(),
-      );
-      transactions.insert(0, newTxn);
-      allGlobalTransactions.insert(0, newTxn);
-      _syncTransaction(newTxn);
-    }
-
-    _syncUser();
-    _checkAndTriggerMatchAutoStart(match);
-    _syncMatch(match);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Successfully joined match in Slot #$chosenSlot!',
-    };
-  }
-
-  // Helper to generate 6-char random alphanumeric team code
-  String _generateTeamCode() {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    final rnd = Random();
-    return List.generate(6, (index) => chars[rnd.nextInt(chars.length)]).join();
-  }
-
-  // --- SQUAD / DUO: CREATE A NEW TEAM & GET 6-CHAR TEAM CODE ---
-  Map<String, dynamic> createSquadTeam({
-    required String matchId,
-    required String teamName,
-    required String inGameName,
-    required String inGameUid,
-  }) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return {'success': false, 'message': 'Match not found'};
-    final match = matches[matchIndex];
-
-    if (match.participants.any((p) => p.uid == user.uid)) {
-      return {'success': false, 'message': 'You have already joined this match!'};
-    }
-
-    user.inGameName = inGameName;
-    user.inGameUid = inGameUid;
-
-    double balBefore = 0.0;
-    double balAfter = 0.0;
-    String walletUsed = '';
-    final isCashMatch = match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid;
-    final fee = match.entryFee;
-
-    if (fee > 0) {
-      if (isCashMatch) {
-        if (user.wallet.depositCash < fee) {
-          return {
-            'success': false,
-            'message': 'Insufficient Deposit Cash! You need ₹${fee.toInt()} to create a team. Please add cash via UPI.'
-          };
-        }
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
-        final reqCoins = fee.toInt();
-        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
-        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
-
-        if (user.wallet.adCoins < adCoinsNeeded) {
-          final maxHalf = (reqCoins * 0.50).floor();
-          return {
-            'success': false,
-            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
-          };
-        }
-        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        user.wallet.referralCoins -= refCoinsToUse;
-        user.wallet.adCoins -= adCoinsNeeded;
-        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
-      }
-    } else {
-      balBefore = user.wallet.adCoins.toDouble();
-      balAfter = balBefore;
-      walletUsed = 'FREE';
-    }
-
-    // Find next available slot
-    int assignedSlot = 1;
-    for (int s = 1; s <= match.maxSlots; s++) {
-      if (!match.isSlotTaken(s)) {
-        assignedSlot = s;
-        break;
-      }
-    }
-
-    final teamCode = _generateTeamCode();
-    final teamMaxSize = match.teamSize; // 2 for Duo, 4 for Squad
-
-    final teamMember = TeamMember(
-      uid: user.uid,
-      inGameName: user.inGameName ?? inGameName,
-      inGameUid: user.inGameUid ?? inGameUid,
-      isCaptain: true,
-      slotNumber: assignedSlot,
-      joinedAt: DateTime.now(),
-      amountPaid: match.entryFee,
-    );
-
-    final newTeam = RegisteredTeam(
-      teamId: 'team_${DateTime.now().millisecondsSinceEpoch}',
-      matchId: match.id,
-      teamCode: teamCode,
-      captainUid: user.uid,
-      captainName: user.inGameName ?? inGameName,
-      maxSize: teamMaxSize,
-      teamName: teamName.isNotEmpty ? teamName : 'Team $teamCode',
-      members: [teamMember],
-      createdAt: DateTime.now(),
-    );
-
-    match.registeredTeams.add(newTeam);
-
-    final participant = MatchParticipant(
-      uid: user.uid,
-      inGameName: user.inGameName ?? inGameName,
-      inGameUid: user.inGameUid ?? inGameUid,
-      slotNumber: assignedSlot,
-      paidWith: walletUsed,
-      amountPaid: match.entryFee,
-      joinedAt: DateTime.now(),
-      teamName: newTeam.teamName,
-    );
-
-    match.participants.add(participant);
-    match.filledSlots += 1;
-    user.stats.matchesPlayed += 1;
-
-    final teamTxn = TransactionModel(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.matchEntryFee,
-      walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
-      amount: -match.entryFee,
-      currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
-      balanceBefore: balBefore,
-      balanceAfter: balAfter,
-      status: 'SUCCESS',
-      description: 'Created Team "${newTeam.teamName}" [Code: $teamCode] for ${match.title}',
-      createdAt: DateTime.now(),
-    );
-    transactions.insert(0, teamTxn);
-    allGlobalTransactions.insert(0, teamTxn);
-    _syncTransaction(teamTxn);
-
-    _syncUser();
-    _checkAndTriggerMatchAutoStart(match);
-    _syncMatch(match);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'team': newTeam,
-      'teamCode': teamCode,
-      'message': 'Team created successfully! Share code $teamCode with your squad.',
-    };
-  }
-
-  // --- SQUAD / DUO: JOIN AN EXISTING TEAM WITH 6-CHAR CODE ---
-  Map<String, dynamic> joinSquadTeamWithCode({
-    required String matchId,
-    required String teamCode,
-    required String inGameName,
-    required String inGameUid,
-  }) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return {'success': false, 'message': 'Match not found'};
-    final match = matches[matchIndex];
-
-    if (match.participants.any((p) => p.uid == user.uid)) {
-      return {'success': false, 'message': 'You have already joined this match!'};
-    }
-
-    final team = match.getTeamByCode(teamCode);
-    if (team == null) {
-      return {'success': false, 'message': 'Team Code "$teamCode" not found! Please check and try again.'};
-    }
-
-    if (team.isComplete) {
-      return {'success': false, 'message': 'This team is already full (${team.maxSize}/${team.maxSize} players)!'};
-    }
-
-    user.inGameName = inGameName;
-    user.inGameUid = inGameUid;
-
-    double balBefore = 0.0;
-    double balAfter = 0.0;
-    String walletUsed = '';
-    final isCashMatch = match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid;
-    final fee = match.entryFee;
-
-    if (fee > 0) {
-      if (isCashMatch) {
-        if (user.wallet.depositCash < fee) {
-          return {
-            'success': false,
-            'message': 'Insufficient Deposit Cash! You need ₹${fee.toInt()} to join this team. Please add cash via UPI.'
-          };
-        }
-        balBefore = user.wallet.depositCash;
-        user.wallet.depositCash -= fee;
-        balAfter = user.wallet.depositCash;
-        walletUsed = 'DEPOSIT_CASH';
-      } else {
-        final reqCoins = fee.toInt();
-        final refCoinsToUse = user.wallet.maxUsableReferralCoins(reqCoins);
-        final adCoinsNeeded = user.wallet.requiredAdCoinsForFreeMatch(reqCoins);
-
-        if (user.wallet.adCoins < adCoinsNeeded) {
-          final maxHalf = (reqCoins * 0.50).floor();
-          return {
-            'success': false,
-            'message': 'Free Match Rule: Max 50% ($maxHalf Coins) Referral Coins use ho sakte hain! Baaki $adCoinsNeeded 🟡 Ad Coins ke liye Ads dekhein (Aapke paas ${user.wallet.adCoins} Ad Coins hain).'
-          };
-        }
-        balBefore = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        user.wallet.referralCoins -= refCoinsToUse;
-        user.wallet.adCoins -= adCoinsNeeded;
-        balAfter = (user.wallet.adCoins + user.wallet.referralCoins).toDouble();
-        walletUsed = refCoinsToUse > 0 ? 'AD_AND_REF_COINS' : 'AD_COINS';
-      }
-    } else {
-      balBefore = user.wallet.adCoins.toDouble();
-      balAfter = balBefore;
-      walletUsed = 'FREE';
-    }
-
-    // Find next available slot
-    int assignedSlot = 1;
-    for (int s = 1; s <= match.maxSlots; s++) {
-      if (!match.isSlotTaken(s)) {
-        assignedSlot = s;
-        break;
-      }
-    }
-
-    final teamMember = TeamMember(
-      uid: user.uid,
-      inGameName: user.inGameName ?? inGameName,
-      inGameUid: user.inGameUid ?? inGameUid,
-      isCaptain: false,
-      slotNumber: assignedSlot,
-      joinedAt: DateTime.now(),
-      amountPaid: match.entryFee,
-    );
-
-    team.members.add(teamMember);
-
-    final participant = MatchParticipant(
-      uid: user.uid,
-      inGameName: user.inGameName ?? inGameName,
-      inGameUid: user.inGameUid ?? inGameUid,
-      slotNumber: assignedSlot,
-      paidWith: walletUsed,
-      amountPaid: match.entryFee,
-      joinedAt: DateTime.now(),
-      teamName: team.teamName,
-    );
-
-    match.participants.add(participant);
-    match.filledSlots += 1;
-    user.stats.matchesPlayed += 1;
-
-    final joinTxn = TransactionModel(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.matchEntryFee,
-      walletAffected: match.matchType == MatchType.free ? WalletType.adCoins : WalletType.depositCash,
-      amount: -match.entryFee,
-      currency: match.matchType == MatchType.free ? 'AD_COINS' : 'INR',
-      balanceBefore: balBefore,
-      balanceAfter: balAfter,
-      status: 'SUCCESS',
-      description: 'Joined Team "${team.teamName}" [Code: ${team.teamCode}] for ${match.title}',
-      createdAt: DateTime.now(),
-    );
-    transactions.insert(0, joinTxn);
-    allGlobalTransactions.insert(0, joinTxn);
-    _syncTransaction(joinTxn);
-
-    _syncUser();
-    _checkAndTriggerMatchAutoStart(match);
-    _syncMatch(match);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'team': team,
-      'message': 'Joined team ${team.teamName} (${team.members.length}/${team.maxSize} players)!',
-    };
-  }
-
-  // --- DAILY TASKS & MISSIONS SYSTEM ---
-  Map<String, dynamic> claimDailyCheckIn() {
-    dailyTaskData.checkAndResetForNewDay();
-    if (dailyTaskData.hasCheckedInToday) {
-      return {'success': false, 'message': 'Already claimed today\'s login bonus!'};
-    }
-
-    final rewardCoins = dailyTaskData.getTodayCheckInReward();
-    final balBefore = user.wallet.adCoins.toDouble();
-    user.wallet.adCoins += rewardCoins;
-    user.stats.totalCoinsEarned += rewardCoins;
-
-    dailyTaskData.hasCheckedInToday = true;
-    if (!dailyTaskData.claimedTaskIds.contains('task_daily_login')) {
-      dailyTaskData.claimedTaskIds.add('task_daily_login');
-    }
-
-    final newTxn = TransactionModel(
-      id: 'txn_checkin_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.adReward,
-      walletAffected: WalletType.adCoins,
-      amount: rewardCoins.toDouble(),
-      currency: 'AD_COINS',
-      balanceBefore: balBefore,
-      balanceAfter: user.wallet.adCoins.toDouble(),
-      status: 'SUCCESS',
-      description: 'Daily Check-In Day ${dailyTaskData.checkInStreak} Bonus (+$rewardCoins 🪙)',
-      createdAt: DateTime.now(),
-    );
-
-    transactions.insert(0, newTxn);
-    allGlobalTransactions.insert(0, newTxn);
-
-    _syncUser();
-    _syncTransaction(newTxn);
-    _saveLocalDailyTasksCache();
-    notifyListeners();
-
-    return {
-      'success': true,
-      'rewardCoins': rewardCoins,
-      'message': '🎉 Day ${dailyTaskData.checkInStreak} Check-In Claimed! +$rewardCoins 🪙 Coins Earned!',
-    };
-  }
-
-  Map<String, dynamic> claimDailyTaskReward(String taskId) {
-    dailyTaskData.checkAndResetForNewDay();
-    final taskIndex = DailyTasksCatalog.allTasks.indexWhere((t) => t.id == taskId);
-    if (taskIndex == -1) {
-      return {'success': false, 'message': 'Task not found'};
-    }
-
-    final task = DailyTasksCatalog.allTasks[taskIndex];
-    if (!task.isCompleted(dailyTaskData)) {
-      return {'success': false, 'message': 'Task not completed yet!'};
-    }
-    if (task.isClaimed(dailyTaskData)) {
-      return {'success': false, 'message': 'Task reward already claimed today!'};
-    }
-
-    final balBefore = user.wallet.adCoins.toDouble();
-    user.wallet.adCoins += task.rewardCoins;
-    user.stats.totalCoinsEarned += task.rewardCoins;
-    if (task.isStreakMilestone) {
-      dailyTaskData.claimedMilestoneTaskIds.add(taskId);
-    } else {
-      dailyTaskData.claimedTaskIds.add(taskId);
-    }
-
-    final newTxn = TransactionModel(
-      id: 'txn_task_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.adReward,
-      walletAffected: WalletType.adCoins,
-      amount: task.rewardCoins.toDouble(),
-      currency: 'AD_COINS',
-      balanceBefore: balBefore,
-      balanceAfter: user.wallet.adCoins.toDouble(),
-      status: 'SUCCESS',
-      description: 'Daily Mission Reward: ${task.title} (+${task.rewardCoins} 🪙)',
-      createdAt: DateTime.now(),
-    );
-
-    transactions.insert(0, newTxn);
-    allGlobalTransactions.insert(0, newTxn);
-
-    _syncUser();
-    _syncTransaction(newTxn);
-    _saveLocalDailyTasksCache();
-    notifyListeners();
-
-    return {
-      'success': true,
-      'rewardCoins': task.rewardCoins,
-      'message': '🎉 Mission Completed! +${task.rewardCoins} 🪙 Coins Earned!',
-    };
-  }
-
-  void recordReferralShareForTasks() {
-    dailyTaskData.checkAndResetForNewDay();
-    dailyTaskData.referralsDoneToday += 1;
-    _saveLocalDailyTasksCache();
-    notifyListeners();
-  }
-
-  // --- REDEEM WINNING CASH (₹) FOR GOOGLE PLAY REDEEM CODES WITH WHATSAPP DELIVERY ---
-  Map<String, dynamic> redeemStoreItem({
-    required StoreItem item,
-    required String whatsappNumber,
-    required String inGameUid,
-  }) {
-    final costInRupees = item.priceInRupees.toDouble();
-    if (user.wallet.winningCash < costInRupees) {
-      return {
-        'success': false,
-        'message': 'Insufficient Winning Cash! Aapke paas ₹${user.wallet.winningCash.toInt()} hain, ₹${costInRupees.toInt()} chahiye ${item.title} ke liye.'
-      };
-    }
-
-    if (costInRupees < 100 && minWithdrawalCoins >= 100) {
-      return {
-        'success': false,
-        'message': 'Minimum withdrawal / Redeem Code limit ₹100 hai.'
-      };
-    }
-
-    if (whatsappNumber.trim().length < 8) {
-      return {
-        'success': false,
-        'message': 'Please enter a valid WhatsApp Number so Admin can deliver your Redeem Code.'
-      };
-    }
-
-    final balBefore = user.wallet.winningCash;
-    user.wallet.winningCash -= costInRupees;
-    final balAfter = user.wallet.winningCash;
-
-    final claimId = 'vclaim_${DateTime.now().millisecondsSinceEpoch}';
-    final claim = VoucherClaim(
-      id: claimId,
-      userId: user.uid,
-      userName: user.displayName,
-      inGameUid: inGameUid.isNotEmpty ? inGameUid : (user.inGameUid ?? ''),
-      whatsappNumber: whatsappNumber.trim(),
-      itemTitle: item.title,
-      rewardCoinsSpent: item.priceInRupees,
-      status: VoucherClaimStatus.pending,
-      requestedAt: DateTime.now(),
-    );
-
-    voucherClaims.insert(0, claim);
-    allGlobalVoucherClaims.insert(0, claim);
-
-    transactions.insert(
-      0,
-      TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.voucherRedeem,
-        walletAffected: WalletType.winningCash,
-        amount: -costInRupees,
-        currency: 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: balAfter,
-        status: 'SUCCESS',
-        description: 'Redeemed ${item.title} (-₹${costInRupees.toInt()} Cash, WhatsApp: $whatsappNumber)',
-        createdAt: DateTime.now(),
-      ),
-    );
-
-    _syncUser();
-    _syncTransaction(transactions.first);
-    _syncVoucherClaim(claim);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Redeem Code request submit ho gayi hai! 2 hours ke andar Admin aapke WhatsApp ($whatsappNumber) par Google Play Code send karenge.',
-    };
-  }
-
-  // --- ADMIN: ADD NEW ITEM TO REWARDS STORE (SYNCED WITH VPS) ---
-  Future<void> adminAddStoreItem({
-    required String title,
-    required String description,
-    required String imageUrl,
-    required int coinPrice,
-    required String rewardValue,
-    String iconEmoji = '🎟️',
-  }) async {
-    final newItem = StoreItem(
-      id: 'store_${DateTime.now().millisecondsSinceEpoch}',
-      title: title,
-      description: description,
-      imageUrl: imageUrl.isNotEmpty ? imageUrl : 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=300&auto=format&fit=crop&q=80',
-      iconEmoji: iconEmoji.isNotEmpty ? iconEmoji : '🎟️',
-      rewardCoinsPrice: coinPrice,
-      rewardValue: rewardValue,
-    );
-
-    storeItems.insert(0, newItem);
-    notifyListeners();
-
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/store-items"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(newItem.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (e) {
-      debugPrint('[AppState] Add store item sync error: $e');
-    }
-  }
-
-  // --- ADMIN: DELETE ITEM FROM REWARDS STORE (SYNCED WITH VPS) ---
-  Future<void> adminDeleteStoreItem(String itemId) async {
-    storeItems.removeWhere((item) => item.id == itemId);
-    notifyListeners();
-
-    try {
-      await http.delete(
-        Uri.parse("$vpsApiUrl/store-items/$itemId"),
-      ).timeout(const Duration(seconds: 4));
-    } catch (e) {
-      debugPrint('[AppState] Delete store item sync error: $e');
-    }
-  }
-
-  // --- UNLOCK ROOM ID & PASSWORD VIA VIDEO AD GATE ---
-  void unlockRoomCredentialsWithAd(String matchId) {
-    final match = matches.firstWhere((m) => m.id == matchId);
-    match.hasUserWatchedAdToUnlockRoom = true;
-    notifyListeners();
-  }
-
-  // --- WATCH REWARDED AD (3 ADS = 1 COIN) ---
-  Map<String, dynamic> watchRewardedAd() {
-    user.adTracker.checkAndResetDaily();
-
-    if (user.adTracker.dailyLimitRemaining <= 0) {
-      return {
-        'success': false,
-        'coinAwarded': false,
-        'message': 'Daily ad limit reached (30/30). Come back tomorrow!'
-      };
-    }
-
-    user.adTracker.adsWatchedToday += 1;
-    user.adTracker.dailyLimitRemaining -= 1;
-    user.adTracker.adsWatchedSinceLastCoin += 1;
-    user.adTracker.lastAdTimestamp = DateTime.now();
-    globalTotalAdsWatched += 1;
-
-    // Asynchronously update global ad stats in Firestore
-    FirestoreRestService.setDocument(
-      'skillwinner_stats',
-      'ad_stats',
-      {
-        'totalAdsWatched': globalTotalAdsWatched,
-        'lastUpdated': DateTime.now().toIso8601String(),
-      },
-    );
-    _syncUser();
-
-    user.adTracker.adsWatchedSinceLastCoin = 0;
-    final balBefore = user.wallet.adCoins.toDouble();
-    user.wallet.adCoins += 1;
-    user.stats.totalCoinsEarned += 1;
-    dailyTaskData.checkAndResetForNewDay();
-    dailyTaskData.adsWatchedToday += 1;
-    _saveLocalDailyTasksCache();
-    const coinAwarded = true;
-    const message = '🎉 +1 🟡 Ad Coin Earned!';
-
-    final newTxn = TransactionModel(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.adReward,
-      walletAffected: WalletType.adCoins,
-      amount: 1,
-      currency: 'AD_COINS',
-      balanceBefore: balBefore,
-      balanceAfter: user.wallet.adCoins.toDouble(),
-      status: 'SUCCESS',
-      description: 'Earned 1 Ad Coin by watching Rewarded Ad',
-      createdAt: DateTime.now(),
-    );
-
-    transactions.insert(0, newTxn);
-    allGlobalTransactions.insert(0, newTxn);
-
-    _syncUser();
-    _syncTransaction(newTxn);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'coinAwarded': coinAwarded,
-      'message': message,
-    };
-  }
-
-  // --- DEPOSIT CASH & AUTO-CREDIT WALLET (REAL CASH TO DEPOSIT, 10% BONUS TO BONUS CASH) ---
-  void depositCash(double amount, String paymentId, {String description = ''}) {
-    final extraBonus = (amount * 0.10);
-    final depBefore = user.wallet.depositCash;
-    final bonusBefore = user.wallet.bonusCash;
-
-    // Real deposited money goes strictly to Deposit Cash (Match Entry Only)
-    user.wallet.depositCash += amount;
-    // 10% Extra Cashback goes strictly to Bonus Cash (Match Entry Only)
-    user.wallet.bonusCash += extraBonus;
-
-    // 1. Record Deposit Transaction
-    final depositTxn = TransactionModel(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.deposit,
-      walletAffected: WalletType.depositCash,
-      amount: amount,
-      currency: 'INR',
-      balanceBefore: depBefore,
-      balanceAfter: user.wallet.depositCash,
-      status: 'SUCCESS',
-      description: description.isNotEmpty
-          ? description
-          : 'Deposit: Added ₹${amount.toInt()} Real Cash ($paymentId)',
-      createdAt: DateTime.now(),
-    );
-    transactions.insert(0, depositTxn);
-    _syncTransaction(depositTxn);
-
-    // 2. Record 10% Extra Bonus Cashback Transaction
-    if (extraBonus > 0) {
-      final bonusTxn = TransactionModel(
-        id: 'txn_bonus_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.bonusCashback,
-        walletAffected: WalletType.bonusCash,
-        amount: extraBonus,
-        currency: 'INR',
-        balanceBefore: bonusBefore,
-        balanceAfter: user.wallet.bonusCash,
-        status: 'SUCCESS',
-        description: '🎁 10% Extra Deposit Cashback (+₹${extraBonus.toStringAsFixed(1)} Bonus Cash)',
-        createdAt: DateTime.now(),
-      );
-      transactions.insert(0, bonusTxn);
-      _syncTransaction(bonusTxn);
-    }
-
-    _syncUser();
-    notifyListeners();
-  }
-
-  // --- WITHDRAWAL SYSTEM (WINNING CASH TO UPI CASH) ---
-  Map<String, dynamic> requestWithdrawal(double coinsToWithdraw, String upiId) {
-    if (coinsToWithdraw < minWithdrawalCoins) {
-      return {
-        'success': false,
-        'message': 'Minimum withdrawal limit ₹$minWithdrawalCoins Real Cash hai.'
-      };
-    }
-    if (user.wallet.winningCash < coinsToWithdraw) {
-      return {
-        'success': false,
-        'message': 'Insufficient Winning Cash! Aapke paas ₹${user.wallet.winningCash.toInt()} hain.'
-      };
-    }
-    if (!upiId.contains('@')) {
-      return {
-        'success': false,
-        'message': 'Please enter a valid UPI ID (e.g. 9876543210@ybl or user@oksbi).'
-      };
-    }
-
-    final double inrAmount = coinsToWithdraw * coinToRupeeRate;
-    final balBefore = user.wallet.winningCash;
-    user.wallet.winningCash -= coinsToWithdraw;
-
-    final reqId = 'wreq_${DateTime.now().millisecondsSinceEpoch}';
-    final newRequest = WithdrawalModel(
-      id: reqId,
-      userId: user.uid,
-      userName: '${user.displayName} (${user.inGameName})',
-      userPhone: user.phoneNumber,
-      amount: inrAmount,
-      coinAmount: coinsToWithdraw,
-      upiId: upiId,
-      status: WithdrawalStatus.pending,
-      requestedAt: DateTime.now(),
-      adminNotes: 'Redeemed ${coinsToWithdraw.toInt()} Winning Coins @ ₹$coinToRupeeRate/coin',
-    );
-
-    withdrawals.insert(0, newRequest);
-
-    final withTxn = TransactionModel(
-      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.withdrawalRequest,
-      walletAffected: WalletType.winningCash,
-      amount: -coinsToWithdraw,
-      currency: 'WINNING_COINS',
-      balanceBefore: balBefore,
-      balanceAfter: user.wallet.winningCash,
-      status: 'PENDING',
-      description: 'UPI Withdrawal: ₹${inrAmount.toStringAsFixed(1)} (${coinsToWithdraw.toInt()} Coins) to $upiId',
-      createdAt: DateTime.now(),
-    );
-    transactions.insert(0, withTxn);
-
-    _syncUser();
-    _syncWithdrawal(newRequest);
-    _syncTransaction(withTxn);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Withdrawal request for ₹${inrAmount.toStringAsFixed(1)} (${coinsToWithdraw.toInt()} Coins) submitted successfully! Payout will be sent to $upiId within 2-4 hours.',
-    };
-  }
-
-  // --- ADMIN: UPDATE WINNING COIN CONVERSION RATE ---
-  Future<void> adminUpdateCoinRate(double rate, {int? minCoins}) async {
-    if (rate > 0) coinToRupeeRate = rate;
-    if (minCoins != null && minCoins > 0) minWithdrawalCoins = minCoins;
-    notifyListeners();
-
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/config"),
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/tournament/sync-user'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'coinToRupeeRate': coinToRupeeRate,
-          'minWithdrawalCoins': minWithdrawalCoins,
-          'isRealCashModeEnabled': isRealCashModeEnabled,
-          'telegramSupportUrl': telegramSupportUrl,
-          'brBannerUrl': brBannerUrl,
-          'csBannerUrl': csBannerUrl,
-          'lwBannerUrl': lwBannerUrl,
-        }),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  // --- ADMIN: PUBLISH ROOM ID & PASSWORD ---
-  void adminPublishRoomCredentials(String matchId, String roomId, String roomPass) {
-    final match = matches.firstWhere((m) => m.id == matchId);
-    match.credentials.roomId = roomId;
-    match.credentials.roomPassword = roomPass;
-    match.credentials.isRevealed = true;
-    match.roomPublishedByAdminName = user.displayName.isNotEmpty ? user.displayName : 'Admin';
-    match.roomPublishedByAdminUid = user.uid;
-    match.roomPublishedAt = DateTime.now();
-    match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
-
-    if (match.status == MatchStatus.upcoming || match.status == MatchStatus.roomFilling) {
-      match.status = MatchStatus.ongoing;
-    }
-
-    // AUTOMATIC 25% HOST PROFIT COMMISSION:
-    // When room ID & Password are published for a paid tournament,
-    // platform profit (Collection - Prize Pool) 25% is immediately credited to host's wallet!
-    if (match.matchType == MatchType.paid && !match.hostCommissionPaid) {
-      final int count = match.participants.isNotEmpty ? match.participants.length : match.maxSlots;
-      final double totalCollection = match.entryFee * count;
-      final double prizePoolTotal = match.prizePool.totalPool;
-      double platformProfit = totalCollection - prizePoolTotal;
-      if (platformProfit <= 0) {
-        platformProfit = totalCollection * 0.25; // fallback 25% platform margin
-      }
-      final double commissionAmount = (platformProfit * 0.25).clamp(1.0, 5000.0);
-      _creditHostCommission(match: match, commissionAmount: commissionAmount);
-    }
-
-    _syncMatch(match);
-    _notificationService.sendMatchAlert(
-      matchId: matchId,
-      title: '🔑 ROOM ID & PASSWORD LIVE! (${match.title})',
-      body: 'Room ID: $roomId | Password: $roomPass. Join custom room immediately! Hosted by ${match.roomPublishedByAdminName}.',
-    );
-    notifyListeners();
-  }
-
-  // Helper to credit 25% host commission to the admin who published room credentials
-  Future<void> _creditHostCommission({
-    required MatchModel match,
-    required double commissionAmount,
-  }) async {
-    if (commissionAmount <= 0) return;
-    final hostUid = (match.roomPublishedByAdminUid != null && match.roomPublishedByAdminUid!.isNotEmpty)
-        ? match.roomPublishedByAdminUid!
-        : user.uid;
-    final hostName = (match.roomPublishedByAdminName != null && match.roomPublishedByAdminName!.isNotEmpty)
-        ? match.roomPublishedByAdminName!
-        : (user.displayName.isNotEmpty ? user.displayName : 'Host Admin');
-
-    match.hostCommissionPaid = true;
-    match.hostCommissionAmount = commissionAmount;
-
-    if (hostUid == user.uid) {
-      final double balBefore = user.wallet.winningCash;
-      user.wallet.winningCash += commissionAmount;
-      user.stats.totalWinningsCash += commissionAmount;
-
-      final hostTxn = TransactionModel(
-        id: 'txn_host_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.hostCommission,
-        walletAffected: WalletType.winningCash,
-        amount: commissionAmount,
-        currency: 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: user.wallet.winningCash,
-        status: 'SUCCESS',
-        description: '💰 25% Host Profit Commission for Match #${match.id} ("${match.title}")',
-        createdAt: DateTime.now(),
-      );
-      transactions.insert(0, hostTxn);
-      allGlobalTransactions.insert(0, hostTxn);
-      _syncTransaction(hostTxn);
-      _syncUser();
-    } else {
-      try {
-        UserModel? hostUser;
-        try {
-          final res = await http.get(Uri.parse("$vpsApiUrl/users/$hostUid")).timeout(const Duration(seconds: 4));
-          if (res.statusCode == 200) {
-            final data = jsonDecode(res.body);
-            final uJson = data['user'] ?? data;
-            if (uJson is Map<String, dynamic>) hostUser = UserModel.fromJson(uJson);
-          }
-        } catch (_) {}
-
-        if (hostUser == null) {
-          final hostDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, hostUid);
-          if (hostDoc != null && hostDoc.isNotEmpty) {
-            hostUser = UserModel.fromJson(hostDoc);
-          }
-        }
-
-        if (hostUser != null) {
-          final double balBefore = hostUser.wallet.winningCash;
-          hostUser.wallet.winningCash += commissionAmount;
-          hostUser.stats.totalWinningsCash += commissionAmount;
-
-          try {
-            await http.post(
-              Uri.parse("$vpsApiUrl/users"),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonEncode(hostUser.toJson()),
-            ).timeout(const Duration(seconds: 4));
-          } catch (_) {}
-
-          try {
-            await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, hostUid, hostUser.toJson());
-          } catch (_) {}
-
-          final hostTxn = TransactionModel(
-            id: 'txn_host_${DateTime.now().millisecondsSinceEpoch}_$hostUid',
-            userId: hostUid,
-            userName: hostUser.displayName.isNotEmpty ? hostUser.displayName : hostName,
-            type: TransactionType.hostCommission,
-            walletAffected: WalletType.winningCash,
-            amount: commissionAmount,
-            currency: 'INR',
-            balanceBefore: balBefore,
-            balanceAfter: hostUser.wallet.winningCash,
-            status: 'SUCCESS',
-            description: '💰 25% Host Profit Commission for Match #${match.id} ("${match.title}")',
-            createdAt: DateTime.now(),
-          );
-          allGlobalTransactions.insert(0, hostTxn);
-          _syncTransaction(hostTxn);
-          try {
-            await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, hostTxn.id, hostTxn.toJson());
-          } catch (_) {}
-        }
-      } catch (e) {
-        debugPrint('[AppState] Failed to credit host commission to $hostUid: $e');
-      }
-    }
-  }
-
-  // --- ADMIN: PUSH NOTIFICATION BROADCAST & TARGETED DISPATCH ---
-  Future<bool> adminSendBroadcastNotification({
-    required String title,
-    required String body,
-    String? imageUrl,
-  }) async {
-    return await _notificationService.sendBroadcastAnnouncement(
-      title: title,
-      body: body,
-      imageUrl: imageUrl,
-    );
-  }
-
-  Future<bool> adminSendMatchNotification({
-    required String matchId,
-    required String title,
-    required String body,
-  }) async {
-    return await _notificationService.sendMatchAlert(
-      matchId: matchId,
-      title: title,
-      body: body,
-    );
-  }
-
-  Future<bool> adminSendPersonalNotification({
-    required String userId,
-    required String title,
-    required String body,
-    String? imageUrl,
-  }) async {
-    return await _notificationService.sendPersonalNotification(
-      userId: userId,
-      title: title,
-      body: body,
-      imageUrl: imageUrl,
-    );
-  }
-
-  // Helper to credit prize to other players' VPS & Firestore user wallets and create transactions
-  Future<void> _creditWinningToParticipant({
-    required String uid,
-    required String inGameName,
-    required double amount,
-    required bool isPaid,
-    required String matchTitle,
-    required int? rank,
-    required int kills,
-  }) async {
-    if (uid.isEmpty || uid == user.uid) return;
-    try {
-      UserModel? targetUser;
-
-      // 1. Fetch user from VPS backend first (primary database)
-      try {
-        final vpsRes = await http.get(Uri.parse("$vpsApiUrl/users/$uid")).timeout(const Duration(seconds: 5));
-        if (vpsRes.statusCode == 200) {
-          final data = jsonDecode(vpsRes.body);
-          final userJson = data['user'] ?? data;
-          if (userJson is Map<String, dynamic>) {
-            targetUser = UserModel.fromJson(userJson);
-          }
-        }
-      } catch (e) {
-        debugPrint('[AppState] VPS user fetch error for $uid: $e');
-      }
-
-      // 2. Fallback to Firestore if not found on VPS
-      if (targetUser == null) {
-        try {
-          final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uid);
-          if (userDoc != null && userDoc.isNotEmpty) {
-            targetUser = UserModel.fromJson(userDoc);
-          }
-        } catch (e) {
-          debugPrint('[AppState] Firestore user fetch error for $uid: $e');
-        }
-      }
-
-      if (targetUser != null) {
-        final double balBefore = targetUser.wallet.winningCash;
-        targetUser.wallet.winningCash += amount;
-        targetUser.stats.totalWinningsCash += amount;
-        targetUser.stats.totalKills += kills;
-        targetUser.stats.matchesPlayed += 1;
-        if (rank == 1) targetUser.stats.matchesWon += 1;
-
-        // 3. Save to VPS Cloud Database immediately
-        try {
-          await http.post(
-            Uri.parse("$vpsApiUrl/users"),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode(targetUser.toJson()),
-          ).timeout(const Duration(seconds: 5));
-        } catch (e) {
-          debugPrint('[AppState] VPS user update error for $uid: $e');
-        }
-
-        // 4. Mirror to Firestore as fallback
-        try {
-          await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, uid, targetUser.toJson());
-        } catch (_) {}
-
-        final winTxn = TransactionModel(
-          id: 'txn_${DateTime.now().millisecondsSinceEpoch}_$uid',
-          userId: uid,
-          userName: targetUser.displayName.isNotEmpty ? targetUser.displayName : inGameName,
-          type: TransactionType.matchWinningCash,
-          walletAffected: WalletType.winningCash,
-          amount: amount,
-          currency: 'INR',
-          balanceBefore: balBefore,
-          balanceAfter: targetUser.wallet.winningCash,
-          status: 'SUCCESS',
-          description: '🏆 Rank #${rank ?? 1} (+₹${amount.toInt()} Real Cash) in "$matchTitle"',
-          createdAt: DateTime.now(),
-        );
-        allGlobalTransactions.insert(0, winTxn);
-        _syncTransaction(winTxn);
-        try {
-          await FirestoreRestService.setDocument(FirebaseConfig.transactionsCollection, winTxn.id, winTxn.toJson());
-        } catch (_) {}
-      }
-    } catch (e) {
-      debugPrint('[AppState] Failed to credit winning to participant $uid: $e');
-    }
-  }
-
-  // --- ADMIN: CLASH SQUAD / LONE WOLF 1-CLICK TEAM WINNER DECLARATION ---
-  void adminDeclareCSTeamWinner({
-    required String matchId,
-    required String winningTeam, // 'Team A' or 'Team B'
-  }) {
-    final match = matches.firstWhere((m) => m.id == matchId);
-    match.status = MatchStatus.completed;
-    match.completedAt = DateTime.now();
-    if (match.hostName == null || match.hostName!.isEmpty) {
-      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
-    }
-    final bool isPaid = match.matchType == MatchType.paid;
-
-    // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
-    final double actualCollection = isPaid
-        ? (match.participants.isNotEmpty
-            ? match.participants.fold(0.0, (s, p) => s + p.amountPaid)
-            : match.totalCollection)
-        : 0.0;
-    match.financialBreakdown = FinancialBreakdown.calculate(totalCollection: actualCollection);
-
-    final winningParticipants = (winningTeam == 'Team A') ? match.teamAParticipants : match.teamBParticipants;
-    final losingParticipants = (winningTeam == 'Team A') ? match.teamBParticipants : match.teamAParticipants;
-
-    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
-
-    // Distributable Prize Pool (75% for paid cash, totalPool for free / reward coins / custom pool)
-    final double totalPrizePool = (isPaid && isCashPrize) ? match.distributablePrizePool : match.prizePool.totalPool;
-    final int winningCount = winningParticipants.isNotEmpty ? winningParticipants.length : (match.maxSlots / 2).ceil();
-    final double prizePerPlayer = totalPrizePool / (winningCount > 0 ? winningCount : 1);
-
-    // Update winners
-    for (var p in winningParticipants) {
-      p.isWinner = true;
-      p.rank = 1;
-      p.prizeAwarded = prizePerPlayer;
-
-      if (p.uid == user.uid || p.inGameName == user.inGameName) {
-        final balBefore = user.wallet.winningCash;
-        user.wallet.winningCash += prizePerPlayer;
-        user.stats.totalWinningsCash += prizePerPlayer;
-        user.stats.matchesWon += 1;
-        user.stats.matchesPlayed += 1;
-
-        final winTxn = TransactionModel(
-          id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.matchWinningCash,
-          walletAffected: WalletType.winningCash,
-          amount: prizePerPlayer,
-          currency: 'INR',
-          balanceBefore: balBefore,
-          balanceAfter: user.wallet.winningCash,
-          status: 'SUCCESS',
-          description: '🏆 $winningTeam Winner (+₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
-          createdAt: DateTime.now(),
-        );
-        transactions.insert(0, winTxn);
-        _syncTransaction(winTxn);
-      } else if (p.uid.isNotEmpty) {
-        _creditWinningToParticipant(
-          uid: p.uid,
-          inGameName: p.inGameName,
-          amount: prizePerPlayer,
-          isPaid: true,
-          matchTitle: match.title,
-          rank: 1,
-          kills: 0,
-        );
-      }
-    }
-
-    // Update losers
-    for (var p in losingParticipants) {
-      p.isWinner = false;
-      p.rank = 2;
-      p.prizeAwarded = 0;
-    }
-
-    // 💰 Credit 25% Host Profit Commission
-    if (isPaid && isCashPrize && match.financialBreakdown != null) {
-      final hostShare = match.financialBreakdown!.shares.host25;
-      _creditHostCommission(match: match, commissionAmount: hostShare);
-    }
-
-    _syncUser();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-  // --- ADMIN: CUSTOM MULTI-SELECT WINNER DECLARATION (FOR RANDOM CS/LW PLAYERS) ---
-  void adminDeclareCustomCSWinners({
-    required String matchId,
-    required List<String> winningUids,
-  }) {
-    final match = matches.firstWhere((m) => m.id == matchId);
-    match.status = MatchStatus.completed;
-    match.completedAt = DateTime.now();
-    if (match.hostName == null || match.hostName!.isEmpty) {
-      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
-    }
-    final bool isPaid = match.matchType == MatchType.paid;
-
-    // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
-    final double actualCollection = isPaid
-        ? (match.participants.isNotEmpty
-            ? match.participants.fold(0.0, (s, p) => s + p.amountPaid)
-            : match.totalCollection)
-        : 0.0;
-    match.financialBreakdown = FinancialBreakdown.calculate(totalCollection: actualCollection);
-
-    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
-
-    // Distributable Prize Pool
-    final double totalPrizePool = (isPaid && isCashPrize) ? match.distributablePrizePool : match.prizePool.totalPool;
-    final int winningCount = winningUids.isNotEmpty ? winningUids.length : 1;
-    final double prizePerPlayer = totalPrizePool / winningCount;
-
-    // Update participants
-    for (var p in match.participants) {
-      final isWinner = winningUids.contains(p.uid);
-      if (isWinner) {
-        p.isWinner = true;
-        p.rank = 1;
-        p.prizeAwarded = prizePerPlayer;
-
-        if (p.uid == user.uid || p.inGameName == user.inGameName) {
-          // Current user is winner
-          dailyTaskData.checkAndResetForNewDay();
-          dailyTaskData.booyahsWonToday += 1;
-          _saveLocalDailyTasksCache();
-
-          final balBefore = user.wallet.winningCash;
-          user.wallet.winningCash += prizePerPlayer;
-          user.stats.totalWinningsCash += prizePerPlayer;
-          user.stats.matchesWon += 1;
-          user.stats.matchesPlayed += 1;
-
-          final winTxn = TransactionModel(
-            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-            userId: user.uid,
-            userName: user.displayName,
-            type: TransactionType.matchWinningCash,
-            walletAffected: WalletType.winningCash,
-            amount: prizePerPlayer,
-            currency: 'INR',
-            balanceBefore: balBefore,
-            balanceAfter: user.wallet.winningCash,
-            status: 'SUCCESS',
-            description: 'Clash Squad Victory (Selected Winner: ₹${prizePerPlayer.toInt()} Real Cash) in "${match.title}"',
-            createdAt: DateTime.now(),
-          );
-          transactions.insert(0, winTxn);
-          _syncTransaction(winTxn);
-        } else if (p.uid.isNotEmpty) {
-          _creditWinningToParticipant(
-            uid: p.uid,
-            inGameName: p.inGameName,
-            amount: prizePerPlayer,
-            isPaid: true,
-            matchTitle: match.title,
-            rank: 1,
-            kills: 0,
-          );
-        }
-      } else {
-        p.isWinner = false;
-        p.rank = 2;
-        p.prizeAwarded = 0;
-      }
-    }
-
-    // 💰 Credit 25% Host Profit Commission
-    if (isPaid && isCashPrize && match.financialBreakdown != null) {
-      final hostShare = match.financialBreakdown!.shares.host25;
-      _creditHostCommission(match: match, commissionAmount: hostShare);
-    }
-
-    _syncUser();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-  // --- ADMIN: RESCHEDULE MATCH DATE & TIME ---
-  void adminRescheduleMatch(String matchId, DateTime newMatchTime) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return;
-
-    final match = matches[matchIndex];
-    match.matchTime = newMatchTime;
-    if (match.status != MatchStatus.completed && match.status != MatchStatus.cancelled) {
-      if (newMatchTime.isAfter(DateTime.now())) {
-        match.status = MatchStatus.upcoming;
-      }
-    }
-    _saveLocalMatchesCache();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-  // --- ADMIN: KICK / REMOVE ABSENT PLAYER FROM MATCH SLOT ---
-  void adminKickParticipant({
-    required String matchId,
-    required String participantUid,
-    bool refund = true,
-  }) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return;
-
-    final match = matches[matchIndex];
-    final pIndex = match.participants.indexWhere((p) => p.uid == participantUid);
-    if (pIndex == -1) return;
-
-    final participant = match.participants[pIndex];
-
-    // Optional refund if player paid entry fee
-    if (refund && participant.amountPaid > 0) {
-      if (participant.uid == user.uid) {
-        if (participant.paidWith.contains('COIN')) {
-          user.wallet.adCoins += participant.amountPaid.toInt();
-        } else {
-          user.wallet.depositCash += participant.amountPaid;
-        }
-        _syncUser();
-      }
-    }
-
-    match.participants.removeAt(pIndex);
-    match.filledSlots = match.participants.length;
-
-    // If room filling countdown was active and slots are now below max, reset
-    if (match.status == MatchStatus.roomFilling && match.filledSlots < match.maxSlots) {
-      match.status = MatchStatus.upcoming;
-      match.roomFillingStartedAt = null;
-    }
-
-    _saveLocalMatchesCache();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-
-  // --- ADMIN: FULL MAP BR DYNAMIC RESULT DECLARATION ---
-  void adminDeclareBRWinners({
-    required String matchId,
-    required List<Map<String, dynamic>> results,
-  }) {
-    final match = matches.firstWhere((m) => m.id == matchId);
-    match.status = MatchStatus.completed;
-    match.completedAt = DateTime.now();
-    if (match.hostName == null || match.hostName!.isEmpty) {
-      match.hostName = user.displayName.isNotEmpty ? user.displayName : 'Admin Host';
-    }
-    final bool isPaid = match.matchType == MatchType.paid;
-    final bool isCashPrize = isPaid || match.prizePool.isCashPrize || match.entryFeeType == EntryFeeType.cash;
-
-    // Automated Profit Sharing Calculation Engine (Stored & Sealed immutably)
-    final double actualCollection = isPaid
-        ? (match.participants.isNotEmpty
-            ? match.participants.fold(0.0, (s, p) => s + p.amountPaid)
-            : match.totalCollection)
-        : 0.0;
-    match.financialBreakdown = FinancialBreakdown.calculate(totalCollection: actualCollection);
-
-    for (var res in results) {
-      final participant = res['participant'] as MatchParticipant;
-      final int rank = res['rank'] ?? 1;
-      final int kills = res['kills'] ?? 0;
-
-      // Automated Auto-Distribution Engine: (Rank_Percentage_Amount / Team_Type) + (Individual Kills * Per_Kill_Reward)
-      final double totalPrize = match.calculatePlayerPayout(rank: rank, kills: kills);
-
-      participant.rank = rank;
-      participant.kills = kills;
-      participant.prizeAwarded = totalPrize;
-      participant.isWinner = (rank == 1);
-
-      if (participant.uid == user.uid || participant.inGameName == user.inGameName) {
-        if (totalPrize > 0) {
-          final balBefore = user.wallet.winningCash;
-          user.wallet.winningCash += totalPrize;
-          user.stats.totalWinningsCash += totalPrize;
-          user.stats.totalKills += kills;
-          user.stats.matchesPlayed += 1;
-          if (rank == 1) user.stats.matchesWon += 1;
-
-          final winTxn = TransactionModel(
-            id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-            userId: user.uid,
-            userName: user.displayName,
-            type: TransactionType.matchWinningCash,
-            walletAffected: WalletType.winningCash,
-            amount: totalPrize,
-            currency: 'INR',
-            balanceBefore: balBefore,
-            balanceAfter: user.wallet.winningCash,
-            status: 'SUCCESS',
-            description: '🏆 Rank #$rank (+₹${totalPrize.toInt()} Real Cash) in "${match.title}"',
-            createdAt: DateTime.now(),
-          );
-          transactions.insert(0, winTxn);
-          _syncTransaction(winTxn);
-        }
-      } else if (participant.uid.isNotEmpty && totalPrize > 0) {
-        _creditWinningToParticipant(
-          uid: participant.uid,
-          inGameName: participant.inGameName,
-          amount: totalPrize,
-          isPaid: true,
-          matchTitle: match.title,
-          rank: rank,
-          kills: kills,
-        );
-      }
-    }
-
-    // 💰 Credit 25% Host Profit Commission
-    if (isPaid && isCashPrize && match.financialBreakdown != null) {
-      final hostShare = match.financialBreakdown!.shares.host25;
-      _creditHostCommission(match: match, commissionAmount: hostShare);
-    }
-
-    _syncUser();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-
-  // --- ADMIN: RESPAWN / RESTART MATCH (FOR NEXT ROUND WITH 0 SLOTS) ---
-  void adminRespawnMatch(String matchId) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return;
-
-    final match = matches[matchIndex];
-    match.status = MatchStatus.upcoming;
-    match.filledSlots = 0;
-    match.participants = [];
-    match.registeredTeams = [];
-    match.credentials = MatchCredentials(roomId: '', roomPassword: '');
-    match.roomFillingStartedAt = null;
-    match.completedAt = null;
-    match.hostCommissionPaid = false;
-    match.hostCommissionAmount = 0.0;
-    match.matchTime = DateTime.now().add(const Duration(minutes: 45));
-
-    _saveLocalMatchesCache();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-  // --- ADMIN: RESET SLOTS TO 0 (CLEAN PLAYERS) ---
-  void adminResetMatchSlots(String matchId) {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return;
-
-    final match = matches[matchIndex];
-    match.filledSlots = 0;
-    match.participants = [];
-    match.registeredTeams = [];
-    match.status = MatchStatus.upcoming;
-    match.roomFillingStartedAt = null;
-
-    _saveLocalMatchesCache();
-    _syncMatch(match);
-    notifyListeners();
-  }
-
-  // --- IMMUTABLE MATCH LEDGER & FINANCIAL AGGREGATE FILTERS ---
-  List<MatchModel> getCompletedMatchesByFilter(String dateFilter) {
-    final now = DateTime.now();
-    return matches.where((m) {
-      if (m.status != MatchStatus.completed) return false;
-      final completedTime = m.completedAt ?? m.matchTime;
-      if (dateFilter == 'Today') {
-        return completedTime.year == now.year &&
-            completedTime.month == now.month &&
-            completedTime.day == now.day;
-      } else if (dateFilter == 'Yesterday') {
-        final yesterday = now.subtract(const Duration(days: 1));
-        return completedTime.year == yesterday.year &&
-            completedTime.month == yesterday.month &&
-            completedTime.day == yesterday.day;
-      } else if (dateFilter == 'Last 7 Days') {
-        return completedTime.isAfter(now.subtract(const Duration(days: 7)));
-      } else if (dateFilter == 'This Month') {
-        return completedTime.year == now.year && completedTime.month == now.month;
-      }
-      // 'All Time'
-      return true;
-    }).toList()
-      ..sort((a, b) => (b.completedAt ?? b.matchTime).compareTo(a.completedAt ?? a.matchTime));
-  }
-
-  Map<String, double> getFinancialAggregates(String dateFilter) {
-    final completedList = getCompletedMatchesByFilter(dateFilter);
-    double totalNetProfit = 0;
-    double founderTotal = 0;
-    double hostTotal = 0;
-    double investorTotal = 0;
-    double totalCollection = 0;
-    double grossCommission = 0;
-    double gatewayFees = 0;
-
-    for (var m in completedList) {
-      final fb = m.financialBreakdown ?? FinancialBreakdown.calculate(totalCollection: m.totalCollection);
-      totalNetProfit += fb.netProfit;
-      founderTotal += fb.shares.founder60;
-      hostTotal += fb.shares.host25;
-      investorTotal += fb.shares.investor15;
-      totalCollection += fb.totalEntryCollection;
-      grossCommission += fb.platformCommissionGross;
-      gatewayFees += fb.gatewayFeeDeduction;
-    }
-
-    return {
-      'totalNetProfit': totalNetProfit,
-      'founderTotal': founderTotal,
-      'hostTotal': hostTotal,
-      'investorTotal': investorTotal,
-      'totalCollection': totalCollection,
-      'grossCommission': grossCommission,
-      'gatewayFees': gatewayFees,
-      'completedCount': completedList.length.toDouble(),
-    };
-  }
-
-  // Multi-Admin / Host Earnings Aggregator with Real Names & UIDs
-  List<Map<String, dynamic>> getAdminHostLeaderboard({List<UserModel>? registeredUsers}) {
-    final Map<String, Map<String, dynamic>> hostMap = {};
-
-    // 1. Ensure current active admin is present
-    if (user.role == 'admin') {
-      hostMap[user.uid] = {
-        'hostUid': user.uid,
-        'hostName': user.displayName.isNotEmpty ? user.displayName : 'Admin (${user.phoneNumber})',
-        'email': user.email,
-        'phoneNumber': user.phoneNumber,
-        'avatarUrl': user.avatarUrl,
-        'totalMatchesCreated': 0,
-        'totalMatchesPublished': 0,
-        'totalMatchesCompleted': 0,
-        'totalRevenueGenerated': 0.0,
-        'totalHostCommissionEarned': 0.0,
-      };
-    }
-
-    // 2. Include any other registered admins
-    if (registeredUsers != null) {
-      for (var u in registeredUsers) {
-        if (u.role == 'admin') {
-          if (!hostMap.containsKey(u.uid)) {
-            hostMap[u.uid] = {
-              'hostUid': u.uid,
-              'hostName': u.displayName.isNotEmpty ? u.displayName : 'Admin (${u.phoneNumber})',
-              'email': u.email,
-              'phoneNumber': u.phoneNumber,
-              'avatarUrl': u.avatarUrl,
-              'totalMatchesCreated': 0,
-              'totalMatchesPublished': 0,
-              'totalMatchesCompleted': 0,
-              'totalRevenueGenerated': 0.0,
-              'totalHostCommissionEarned': 0.0,
-            };
-          }
-        }
-      }
-    }
-
-    // 3. Aggregate all match publishing and completions
-    for (var m in matches) {
-      final hostUid = (m.roomPublishedByAdminUid != null && m.roomPublishedByAdminUid!.isNotEmpty)
-          ? m.roomPublishedByAdminUid!
-          : (m.createdByAdminUid ?? 'admin_default');
-      
-      String hostName = (m.roomPublishedByAdminName != null && m.roomPublishedByAdminName!.isNotEmpty)
-          ? m.roomPublishedByAdminName!
-          : (m.hostName ?? 'Official Admin');
-
-      // Resolve real name from registered users or active user
-      if (hostUid == user.uid && user.displayName.isNotEmpty) {
-        hostName = user.displayName;
-      } else if (registeredUsers != null) {
-        final matchUser = registeredUsers.where((u) => u.uid == hostUid).firstOrNull;
-        if (matchUser != null && matchUser.displayName.isNotEmpty) {
-          hostName = matchUser.displayName;
-        }
-      }
-
-      if (!hostMap.containsKey(hostUid)) {
-        hostMap[hostUid] = {
-          'hostUid': hostUid,
-          'hostName': hostName,
-          'email': hostUid == user.uid ? user.email : '',
-          'phoneNumber': hostUid == user.uid ? user.phoneNumber : '',
-          'avatarUrl': hostUid == user.uid ? user.avatarUrl : null,
-          'totalMatchesCreated': 0,
-          'totalMatchesPublished': 0,
-          'totalMatchesCompleted': 0,
-          'totalRevenueGenerated': 0.0,
-          'totalHostCommissionEarned': 0.0,
-        };
-      }
-
-      hostMap[hostUid]!['totalMatchesCreated'] = (hostMap[hostUid]!['totalMatchesCreated'] as int) + 1;
-
-      if (m.credentials.roomId.isNotEmpty) {
-        hostMap[hostUid]!['totalMatchesPublished'] = (hostMap[hostUid]!['totalMatchesPublished'] as int) + 1;
-      }
-
-      if (m.status == MatchStatus.completed) {
-        hostMap[hostUid]!['totalMatchesCompleted'] = (hostMap[hostUid]!['totalMatchesCompleted'] as int) + 1;
-        final fb = m.financialBreakdown ?? FinancialBreakdown.calculate(totalCollection: m.totalCollection);
-        hostMap[hostUid]!['totalRevenueGenerated'] = (hostMap[hostUid]!['totalRevenueGenerated'] as double) + fb.totalEntryCollection;
-        hostMap[hostUid]!['totalHostCommissionEarned'] = (hostMap[hostUid]!['totalHostCommissionEarned'] as double) + fb.shares.host25;
-      }
-    }
-
-    final list = hostMap.values.toList();
-    list.sort((a, b) => (b['totalHostCommissionEarned'] as double).compareTo(a['totalHostCommissionEarned'] as double));
-    return list;
-  }
-
-  // Date-wise ledger breakdown
-  List<Map<String, dynamic>> getDateWiseFinancialLedger(String dateFilter) {
-    final completed = getCompletedMatchesByFilter(dateFilter);
-    final Map<String, Map<String, dynamic>> dayMap = {};
-
-    for (var m in completed) {
-      final time = m.completedAt ?? m.matchTime;
-      final dayKey = '${time.year}-${time.month.toString().padLeft(2, '0')}-${time.day.toString().padLeft(2, '0')}';
-
-      final fb = m.financialBreakdown ?? FinancialBreakdown.calculate(totalCollection: m.totalCollection);
-
-      if (!dayMap.containsKey(dayKey)) {
-        dayMap[dayKey] = {
-          'date': dayKey,
-          'matchCount': 0,
-          'totalCollection': 0.0,
-          'grossCommission': 0.0,
-          'gatewayFees': 0.0,
-          'netProfit': 0.0,
-          'founder60': 0.0,
-          'host25': 0.0,
-          'investor15': 0.0,
-          'matches': <MatchModel>[],
-        };
-      }
-
-      dayMap[dayKey]!['matchCount'] = (dayMap[dayKey]!['matchCount'] as int) + 1;
-      dayMap[dayKey]!['totalCollection'] = (dayMap[dayKey]!['totalCollection'] as double) + fb.totalEntryCollection;
-      dayMap[dayKey]!['grossCommission'] = (dayMap[dayKey]!['grossCommission'] as double) + fb.platformCommissionGross;
-      dayMap[dayKey]!['gatewayFees'] = (dayMap[dayKey]!['gatewayFees'] as double) + fb.gatewayFeeDeduction;
-      dayMap[dayKey]!['netProfit'] = (dayMap[dayKey]!['netProfit'] as double) + fb.netProfit;
-      dayMap[dayKey]!['founder60'] = (dayMap[dayKey]!['founder60'] as double) + fb.shares.founder60;
-      dayMap[dayKey]!['host25'] = (dayMap[dayKey]!['host25'] as double) + fb.shares.host25;
-      dayMap[dayKey]!['investor15'] = (dayMap[dayKey]!['investor15'] as double) + fb.shares.investor15;
-      (dayMap[dayKey]!['matches'] as List<MatchModel>).add(m);
-    }
-
-    final list = dayMap.values.toList();
-    list.sort((a, b) => (b['date'] as String).compareTo(a['date'] as String));
-    return list;
-  }
-
-  // ==========================================
-  // 🏆 WEEKLY LEADERBOARD & ₹100 PRIZE POOL SYSTEM
-  // ==========================================
-
-  /// Get time remaining until the weekly season reset (Sunday 23:59:59 IST)
-  Duration getWeeklySeasonTimeRemaining() {
-    final now = DateTime.now();
-    // Monday = 1, Sunday = 7
-    int daysUntilSunday = 7 - now.weekday;
-    if (daysUntilSunday < 0) daysUntilSunday = 0;
-    
-    final endOfWeek = DateTime(now.year, now.month, now.day + daysUntilSunday, 23, 59, 59);
-    final diff = endOfWeek.difference(now);
-    return diff.isNegative ? Duration.zero : diff;
-  }
-
-  /// Get season label (e.g. Week 41 - 05 Oct to 11 Oct)
-  String getWeeklySeasonLabel() {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
-    final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${startOfWeek.day} ${months[startOfWeek.month - 1]} - ${endOfWeek.day} ${months[endOfWeek.month - 1]}';
-  }
-
-  /// Compute weekly leaderboard with dynamic top 3 ₹100 prize pool (₹50, ₹30, ₹20)
-  List<LeaderboardEntry> getWeeklyLeaderboard({String filter = 'WEEKLY', List<UserModel>? registeredUsers}) {
-    final now = DateTime.now();
-    final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1), 0, 0, 0);
-
-    // Map of UID -> aggregated stats
-    final Map<String, Map<String, dynamic>> playerStats = {};
-
-    // 1. Process completed matches
-    for (var m in matches) {
-      if (m.status != MatchStatus.completed) continue;
-
-      final matchDate = m.completedAt ?? m.matchTime;
-      final isThisWeek = matchDate.isAfter(startOfWeek) || filter == 'ALL_TIME';
-      if (!isThisWeek && filter == 'WEEKLY') continue;
-
-      for (var p in m.participants) {
-        final uid = p.uid;
-        if (uid.isEmpty) continue;
-
-        if (!playerStats.containsKey(uid)) {
-          playerStats[uid] = {
-            'uid': uid,
-            'displayName': p.inGameName.isNotEmpty ? p.inGameName : 'Player',
-            'inGameName': p.inGameName,
-            'inGameUid': p.inGameUid,
-            'inGameLevel': 45,
-            'avatarUrl': null,
-            'kills': 0,
-            'matchesWon': 0,
-            'matchesPlayed': 0,
-            'winningsCash': 0.0,
-            'rewardCoins': 0,
-            'totalReferrals': 0,
-          };
-        }
-
-        playerStats[uid]!['kills'] = (playerStats[uid]!['kills'] as int) + p.kills;
-        playerStats[uid]!['matchesPlayed'] = (playerStats[uid]!['matchesPlayed'] as int) + 1;
-        if (p.isWinner || p.rank == 1) {
-          playerStats[uid]!['matchesWon'] = (playerStats[uid]!['matchesWon'] as int) + 1;
-        }
-        playerStats[uid]!['winningsCash'] = (playerStats[uid]!['winningsCash'] as double) + (p.prizeAwarded ?? 0.0);
-      }
-    }
-
-    // 2. Include registered users if supplied
-    if (registeredUsers != null) {
-      for (var u in registeredUsers) {
-        if (!playerStats.containsKey(u.uid) && u.uid != 'user_guest') {
-          playerStats[u.uid] = {
-            'uid': u.uid,
-            'displayName': u.displayName,
-            'inGameName': u.inGameName ?? u.displayName,
-            'inGameUid': u.inGameUid ?? '897654321',
-            'inGameLevel': u.inGameLevel,
-            'avatarUrl': u.avatarUrl,
-            'kills': filter == 'WEEKLY' ? (u.stats.totalKills > 0 ? (u.stats.totalKills % 15) : 0) : u.stats.totalKills,
-            'matchesWon': filter == 'WEEKLY' ? (u.stats.matchesWon > 0 ? (u.stats.matchesWon % 5) : 0) : u.stats.matchesWon,
-            'matchesPlayed': filter == 'WEEKLY' ? (u.stats.matchesPlayed > 0 ? (u.stats.matchesPlayed % 8) : 0) : u.stats.matchesPlayed,
-            'winningsCash': filter == 'WEEKLY' ? (u.stats.totalWinningsCash > 0 ? (u.stats.totalWinningsCash % 200) : 0.0) : u.stats.totalWinningsCash,
-            'rewardCoins': u.wallet.rewardCoins,
-            'totalReferrals': u.totalReferrals,
-          };
-        }
-      }
-    }
-
-    // 3. Ensure current logged-in user is registered in the pool
-    if (user.uid.isNotEmpty && user.uid != 'user_guest') {
-      if (!playerStats.containsKey(user.uid)) {
-        playerStats[user.uid] = {
-          'uid': user.uid,
+          'deviceId': user.uid,
           'displayName': user.displayName,
-          'inGameName': user.inGameName ?? user.displayName,
-          'inGameUid': user.inGameUid ?? '897654321',
-          'inGameLevel': user.inGameLevel,
-          'avatarUrl': user.avatarUrl,
-          'kills': filter == 'WEEKLY' ? (user.stats.totalKills > 0 ? (user.stats.totalKills % 15) : 0) : user.stats.totalKills,
-          'matchesWon': filter == 'WEEKLY' ? (user.stats.matchesWon > 0 ? (user.stats.matchesWon % 5) : 0) : user.stats.matchesWon,
-          'matchesPlayed': filter == 'WEEKLY' ? (user.stats.matchesPlayed > 0 ? (user.stats.matchesPlayed % 8) : 0) : user.stats.matchesPlayed,
-          'winningsCash': filter == 'WEEKLY' ? (user.stats.totalWinningsCash > 0 ? (user.stats.totalWinningsCash % 200) : 0.0) : user.stats.totalWinningsCash,
-          'rewardCoins': user.wallet.rewardCoins,
-          'totalReferrals': user.totalReferrals,
-        };
-      } else {
-        // Enhance with user model details
-        playerStats[user.uid]!['displayName'] = user.displayName;
-        playerStats[user.uid]!['inGameName'] = user.inGameName ?? user.displayName;
-        playerStats[user.uid]!['inGameUid'] = user.inGameUid ?? playerStats[user.uid]!['inGameUid'];
-        playerStats[user.uid]!['inGameLevel'] = user.inGameLevel;
-        playerStats[user.uid]!['avatarUrl'] = user.avatarUrl;
-        playerStats[user.uid]!['totalReferrals'] = user.totalReferrals;
-      }
-    }
-
-    // 4. Calculate Leaderboard Points for REAL users only (Formula: (Kills * 10) + (Wins * 50) + (WinningsCash * 2) + (Referrals * 20))
-    final List<LeaderboardEntry> rawList = [];
-    playerStats.forEach((uid, data) {
-      final kills = (data['kills'] ?? 0) as int;
-      final wins = (data['matchesWon'] ?? 0) as int;
-      final played = (data['matchesPlayed'] ?? 0) as int;
-      final cash = ((data['winningsCash'] ?? 0) as num).toDouble();
-      final coins = (data['rewardCoins'] ?? 0) as int;
-      final referrals = (data['totalReferrals'] ?? 0) as int;
-      final totalPoints = (kills * 10) + (wins * 50) + (cash * 2).toInt() + (referrals * 20);
-
-      rawList.add(
-        LeaderboardEntry(
-          uid: uid,
-          displayName: (data['displayName'] ?? 'Player').toString(),
-          inGameName: data['inGameName']?.toString(),
-          inGameUid: data['inGameUid']?.toString(),
-          inGameLevel: (data['inGameLevel'] ?? 45) as int,
-          avatarUrl: data['avatarUrl']?.toString(),
-          rank: 0, // Assigned after sorting
-          kills: kills,
-          matchesWon: wins,
-          matchesPlayed: played,
-          winningsCash: cash,
-          rewardCoins: coins,
-          points: totalPoints,
-          prizeAmount: 0.0, // Assigned after ranking
-          isCurrentUser: (uid == user.uid),
-        ),
-      );
-    });
-
-    // 5. Sort descending by points (tie-breaker: kills, then wins)
-    rawList.sort((a, b) {
-      if (b.points != a.points) return b.points.compareTo(a.points);
-      if (b.kills != a.kills) return b.kills.compareTo(a.kills);
-      return b.matchesWon.compareTo(a.matchesWon);
-    });
-
-    // 6. Assign Ranks and Top 3 Prizes (Rank 1: 200 Coins, Rank 2: 150 Coins, Rank 3: 100 Coins)
-    final List<LeaderboardEntry> rankedList = [];
-    for (int i = 0; i < rawList.length; i++) {
-      final item = rawList[i];
-      final rank = i + 1;
-      double prize = 0.0;
-      if (rank == 1) {
-        prize = weeklyRank1Prize;
-      } else if (rank == 2) {
-        prize = weeklyRank2Prize;
-      } else if (rank == 3) {
-        prize = weeklyRank3Prize;
-      }
-
-      rankedList.add(
-        LeaderboardEntry(
-          uid: item.uid,
-          displayName: item.displayName,
-          inGameName: item.inGameName,
-          inGameUid: item.inGameUid,
-          inGameLevel: item.inGameLevel,
-          avatarUrl: item.avatarUrl,
-          rank: rank,
-          kills: item.kills,
-          matchesWon: item.matchesWon,
-          matchesPlayed: item.matchesPlayed,
-          winningsCash: item.winningsCash,
-          rewardCoins: item.rewardCoins,
-          points: item.points,
-          prizeAmount: prize,
-          isCurrentUser: item.isCurrentUser,
-        ),
-      );
-    }
-
-    return rankedList;
-  }
-
-  /// Apply referral code: credits 5 Referral Coins (0 Bonus Cash) to BOTH users (50% usable in Free Matches)
-  Future<Map<String, dynamic>> applyReferralCode(String rawCode) async {
-    final code = rawCode.trim().toUpperCase();
-    if (code.isEmpty) {
-      return {'success': false, 'message': 'Please enter a valid referral code'};
-    }
-
-    if (user.uid.isEmpty || user.uid == 'user_guest') {
-      return {'success': false, 'message': 'Please login to apply a referral code'};
-    }
-
-    if (user.referredBy != null && user.referredBy!.isNotEmpty) {
-      return {'success': false, 'message': 'You have already applied a referral code!'};
-    }
-
-    if (code == user.referralCode.toUpperCase()) {
-      return {'success': false, 'message': 'You cannot use your own referral code!'};
-    }
-
-    // --- STEP 1: Fast Atomic VPS Referral Application ---
-    try {
-      final res = await http.post(
-        Uri.parse("$vpsApiUrl/referrals/apply"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'referredUid': user.uid,
-          'referralCode': code,
+          'scoreToAdd': scoreToAdd,
+          'coinsToAdd': coinsToAdd,
+          'referralCode': referralCode.isNotEmpty ? referralCode : user.referredBy,
         }),
-      ).timeout(const Duration(seconds: 5));
-
+      );
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data['success'] == true) {
-          if (data['referredUser'] != null && data['referredUser'] is Map) {
-            user = UserModel.fromJson(Map<String, dynamic>.from(data['referredUser']));
+        if (data['success'] == true && data['user'] != null) {
+          final sUser = data['user'];
+          user.weeklyScore = (sUser['weeklyScore'] as num?)?.toInt() ?? user.weeklyScore;
+          final sCoins = (sUser['adCoins'] as num?)?.toInt();
+          if (sCoins != null && sCoins > user.adCoins) {
+            user.adCoins = sCoins;
           }
-          if (user.wallet.referralCoins < 5) {
-            user.wallet.referralCoins = 5;
+          if (sUser['referralCode'] != null) {
+            user.referralCode = sUser['referralCode'].toString();
           }
-          user.referredBy = code;
-          await AuthService.saveUser(user);
-          _syncUser();
-
-          // Add Welcome Referral Transaction
-          final userTxn = TransactionModel(
-            id: 'txn_ref_welcome_${DateTime.now().millisecondsSinceEpoch}',
-            userId: user.uid,
-            userName: user.displayName,
-            type: TransactionType.referralReward,
-            walletAffected: WalletType.referralCoins,
-            amount: 5.0,
-            currency: 'COINS',
-            balanceBefore: 0.0,
-            balanceAfter: user.wallet.referralCoins.toDouble(),
-            status: 'SUCCESS',
-            description: '🎁 Referral Welcome Bonus (Code: $code) - +5 Referral Coins (50% usable in Free Matches)',
-            createdAt: DateTime.now(),
-          );
-          transactions.removeWhere((t) => t.id == userTxn.id);
-          transactions.insert(0, userTxn);
-          allGlobalTransactions.insert(0, userTxn);
-          _syncTransaction(userTxn);
-
-          // Add In-App Notification
-          final userNotif = AppNotification(
-            id: 'notif_ref_user_${DateTime.now().millisecondsSinceEpoch}',
-            title: '🎁 +5 Referral Coins Credited!',
-            body: 'Welcome! You received 5 Referral Coins for applying referral code $code. (Max 50% usable in Free Matches + 50% Ad Coins).',
-            createdAt: DateTime.now(),
-            type: NotificationType.matchResult,
-            targetType: 'user',
-            targetId: user.uid,
-          );
-          notifications.removeWhere((n) => n.id == userNotif.id);
-          notifications.insert(0, userNotif);
-          allGlobalNotifications.insert(0, userNotif);
-
-          if (data['refRecord'] != null && data['refRecord'] is Map) {
-            final rec = ReferralRecord.fromJson(Map<String, dynamic>.from(data['refRecord']));
-            allGlobalReferralRecords.removeWhere((r) => r.id == rec.id);
-            allGlobalReferralRecords.insert(0, rec);
-            referralRecords.removeWhere((r) => r.id == rec.id);
-            if (rec.referrerUid == user.uid || rec.referrerCode == user.referralCode) {
-              referralRecords.insert(0, rec);
-            }
-            _saveLocalReferralsCache();
-          }
-
-          notifyListeners();
-          return {
-            'success': true,
-            'message': '🎁 Referral Code Applied! +5 Referral Coins credited to both wallets! (50% usable in Free Matches)'
-          };
-        } else {
-          return {
-            'success': false,
-            'message': data['message'] ?? 'Could not apply referral code.'
-          };
+          await saveUser();
         }
-      }
-    } catch (e) {
-      debugPrint('[AppState] VPS referral apply notice: $e');
-    }
-
-    UserModel? referrer;
-    // Check VPS /users endpoint for referrer
-    try {
-      final userRes = await http.get(Uri.parse("$vpsApiUrl/users")).timeout(const Duration(seconds: 4));
-      if (userRes.statusCode == 200) {
-        final uData = jsonDecode(userRes.body);
-        if (uData['users'] is List) {
-          for (var d in (uData['users'] as List)) {
-            final u = UserModel.fromJson(Map<String, dynamic>.from(d));
-            if (u.referralCode.toUpperCase() == code && u.uid != user.uid) {
-              referrer = u;
-              break;
-            }
-          }
+        if (data['config'] != null) {
+          _updateConfig(data['config'] as Map<String, dynamic>);
         }
-      }
-    } catch (_) {}
-
-    try {
-      final userDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.usersCollection);
-      for (var d in userDocs) {
-        final u = UserModel.fromJson(d);
-        if (u.referralCode.toUpperCase() == code && u.uid != user.uid) {
-          referrer = u;
-          break;
+        if (data['season'] != null) {
+          season = (data['season'] as num).toInt();
         }
-      }
-    } catch (_) {}
-
-    if (referrer == null) {
-      return {'success': false, 'message': 'Invalid referral code. Please verify and try again.'};
-    }
-
-    // Reward: 5 Referral Coins & 0 Bonus Cash to BOTH users
-    const rewardBonusCash = 0.0;
-    const rewardRefCoins = 5;
-
-    user.wallet.referralCoins += rewardRefCoins;
-    user.referredBy = code;
-    _syncUser();
-
-    // Create persistent ReferralRecord
-    final refRecord = ReferralRecord(
-      id: 'ref_${DateTime.now().millisecondsSinceEpoch}',
-      referrerUid: referrer.uid,
-      referrerName: referrer.displayName.isNotEmpty ? referrer.displayName : (referrer.inGameName ?? 'Inviter ($code)'),
-      referrerCode: code,
-      referredUid: user.uid,
-      referredName: user.displayName.isNotEmpty ? user.displayName : (user.inGameName ?? 'New Player'),
-      createdAt: DateTime.now(),
-      bonusCashAwarded: rewardBonusCash,
-      adCoinsAwarded: rewardRefCoins,
-    );
-    allGlobalReferralRecords.insert(0, refRecord);
-    referralRecords.insert(0, refRecord);
-    _syncReferralRecord(refRecord);
-
-    // Transaction for current user
-    final userTxn = TransactionModel(
-      id: 'txn_ref_welcome_${DateTime.now().millisecondsSinceEpoch}',
-      userId: user.uid,
-      userName: user.displayName,
-      type: TransactionType.referralReward,
-      walletAffected: WalletType.referralCoins,
-      amount: rewardRefCoins.toDouble(),
-      currency: 'COINS',
-      balanceBefore: (user.wallet.referralCoins - rewardRefCoins).toDouble(),
-      balanceAfter: user.wallet.referralCoins.toDouble(),
-      status: 'SUCCESS',
-      description: '🎁 Referral Welcome Bonus (Code: $code) - +5 Referral Coins (50% usable in Free Matches)',
-      createdAt: DateTime.now(),
-    );
-    transactions.insert(0, userTxn);
-    allGlobalTransactions.insert(0, userTxn);
-    _syncTransaction(userTxn);
-
-    // Notification for current user
-    final userNotif = AppNotification(
-      id: 'notif_ref_user_${DateTime.now().millisecondsSinceEpoch}',
-      title: '🎁 +5 Referral Coins Credited!',
-      body: 'Welcome! You received 5 Referral Coins for applying referral code $code. (Max 50% usable in Free Matches + 50% Ad Coins).',
-      createdAt: DateTime.now(),
-      type: NotificationType.matchResult,
-      targetType: 'user',
-      targetId: user.uid,
-    );
-    notifications.insert(0, userNotif);
-    allGlobalNotifications.insert(0, userNotif);
-
-    // Credit referrer
-    referrer.wallet.referralCoins += rewardRefCoins;
-    referrer.totalReferrals += 1;
-    referrer.totalReferralCoins += rewardRefCoins;
-
-    try {
-      await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, referrer.uid, referrer.toJson());
-      await http.post(
-        Uri.parse("$vpsApiUrl/users"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(referrer.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-
-    final refTxn = TransactionModel(
-      id: 'txn_ref_bonus_${referrer.uid}_${DateTime.now().millisecondsSinceEpoch}',
-      userId: referrer.uid,
-      userName: referrer.displayName,
-      type: TransactionType.referralReward,
-      walletAffected: WalletType.referralCoins,
-      amount: rewardRefCoins.toDouble(),
-      currency: 'COINS',
-      balanceBefore: (referrer.wallet.referralCoins - rewardRefCoins).toDouble(),
-      balanceAfter: referrer.wallet.referralCoins.toDouble(),
-      status: 'SUCCESS',
-      description: '👥 Referral Reward from ${user.displayName} - +5 Referral Coins (50% usable in Free Matches)',
-      createdAt: DateTime.now(),
-    );
-    allGlobalTransactions.insert(0, refTxn);
-    _syncTransaction(refTxn);
-
-    final refNotif = AppNotification(
-      id: 'notif_ref_referrer_${DateTime.now().millisecondsSinceEpoch}',
-      title: '👥 New Friend Joined via Your Referral!',
-      body: '${user.displayName} joined using your referral code. +5 Referral Coins credited to your wallet!',
-      createdAt: DateTime.now(),
-      type: NotificationType.matchResult,
-      targetType: 'user',
-      targetId: referrer.uid,
-    );
-    allGlobalNotifications.insert(0, refNotif);
-
-    notifyListeners();
-    return {
-      'success': true,
-      'message': 'Success! +5 Referral Coins credited to both wallets! (50% usable in Free Matches)',
-      'bonusCash': rewardBonusCash,
-      'adCoins': rewardRefCoins,
-    };
-  }
-
-  /// Admin 1-Click Distribute 450 🪙 Weekly Championship Coins (Rank 1: 200 Coins, Rank 2: 150 Coins, Rank 3: 100 Coins)
-  Future<Map<String, dynamic>> adminDistributeWeeklyLeaderboardPrizes() async {
-    final leaderboard = getWeeklyLeaderboard(filter: 'WEEKLY');
-    final top3 = leaderboard.take(3).toList();
-
-    if (top3.isEmpty) {
-      return {'success': false, 'message': 'No eligible players found on leaderboard'};
-    }
-
-    final seasonLabel = getWeeklySeasonLabel();
-    final List<LeaderboardWinnerPayout> winnerPayouts = [];
-    double totalDistributed = 0.0;
-
-    for (var winner in top3) {
-      final prize = winner.prizeAmount;
-      if (prize <= 0) continue;
-
-      totalDistributed += prize;
-      winnerPayouts.add(
-        LeaderboardWinnerPayout(
-          rank: winner.rank,
-          uid: winner.uid,
-          name: winner.displayName,
-          inGameName: winner.inGameName,
-          prizeAmount: prize,
-          points: winner.points,
-        ),
-      );
-
-      // If winner is current active user, credit immediately
-      if (winner.uid == user.uid) {
-        user.wallet.winningCash += prize;
-        user.stats.totalWinningsCash += prize;
-        _syncUser();
-      } else {
-        // Attempt remote credit via Firestore & VPS
-        try {
-          final doc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, winner.uid);
-          if (doc != null) {
-            final targetUser = UserModel.fromJson(doc);
-            targetUser.wallet.winningCash += prize;
-            targetUser.stats.totalWinningsCash += prize;
-            await FirestoreRestService.setDocument(FirebaseConfig.usersCollection, winner.uid, targetUser.toJson());
-          }
-        } catch (_) {}
-      }
-
-      // Create Winner Ledger Transaction
-      final txn = TransactionModel(
-        id: 'txn_weekly_prize_${winner.rank}_${DateTime.now().millisecondsSinceEpoch}',
-        userId: winner.uid,
-        userName: winner.displayName,
-        type: TransactionType.weeklyLeaderboardReward,
-        walletAffected: WalletType.winningCash,
-        amount: prize,
-        currency: 'COINS',
-        balanceBefore: (winner.uid == user.uid) ? (user.wallet.winningCash - prize) : 0,
-        balanceAfter: (winner.uid == user.uid) ? user.wallet.winningCash : prize,
-        status: 'SUCCESS',
-        description: '🏆 Weekly Leaderboard Rank #${winner.rank} Championship Prize (${prize.toInt()} 🪙 Coins)',
-        createdAt: DateTime.now(),
-        metadata: {
-          'rank': winner.rank,
-          'points': winner.points,
-          'season': seasonLabel,
-        },
-      );
-
-      if (winner.uid == user.uid) {
-        transactions.insert(0, txn);
-      }
-      allGlobalTransactions.insert(0, txn);
-      _syncTransaction(txn);
-
-      // Create Winner In-App Notification
-      final notif = AppNotification(
-        id: 'notif_weekly_win_${winner.rank}_${DateTime.now().millisecondsSinceEpoch}',
-        title: '🎉 ₹450 Weekly Leaderboard Reward Won!',
-        body: 'Congratulations ${winner.displayName}! You secured Rank #${winner.rank} with ${winner.points} pts in the Weekly Esports Championship! ₹${prize.toInt()} Real Cash has been credited directly to your Winning Wallet.',
-        createdAt: DateTime.now(),
-        type: NotificationType.matchResult,
-        targetType: 'user',
-        targetId: winner.uid,
-        isRead: false,
-      );
-      if (winner.uid == user.uid) {
-        notifications.insert(0, notif);
-      }
-      allGlobalNotifications.insert(0, notif);
-    }
-
-    // Save distribution record
-    final record = WeeklyDistributionRecord(
-      id: 'dist_weekly_${DateTime.now().millisecondsSinceEpoch}',
-      seasonLabel: seasonLabel,
-      distributedAt: DateTime.now(),
-      adminUid: user.uid,
-      adminName: user.displayName,
-      winners: winnerPayouts,
-      totalDistributed: totalDistributed,
-    );
-
-    weeklyDistributions.insert(0, record);
-    FirestoreRestService.setDocument('skillwinner_weekly_distributions', record.id, record.toJson());
-
-    // Sync distribution with VPS backend
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/leaderboard/distribute"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(record.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-
-    notifyListeners();
-    return {
-      'success': true,
-      'winners': winnerPayouts,
-      'totalDistributed': totalDistributed,
-      'season': seasonLabel,
-    };
-  }
-
-  Future<void> adminUpdateWeeklyPrizes({
-    required double rank1,
-    required double rank2,
-    required double rank3,
-  }) async {
-    weeklyRank1Prize = rank1;
-    weeklyRank2Prize = rank2;
-    weeklyRank3Prize = rank3;
-    notifyListeners();
-
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/config"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'weeklyRank1Prize': rank1,
-          'weeklyRank2Prize': rank2,
-          'weeklyRank3Prize': rank3,
-        }),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  // Legacy fallback
-  void adminDeclareMatchWinners({
-    required String matchId,
-    required List<Map<String, dynamic>> winnersData,
-  }) {
-    adminDeclareBRWinners(matchId: matchId, results: winnersData);
-  }
-
-  // --- ADMIN: WITHDRAWAL APPROVE & REJECT ---
-  void adminApproveWithdrawal(String reqId, String utrRef, String notes) {
-    final req = allGlobalWithdrawals.firstWhere(
-      (w) => w.id == reqId,
-      orElse: () => withdrawals.firstWhere((w) => w.id == reqId),
-    );
-    req.status = WithdrawalStatus.completed;
-    req.payoutTxnRef = utrRef.isEmpty ? 'UTR-${DateTime.now().millisecondsSinceEpoch}' : utrRef;
-    req.adminNotes = notes.isEmpty ? 'Paid via UPI Transfer' : notes;
-    req.processedAt = DateTime.now();
-    _syncWithdrawal(req);
-    notifyListeners();
-  }
-
-  void adminRejectWithdrawal(String reqId, String reason) {
-    final req = allGlobalWithdrawals.firstWhere(
-      (w) => w.id == reqId,
-      orElse: () => withdrawals.firstWhere((w) => w.id == reqId),
-    );
-    req.status = WithdrawalStatus.rejected;
-    req.adminNotes = reason.isEmpty ? 'Invalid UPI details. Amount refunded.' : reason;
-    req.processedAt = DateTime.now();
-
-    if (req.userId == user.uid) {
-      final balBefore = user.wallet.winningCash;
-      user.wallet.winningCash += req.amount;
-
-      final refTxn = TransactionModel(
-        id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
-        userId: user.uid,
-        userName: user.displayName,
-        type: TransactionType.withdrawalRefund,
-        walletAffected: WalletType.winningCash,
-        amount: req.amount,
-        currency: 'INR',
-        balanceBefore: balBefore,
-        balanceAfter: user.wallet.winningCash,
-        status: 'SUCCESS',
-        description: 'Refund for rejected withdrawal: $reason',
-        createdAt: DateTime.now(),
-      );
-      transactions.insert(0, refTxn);
-      allGlobalTransactions.insert(0, refTxn);
-      _syncTransaction(refTxn);
-      _syncUser();
-    }
-
-    _syncWithdrawal(req);
-    notifyListeners();
-  }
-
-  // --- ADMIN: DELIVER VOUCHER CODE VIA WHATSAPP ---
-  void adminDeliverVoucher(String claimId, String code) {
-    final claim = allGlobalVoucherClaims.firstWhere(
-      (c) => c.id == claimId,
-      orElse: () => voucherClaims.firstWhere((c) => c.id == claimId),
-    );
-    claim.status = VoucherClaimStatus.delivered;
-    claim.redeemCode = code.isEmpty ? 'GP-${DateTime.now().millisecondsSinceEpoch.toString().substring(4)}' : code;
-    claim.deliveredAt = DateTime.now();
-    _syncVoucherClaim(claim);
-    notifyListeners();
-  }
-
-  void adminCreateMatch(MatchModel newMatch) {
-    matches.insert(0, newMatch);
-    _saveLocalMatchesCache();
-    _syncMatch(newMatch);
-    notifyListeners();
-  }
-
-  /// Cancel match and automatically refund Ad Coins to ALL joined participants
-  Future<Map<String, dynamic>> adminCancelAndRefundMatch(String matchId) async {
-    final matchIndex = matches.indexWhere((m) => m.id == matchId);
-    if (matchIndex == -1) return {'success': false, 'message': 'Match not found'};
-    final match = matches[matchIndex];
-
-    int refundedPlayersCount = 0;
-    double totalRefundAmount = 0;
-    final isCashMatch = match.entryFeeType == EntryFeeType.cash || match.matchType == MatchType.paid;
-
-    // Refund each participant
-    for (var p in match.participants) {
-      final refundAmount = p.amountPaid > 0 ? p.amountPaid : match.entryFee;
-      if (refundAmount <= 0) continue;
-
-      refundedPlayersCount++;
-      totalRefundAmount += refundAmount;
-      final isCashParticipant = (p.paidWith == 'DEPOSIT_CASH' || isCashMatch);
-
-      // If active user, credit immediately
-      if (p.uid == user.uid) {
-        double balBefore = 0;
-        double balAfter = 0;
-
-        if (isCashParticipant) {
-          balBefore = user.wallet.depositCash;
-          user.wallet.depositCash += refundAmount;
-          balAfter = user.wallet.depositCash;
-        } else {
-          balBefore = user.wallet.adCoins.toDouble();
-          user.wallet.adCoins += refundAmount.toInt();
-          balAfter = user.wallet.adCoins.toDouble();
-        }
-        await _syncUser();
-
-        final refundTxn = TransactionModel(
-          id: 'txn_refund_${DateTime.now().millisecondsSinceEpoch}_${p.uid}',
-          userId: user.uid,
-          userName: user.displayName,
-          type: TransactionType.matchRefund,
-          walletAffected: isCashParticipant ? WalletType.depositCash : WalletType.adCoins,
-          amount: refundAmount,
-          currency: isCashParticipant ? 'INR' : 'AD_COINS',
-          balanceBefore: balBefore,
-          balanceAfter: balAfter,
-          status: 'SUCCESS',
-          description: isCashParticipant
-              ? '💵 Match Refund: "${match.title}" cancelled by Admin'
-              : '🟡 Match Refund: "${match.title}" cancelled by Admin',
-          createdAt: DateTime.now(),
-        );
-        transactions.insert(0, refundTxn);
-        allGlobalTransactions.insert(0, refundTxn);
-        _syncTransaction(refundTxn);
-
-        final notif = AppNotification(
-          id: 'notif_refund_${DateTime.now().millisecondsSinceEpoch}',
-          title: isCashParticipant ? '💵 Match Cancelled: ₹${refundAmount.toInt()} Refunded' : '🟡 Match Cancelled: ${refundAmount.toInt()} Coins Refunded',
-          body: isCashParticipant
-              ? 'Match "${match.title}" was cancelled by Admin. Your entry fee of ₹${refundAmount.toInt()} Deposit Cash has been credited back to your wallet.'
-              : 'Match "${match.title}" was cancelled by Admin. Your entry fee of ${refundAmount.toInt()} 🟡 Ad Coins has been credited back to your wallet.',
-          createdAt: DateTime.now(),
-          type: NotificationType.matchResult,
-          targetType: 'user',
-          targetId: user.uid,
-        );
-        notifications.insert(0, notif);
-        allGlobalNotifications.insert(0, notif);
-      }
-    }
-
-    // Now remove match from matches list and sync delete with VPS
-    matches.removeWhere((m) => m.id == matchId);
-    _saveLocalMatchesCache();
-    try {
-      await http.delete(Uri.parse("$vpsApiUrl/matches/$matchId")).timeout(const Duration(seconds: 5));
-    } catch (_) {}
-    FirestoreRestService.deleteDocument(FirebaseConfig.matchesCollection, matchId);
-    notifyListeners();
-
-    return {
-      'success': true,
-      'refundedPlayers': refundedPlayersCount,
-      'totalRefundAmount': totalRefundAmount,
-      'message': 'Match cancelled! Refunded ${isCashMatch ? "₹" : ""}${totalRefundAmount.toInt()}${isCashMatch ? " Real Cash" : " 🟡 Ad Coins"} to $refundedPlayersCount player(s).',
-    };
-  }
-
-  void adminDeleteMatch(String matchId) {
-    adminCancelAndRefundMatch(matchId);
-  }
-
-  // --- ADMIN FINANCIAL & ECONOMY ANALYTICS ---
-  Map<String, dynamic> get adminFinancialMetrics {
-    // 💵 PAID MATCHES METRICS (GLOBAL PLATFORM LEVEL)
-    double totalDeposits = allGlobalTransactions
-        .where((t) => (t.type == TransactionType.deposit || t.description.toLowerCase().contains('deposit')) && t.status == 'SUCCESS')
-        .fold(0.0, (sum, t) => sum + t.amount);
-
-    double totalCashEntryFees = allGlobalTransactions
-        .where((t) => t.type == TransactionType.matchEntryFee && (t.walletAffected == WalletType.depositCash || t.currency == 'INR'))
-        .fold(0.0, (sum, t) => sum + t.amount.abs());
-
-    // Also calculate from paid matches participants if no transactions recorded yet
-    double matchCalculatedPaidEntry = 0;
-    int paidPlayersJoined = 0;
-    int paidMatchesCount = 0;
-    for (var m in matches.where((m) => m.matchType == MatchType.paid)) {
-      paidMatchesCount++;
-      paidPlayersJoined += m.participants.length;
-      matchCalculatedPaidEntry += m.participants.fold(0.0, (s, p) => s + p.amountPaid);
-    }
-    if (totalCashEntryFees == 0) totalCashEntryFees = matchCalculatedPaidEntry;
-
-    double totalCashPrizesWon = allGlobalTransactions
-        .where((t) => t.type == TransactionType.matchWinningCash && t.walletAffected == WalletType.winningCash)
-        .fold(0.0, (sum, t) => sum + t.amount);
-
-    final pendingList = allGlobalWithdrawals.where((w) => w.status == WithdrawalStatus.pending).toList();
-    double totalPendingPayout = pendingList.fold(0.0, (sum, w) => sum + w.amount);
-
-    double totalPaidOut = allGlobalWithdrawals
-        .where((w) => w.status == WithdrawalStatus.completed)
-        .fold(0.0, (sum, w) => sum + w.amount);
-
-    double totalHostCommissions = allGlobalTransactions
-        .where((t) => t.type == TransactionType.hostCommission)
-        .fold(0.0, (sum, t) => sum + t.amount);
-    for (var m in matches) {
-      if (m.hostCommissionPaid && m.hostCommissionAmount > 0) {
-        if (!allGlobalTransactions.any((t) => t.description.contains('#${m.id}'))) {
-          totalHostCommissions += m.hostCommissionAmount;
-        }
-      }
-    }
-
-    double totalUserWinningLiabilities = allGlobalUsers.isNotEmpty
-        ? allGlobalUsers.fold(0.0, (sum, u) => sum + u.wallet.winningCash)
-        : user.wallet.winningCash;
-
-    double totalUserDepositLiabilities = allGlobalUsers.isNotEmpty
-        ? allGlobalUsers.fold(0.0, (sum, u) => sum + u.wallet.depositCash)
-        : user.wallet.depositCash;
-
-    double netCashMargin = totalCashEntryFees - totalCashPrizesWon - totalHostCommissions;
-
-    // 🟡 FREE MATCHES (AD-BASED) METRICS
-    int freeMatchesCount = 0;
-    int freePlayersJoined = 0;
-    double totalAdCoinsCollected = 0;
-    for (var m in matches.where((m) => m.matchType == MatchType.free)) {
-      freeMatchesCount++;
-      freePlayersJoined += m.participants.length;
-      totalAdCoinsCollected += m.participants.fold(0.0, (s, p) => s + p.amountPaid);
-    }
-
-    double totalRewardCoinsIssued = allGlobalTransactions
-        .where((t) => t.type == TransactionType.matchWinningRewardCoins)
-        .fold(0.0, (sum, t) => sum + t.amount);
-
-    // Global Ads Watched: Real count from global ad stats & conversions
-    int totalEstimatedAdsWatched = globalTotalAdsWatched > 0
-        ? globalTotalAdsWatched
-        : ((totalAdCoinsCollected * 3).toInt() + user.adTracker.adsWatchedToday);
-
-    // Estimated AdMob revenue: eCPM ~ ₹60 per 1000 ads = ₹0.06 per ad
-    double estimatedAdRevenue = totalEstimatedAdsWatched * 0.06;
-    // Reward coins cost: 10 coins = ₹1
-    double estimatedRewardCost = totalRewardCoinsIssued / 10.0;
-    double netAdMargin = estimatedAdRevenue - estimatedRewardCost;
-
-    // 🏆 WINNERS METRICS
-    int totalWinnersCount = 0;
-    for (var m in matches) {
-      for (var p in m.participants) {
-        if (p.isWinner || (p.prizeAwarded != null && p.prizeAwarded! > 0) || (p.rank != null && p.rank! <= 3)) {
-          totalWinnersCount += 1;
-        }
-      }
-    }
-
-    int pendingVouchers = allGlobalVoucherClaims.where((v) => v.status == VoucherClaimStatus.pending).length;
-    int deliveredVouchers = allGlobalVoucherClaims.where((v) => v.status == VoucherClaimStatus.delivered).length;
-
-    return {
-      // Combined / General
-      'totalDeposits': totalDeposits,
-      'totalPendingPayout': totalPendingPayout,
-      'pendingCount': pendingList.length,
-      'totalWinnersCount': totalWinnersCount,
-      'totalPaidOut': totalPaidOut,
-      'totalMatches': matches.length,
-      'totalHostCommissions': totalHostCommissions,
-      'totalUserWinningLiabilities': totalUserWinningLiabilities,
-      'totalUserDepositLiabilities': totalUserDepositLiabilities,
-      'combinedNetProfit': netCashMargin + netAdMargin,
-
-      // Paid Matches Specific
-      'paidMatchesCount': paidMatchesCount,
-      'paidPlayersJoined': paidPlayersJoined,
-      'totalCashEntryFees': totalCashEntryFees,
-      'totalCashPrizesWon': totalCashPrizesWon,
-      'netCashMargin': netCashMargin,
-
-      // Free Matches Specific
-      'freeMatchesCount': freeMatchesCount,
-      'freePlayersJoined': freePlayersJoined,
-      'totalAdCoinsCollected': totalAdCoinsCollected.toInt(),
-      'totalRewardCoinsIssued': totalRewardCoinsIssued.toInt(),
-      'totalEstimatedAdsWatched': totalEstimatedAdsWatched,
-      'estimatedAdRevenue': estimatedAdRevenue,
-      'estimatedRewardCost': estimatedRewardCost,
-      'netAdMargin': netAdMargin,
-
-      // Store Voucher Claims
-      'pendingVoucherClaims': pendingVouchers,
-      'deliveredVoucherClaims': deliveredVouchers,
-      'totalVouchersClaimed': allGlobalVoucherClaims.length,
-    };
-  }
-
-  void toggleRole() {
-    user.role = user.role == 'admin' ? 'user' : 'admin';
-    notifyListeners();
-  }
-
-  void updateUserProfile({
-    required String inGameName,
-    required String inGameUid,
-    int? inGameLevel,
-  }) {
-    user.inGameName = inGameName;
-    user.inGameUid = inGameUid;
-    if (inGameLevel != null) {
-      user.inGameLevel = inGameLevel;
-    }
-    _syncUser();
-    notifyListeners();
-  }
-
-  // --- LIVE FIRESTORE DATABASE SYNCHRONIZATION (SW-GYANMITRA-FINALL2) ---
-  Future<void> refreshFromFirestore() => _syncWithFirestore();
-
-  Future<void> _syncWithFirestore() async {
-    isLiveSyncing = true;
-    notifyListeners();
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUid = prefs.getString('saved_uid');
-      final activeUser = await AuthService.getActiveUser();
-      
-      if (!isAuthenticated && activeUser != null) {
-        user = activeUser;
-        isAuthenticated = true;
-      }
-
-      final uidToSync = (user.uid.isNotEmpty && user.uid != 'user_guest')
-          ? user.uid
-          : (savedUid ?? activeUser?.uid);
-
-      // --- ATTEMPT 1: High-Speed VPS Dedicated Server Sync (Zero Limit & Instant) ---
-      bool backendSyncSuccess = false;
-      try {
-        final syncUrl = Uri.parse("$vpsApiUrl/sync?uid=${uidToSync ?? ''}");
-        final res = await http.get(syncUrl).timeout(const Duration(seconds: 4));
-        if (res.statusCode == 200) {
-          final data = jsonDecode(res.body);
-          if (data['success'] == true) {
-            // 1. Matches
-            if (data['matches'] is List) {
-              final list = (data['matches'] as List).map((d) => MatchModel.fromJson(Map<String, dynamic>.from(d))).toList();
-              matches = list;
-              for (var m in matches) {
-                _checkAndTriggerMatchAutoStart(m);
-              }
-              _saveLocalMatchesCache();
-            }
-
-            // 2. Dynamic Banners
-            if (data['banners'] is List) {
-              banners = (data['banners'] as List).map((d) => BannerModel.fromJson(Map<String, dynamic>.from(d))).where((b) => b.isActive).toList();
-            }
-
-            // 3. User Profile
-            if (data['user'] != null && data['user'] is Map && (data['user'] as Map).isNotEmpty) {
-              user = UserModel.fromJson(Map<String, dynamic>.from(data['user']));
-              isAuthenticated = true;
-              await AuthService.saveUser(user);
-            }
-
-            // 4. Dynamic Tournament Modes
-            if (data['modes'] is List) {
-              final modeList = (data['modes'] as List).map((d) => TournamentModeItem.fromJson(Map<String, dynamic>.from(d))).toList();
-              if (modeList.isNotEmpty) {
-                tournamentModes = modeList;
-              }
-            }
-
-            // 5. Config
-            if (data['config'] != null) {
-              final cfg = data['config'];
-              if (cfg['telegramSupportUrl'] != null) {
-                telegramSupportUrl = cfg['telegramSupportUrl'].toString();
-              }
-              if (cfg['isRealCashModeEnabled'] != null) {
-                isRealCashModeEnabled = cfg['isRealCashModeEnabled'] == true ||
-                    cfg['isRealCashModeEnabled'].toString() == 'true';
-                try {
-                  WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false');
-                  SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false'));
-                } catch (_) {}
-              }
-              if (cfg['coinToRupeeRate'] != null) {
-                final r = (cfg['coinToRupeeRate'] as num).toDouble();
-                coinToRupeeRate = (r > 0) ? r : 1.0;
-              }
-              if (cfg['minWithdrawalCoins'] != null) {
-                final m = (cfg['minWithdrawalCoins'] as num).toInt();
-                if (m > 0 && m <= 500) {
-                  minWithdrawalCoins = m;
-                } else {
-                  minWithdrawalCoins = 50;
-                }
-              }
-              if (cfg['weeklyRank1Prize'] != null) {
-                weeklyRank1Prize = (cfg['weeklyRank1Prize'] as num).toDouble();
-              }
-              if (cfg['weeklyRank2Prize'] != null) {
-                weeklyRank2Prize = (cfg['weeklyRank2Prize'] as num).toDouble();
-              }
-              if (cfg['weeklyRank3Prize'] != null) {
-                weeklyRank3Prize = (cfg['weeklyRank3Prize'] as num).toDouble();
-              }
-              if (cfg['brBannerUrl'] != null && cfg['brBannerUrl'].toString().isNotEmpty) {
-                brBannerUrl = cfg['brBannerUrl'].toString();
-              }
-              if (cfg['csBannerUrl'] != null && cfg['csBannerUrl'].toString().isNotEmpty) {
-                csBannerUrl = cfg['csBannerUrl'].toString();
-              }
-              if (cfg['lwBannerUrl'] != null && cfg['lwBannerUrl'].toString().isNotEmpty) {
-                lwBannerUrl = cfg['lwBannerUrl'].toString();
-              }
-              if (cfg['minBuildNumber'] != null) {
-                minBuildNumber = (cfg['minBuildNumber'] as num).toInt();
-              }
-              if (cfg['minAppVersion'] != null) {
-                minAppVersion = cfg['minAppVersion'].toString();
-              }
-              if (cfg['isForceUpdateEnabled'] != null) {
-                isForceUpdateEnabled = cfg['isForceUpdateEnabled'] == true || cfg['isForceUpdateEnabled'].toString() == 'true';
-              }
-              if (cfg['playStoreUrl'] != null && cfg['playStoreUrl'].toString().isNotEmpty) {
-                playStoreUrl = cfg['playStoreUrl'].toString();
-              }
-              if (cfg['updateTitle'] != null && cfg['updateTitle'].toString().isNotEmpty) {
-                updateTitle = cfg['updateTitle'].toString();
-              }
-              if (cfg['updateMessage'] != null && cfg['updateMessage'].toString().isNotEmpty) {
-                updateMessage = cfg['updateMessage'].toString();
-              }
-            }
-
-            // 5b. Live Admin Notice Board
-            if (data['noticeBoard'] != null && data['noticeBoard'] is Map) {
-              noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
-            }
-
-            // 6. Notifications
-            if (data['notifications'] is List) {
-              final parsed = (data['notifications'] as List).map((d) => AppNotification.fromJson(Map<String, dynamic>.from(d))).toList();
-              allGlobalNotifications = parsed;
-              notifications = allGlobalNotifications.where((n) {
-                if (n.targetType == 'all') return true;
-                if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
-                if (n.targetType == 'user' && n.targetId == user.uid) return true;
-                if (n.targetType == 'admin' && user.role == 'admin') return true;
-                return false;
-              }).toList();
-            }
-
-            // 7. Referrals from VPS
-            if (data['referrals'] is List) {
-              final parsed = (data['referrals'] as List).map((d) => ReferralRecord.fromJson(Map<String, dynamic>.from(d))).toList();
-              parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-              allGlobalReferralRecords = parsed;
-              referralRecords = allGlobalReferralRecords.where((r) => r.referrerUid == user.uid || r.referrerCode == user.referralCode).toList();
-              _saveLocalReferralsCache();
-            }
-
-            // 8. Transactions from VPS
-            if (data['transactions'] is List) {
-              final parsed = (data['transactions'] as List).map((d) => TransactionModel.fromJson(Map<String, dynamic>.from(d))).toList();
-              parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-              allGlobalTransactions = parsed;
-              transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
-              _saveLocalTxnCache();
-            }
-
-            // 9. All Users from VPS (For Admin Financial Dashboard & Liabilities)
-            if (data['allUsers'] is List) {
-              try {
-                final parsedUsers = (data['allUsers'] as List).map((u) => UserModel.fromJson(Map<String, dynamic>.from(u))).toList();
-                if (parsedUsers.isNotEmpty) {
-                  allGlobalUsers = parsedUsers;
-                }
-              } catch (_) {}
-            }
-
-            // 10. Dynamic Store Items from VPS (Admin Controlled Redeem Codes)
-            if (data['storeItems'] is List) {
-              try {
-                storeItems = (data['storeItems'] as List).map((s) => StoreItem.fromJson(Map<String, dynamic>.from(s))).toList();
-              } catch (_) {}
-            }
-
-            // 11. Voucher Claims from VPS
-            if (data['voucherClaims'] is List) {
-              try {
-                final parsedClaims = (data['voucherClaims'] as List).map((c) => VoucherClaim.fromJson(Map<String, dynamic>.from(c))).toList();
-                parsedClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-                allGlobalVoucherClaims = parsedClaims;
-                voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
-              } catch (_) {}
-            }
-
-            backendSyncSuccess = true;
-          }
-        }
-      } catch (e) {
-        debugPrint('[AppState] VPS backend sync notice: $e');
-      }
-
-
-      // --- ATTEMPT 2: Fallback to Direct Firestore REST if Backend Proxy was skipped/offline ---
-      if (!backendSyncSuccess) {
-        if (uidToSync != null && uidToSync.isNotEmpty && uidToSync != 'user_guest') {
-          try {
-            final userDoc = await FirestoreRestService.getDocument(FirebaseConfig.usersCollection, uidToSync);
-            if (userDoc != null && userDoc.isNotEmpty) {
-              user = UserModel.fromJson(userDoc);
-              isAuthenticated = true;
-              await AuthService.saveUser(user);
-            }
-          } catch (e) {
-            debugPrint('[AppState] Remote user doc sync error: $e');
-          }
-        }
-
-        // 2. Sync Live Matches from Firestore (Fallback ONLY if matches is empty)
-        try {
-          if (matches.isEmpty) {
-            final matchDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.matchesCollection);
-            if (matchDocs.isNotEmpty) {
-              final firestoreMatches = matchDocs.map((d) => MatchModel.fromJson(d)).toList();
-              matches = firestoreMatches;
-              for (var m in matches) {
-                _checkAndTriggerMatchAutoStart(m);
-              }
-              _saveLocalMatchesCache();
-            }
-          }
-        } catch (e) {
-          debugPrint('[AppState] Sync matches fallback notice: $e');
-        }
-
-        // 3. Sync Transactions
-        try {
-          final txnDocs = await FirestoreRestService.getCollectionDocuments(FirebaseConfig.transactionsCollection);
-          if (txnDocs.isNotEmpty) {
-            allGlobalTransactions = txnDocs.map((d) => TransactionModel.fromJson(d)).toList();
-            allGlobalTransactions.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-            transactions = allGlobalTransactions.where((t) => t.userId == user.uid).toList();
-            _saveLocalTxnCache();
-          }
-        } catch (e) {
-          debugPrint('[AppState] Sync txns error: $e');
-        }
-      }
-
-      // 4. Sync Withdrawals (Global Collection for Admin, Filtered for User)
-      try {
-        final withDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_withdrawals');
-        if (withDocs.isNotEmpty) {
-          allGlobalWithdrawals = withDocs.map((d) => WithdrawalModel.fromJson(d)).toList();
-          allGlobalWithdrawals.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-          withdrawals = allGlobalWithdrawals.where((w) => w.userId == user.uid).toList();
-        }
-      } catch (e) {
-        debugPrint('[AppState] Sync withdrawals error: $e');
-      }
-
-      // 5. Sync Voucher Claims (Global Collection for Admin, Filtered for User)
-      try {
-        final claimDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_voucher_claims');
-        if (claimDocs.isNotEmpty) {
-          allGlobalVoucherClaims = claimDocs.map((d) => VoucherClaim.fromJson(d)).toList();
-          allGlobalVoucherClaims.sort((a, b) => b.requestedAt.compareTo(a.requestedAt));
-          voucherClaims = allGlobalVoucherClaims.where((c) => c.userId == user.uid).toList();
-        }
-      } catch (e) {
-        debugPrint('[AppState] Sync vouchers error: $e');
-      }
-
-      // 6. Sync Global Ad Stats (skillwinner_stats/ad_stats)
-      try {
-        final adDoc = await FirestoreRestService.getDocument('skillwinner_stats', 'ad_stats');
-        if (adDoc != null && adDoc['totalAdsWatched'] != null) {
-          globalTotalAdsWatched = (adDoc['totalAdsWatched'] as num).toInt();
-        } else {
-          final totalAdRewardCoins = allGlobalTransactions
-              .where((t) => t.type == TransactionType.adReward || t.walletAffected == WalletType.adCoins)
-              .fold(0, (sum, t) => sum + t.amount.abs().toInt());
-          globalTotalAdsWatched = (totalAdRewardCoins * 3) + user.adTracker.adsWatchedToday;
-        }
-      } catch (e) {
-        debugPrint('[AppState] Sync ad stats error: $e');
-      }
-
-      // 7. Sync Dynamic Banners from Firestore
-      try {
-        final bannerDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_banners');
-        banners = bannerDocs.map((d) => BannerModel.fromJson(d)).where((b) => b.isActive).toList();
-      } catch (e) {
-        debugPrint('[AppState] Sync banners error: $e');
-      }
-
-      // 8. Sync Telegram Support & App Config (Only if VPS failed)
-      if (!backendSyncSuccess) {
-        try {
-          final configDoc = await FirestoreRestService.getDocument('skillwinner_settings', 'app_config');
-          if (configDoc != null) {
-            if (configDoc['telegramSupportUrl'] != null) {
-              telegramSupportUrl = configDoc['telegramSupportUrl'].toString();
-            }
-            if (configDoc['isRealCashModeEnabled'] != null) {
-              isRealCashModeEnabled = configDoc['isRealCashModeEnabled'] == true ||
-                  configDoc['isRealCashModeEnabled'].toString() == 'true';
-              try {
-                WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false');
-                SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_safe_mode_cash_enabled', isRealCashModeEnabled ? 'true' : 'false'));
-              } catch (_) {}
-            }
-          }
-        } catch (e) {
-          debugPrint('[AppState] Sync telegram support & config error: $e');
-        }
-      }
-
-      // 9. Sync Realtime Push Notifications
-      try {
-        final notifDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_notifications');
-        if (notifDocs.isNotEmpty) {
-          final parsed = notifDocs.map((d) => AppNotification.fromJson(d)).toList();
-          final Map<String, AppNotification> dedupMap = {};
-          for (final item in parsed) {
-            final dedupKey = '${item.title.trim()}||${item.body.trim()}';
-            if (!dedupMap.containsKey(dedupKey) || item.createdAt.isAfter(dedupMap[dedupKey]!.createdAt)) {
-              dedupMap[dedupKey] = item;
-            }
-          }
-          allGlobalNotifications = dedupMap.values.toList();
-          allGlobalNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          final newRelevantNotifs = allGlobalNotifications.where((n) {
-            if (n.targetType == 'all') return true;
-            if (n.targetType == 'match' && matches.any((m) => m.id == n.targetId && m.participants.any((p) => p.uid == user.uid))) return true;
-            if (n.targetType == 'user' && n.targetId == user.uid) return true;
-            if (n.targetType == 'admin' && user.role == 'admin') return true;
-            return false;
-          }).toList();
-
-          // Trigger native desktop notification for any new arrived notification
-          for (final n in newRelevantNotifs) {
-            if (!_alertedNotifIds.contains(n.id)) {
-              _alertedNotifIds.add(n.id);
-              if (DateTime.now().difference(n.createdAt).inMinutes.abs() <= 2) {
-                if (kIsWeb) {
-                  showBrowserNotification(n.title, n.body, imageUrl: n.imageUrl);
-                }
-              }
-            }
-          }
-
-          notifications = newRelevantNotifs;
-        }
-      } catch (e) {
-        debugPrint('[AppState] Sync notifications error: $e');
-      }
-
-      // 10. Sync Referral Records
-      try {
-        final refDocs = await FirestoreRestService.getCollectionDocuments('skillwinner_referrals');
-        if (refDocs.isNotEmpty) {
-          final parsed = refDocs.map((d) => ReferralRecord.fromJson(d)).toList();
-          parsed.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-          allGlobalReferralRecords = parsed;
-          referralRecords = allGlobalReferralRecords.where((r) => r.referrerUid == user.uid || r.referrerCode == user.referralCode).toList();
-          _saveLocalReferralsCache();
-        }
-      } catch (e) {
-        debugPrint('[AppState] Sync referrals error: $e');
-      }
-    } catch (e) {
-      debugPrint('[AppState] Firestore live sync error: $e');
-    } finally {
-      isLoadingAuth = false;
-      isLiveSyncing = false;
-      notifyListeners();
-    }
-  }
-
-  // --- ADMIN: GOOGLE PLAY REVIEW SAFE MODE TOGGLE (REAL CASH ON/OFF) ---
-  Future<void> adminSetRealCashMode(bool enabled) async {
-    isRealCashModeEnabled = enabled;
-    try {
-      WebStorageHelper.setItem('booyah_safe_mode_cash_enabled', enabled ? 'true' : 'false');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('booyah_safe_mode_cash_enabled', enabled ? 'true' : 'false');
-    } catch (_) {}
-    notifyListeners();
-
-    // 1. Sync to VPS Backend
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/config"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'isRealCashModeEnabled': enabled,
-          'telegramSupportUrl': telegramSupportUrl,
-          'brBannerUrl': brBannerUrl,
-          'csBannerUrl': csBannerUrl,
-          'lwBannerUrl': lwBannerUrl,
-        }),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-
-    // 2. Sync to Firestore as fallback
-    try {
-      await FirestoreRestService.setDocument('skillwinner_settings', 'app_config', {
-        'isRealCashModeEnabled': enabled,
-        'telegramSupportUrl': telegramSupportUrl,
-        'updatedAt': DateTime.now().toIso8601String(),
-      });
-    } catch (_) {}
-  }
-
-  // --- ADMIN: CATEGORY BANNERS URL CONFIGURATION ---
-  Future<void> adminUpdateCategoryBanners({String? br, String? cs, String? lw}) async {
-    if (br != null && br.isNotEmpty) brBannerUrl = br.trim();
-    if (cs != null && cs.isNotEmpty) csBannerUrl = cs.trim();
-    if (lw != null && lw.isNotEmpty) lwBannerUrl = lw.trim();
-    notifyListeners();
-
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/config"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'brBannerUrl': brBannerUrl,
-          'csBannerUrl': csBannerUrl,
-          'lwBannerUrl': lwBannerUrl,
-          'telegramSupportUrl': telegramSupportUrl,
-          'isRealCashModeEnabled': isRealCashModeEnabled,
-        }),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  // --- ADMIN: DYNAMIC TOURNAMENT MODES MANAGEMENT ---
-  Future<void> adminSaveTournamentMode(TournamentModeItem modeItem) async {
-    final index = tournamentModes.indexWhere((m) => m.key == modeItem.key);
-    if (index >= 0) {
-      tournamentModes[index] = modeItem;
-    } else {
-      tournamentModes.add(modeItem);
-    }
-    if (modeItem.key == 'BR') brBannerUrl = modeItem.bannerUrl;
-    if (modeItem.key == 'CS') csBannerUrl = modeItem.bannerUrl;
-    if (modeItem.key == 'LONE_WOLF') lwBannerUrl = modeItem.bannerUrl;
-    notifyListeners();
-
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/modes"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(modeItem.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  Future<void> adminDeleteTournamentMode(String modeKey) async {
-    tournamentModes.removeWhere((m) => m.key == modeKey);
-    notifyListeners();
-
-    try {
-      await http.delete(
-        Uri.parse("$vpsApiUrl/modes/$modeKey"),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-
-  // --- ADMIN: DIRECT IMAGE UPLOAD TO VPS ---
-  Future<String?> uploadBannerImageFile(Uint8List fileBytes, String filename) async {
-    try {
-      final uri = Uri.parse('$vpsApiUrl/upload');
-      final request = http.MultipartRequest('POST', uri);
-      request.files.add(http.MultipartFile.fromBytes(
-        'image',
-        fileBytes,
-        filename: filename,
-      ));
-      final streamedResponse = await request.send().timeout(const Duration(seconds: 15));
-      final response = await http.Response.fromStream(streamedResponse);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success'] == true && data['fileUrl'] != null) {
-          return data['fileUrl'].toString();
-        }
-      }
-    } catch (e) {
-      debugPrint('[AppState] Upload image to VPS error: $e');
-    }
-    return null;
-  }
-
-  // --- ADMIN: FETCH UPLOADED GALLERY FROM VPS ---
-  Future<List<Map<String, dynamic>>> getUploadedGallery() async {
-    try {
-      final res = await http.get(Uri.parse('$vpsApiUrl/uploads')).timeout(const Duration(seconds: 5));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['files'] is List) {
-          return List<Map<String, dynamic>>.from(data['files']);
-        }
-      }
-    } catch (e) {
-      debugPrint('[AppState] Get gallery error: $e');
-    }
-    return [];
-  }
-
-  // --- ADMIN: TELEGRAM CUSTOMER SUPPORT URL CONFIGURATION ---
-  void adminUpdateTelegramUrl(String url) {
-    telegramSupportUrl = url.trim();
-    http.post(
-      Uri.parse("$vpsApiUrl/config"),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'telegramSupportUrl': telegramSupportUrl}),
-    ).catchError((_) => http.Response('', 500));
-    notifyListeners();
-  }
-
-  // --- ADMIN: DYNAMIC PROMO BANNERS ---
-  void adminAddBanner(BannerModel newBanner) {
-    banners.insert(0, newBanner);
-    http.post(
-      Uri.parse("$vpsApiUrl/banners"),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(newBanner.toJson()),
-    ).catchError((_) => http.Response('', 500));
-    FirestoreRestService.setDocument('skillwinner_banners', newBanner.id, newBanner.toJson());
-    notifyListeners();
-  }
-
-  void adminDeleteBanner(String bannerId) {
-    banners.removeWhere((b) => b.id == bannerId);
-    http.delete(Uri.parse("$vpsApiUrl/banners/$bannerId")).catchError((_) => http.Response('', 500));
-    FirestoreRestService.deleteDocument('skillwinner_banners', bannerId);
-    notifyListeners();
-  }
-
-
-  Future<void> _syncUser() async {
-    await AuthService.saveUser(user);
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/users"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(user.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  Future<void> _syncMatch(MatchModel m) async {
-    try {
-      await http.put(
-        Uri.parse("$vpsApiUrl/matches/${m.id}"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(m.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-    try {
-      await FirestoreRestService.setDocument(FirebaseConfig.matchesCollection, m.id, m.toJson());
-    } catch (_) {}
-  }
-
-  Future<void> _syncTransaction(TransactionModel txn) async {
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/transactions"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(txn.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  Future<void> _syncWithdrawal(WithdrawalModel w) async {
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/withdrawals"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(w.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  Future<void> _syncVoucherClaim(VoucherClaim claim) async {
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/voucher-claims"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(claim.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  void _saveLocalReferralsCache() {
-    try {
-      final list = allGlobalReferralRecords.map((r) => r.toJson()).toList();
-      final jsonStr = jsonEncode(list);
-      WebStorageHelper.setItem('booyah_cached_referrals', jsonStr);
-      SharedPreferences.getInstance().then((prefs) => prefs.setString('booyah_cached_referrals', jsonStr));
-    } catch (e) {
-      debugPrint('[AppState] Save local referrals cache error: $e');
-    }
-  }
-
-  Future<void> _syncReferralRecord(ReferralRecord rec) async {
-    _saveLocalReferralsCache();
-    await FirestoreRestService.setDocument('skillwinner_referrals', rec.id, rec.toJson());
-    try {
-      await http.post(
-        Uri.parse("$vpsApiUrl/referrals"),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(rec.toJson()),
-      ).timeout(const Duration(seconds: 4));
-    } catch (_) {}
-  }
-
-  // --- NOTICE BOARD OPERATIONS ---
-  Future<void> fetchNoticeBoard() async {
-    try {
-      final res = await http.get(Uri.parse('$vpsApiUrl/notice-board')).timeout(const Duration(seconds: 4));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['noticeBoard'] is Map) {
-          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
+        if (data['leaderboard'] != null) {
+          final list = (data['leaderboard'] as List)
+              .map((item) => LeaderboardEntry.fromJson(item as Map<String, dynamic>))
+              .toList();
+          weeklyLeaderboard = list;
           notifyListeners();
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('VPS Sync error (offline fallback): $e');
+    }
   }
 
-  Future<bool> adminUpdateNoticeBoard({
-    String? title,
-    String? body,
-    bool? allowUserMessages,
-    String? adminMessage,
+  // ── Update Display Name on Leaderboard ──
+  Future<void> updateDisplayName(String newName) async {
+    if (newName.trim().isEmpty) return;
+    user.displayName = newName.trim();
+    await saveUser();
+
+    try {
+      await http.post(
+        Uri.parse('$vpsBaseUrl/api/tournament/update-name'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'deviceId': user.uid,
+          'displayName': user.displayName,
+        }),
+      );
+      await fetchLeaderboard();
+    } catch (e) {
+      debugPrint('Error updating name on VPS: $e');
+    }
+  }
+
+  // ── Apply Referral Code ──
+  Future<bool> applyReferralCode(String code) async {
+    final cleanCode = code.trim();
+    if (cleanCode.isEmpty || cleanCode == user.referralCode) return false;
+    user.referredBy = cleanCode;
+    user.weeklyScore += 25;
+    user.adCoins += 25;
+    await saveUser();
+    await syncUserWithVPS(coinsToAdd: 25, referralCode: cleanCode);
+    notifyListeners();
+    return true;
+  }
+
+  // ── Submit Payout Claim (Allowed for Top 10 Winners) ──
+  Future<Map<String, dynamic>> submitPayoutClaim({
+    required String phoneNumber,
+    required String email,
+    String upiId = '',
   }) async {
     try {
-      final Map<String, dynamic> payload = {};
-      if (title != null) payload['title'] = title;
-      if (body != null) payload['body'] = body;
-      if (allowUserMessages != null) payload['allowUserMessages'] = allowUserMessages;
-      if (adminMessage != null && adminMessage.isNotEmpty) payload['adminMessage'] = adminMessage;
-
       final res = await http.post(
-        Uri.parse('$vpsApiUrl/notice-board/admin'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode(payload),
-      ).timeout(const Duration(seconds: 5));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true && data['noticeBoard'] is Map) {
-          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
-          notifyListeners();
-          return true;
-        }
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  Future<bool> adminToggleUserMessages(bool allow) async {
-    try {
-      final res = await http.post(
-        Uri.parse('$vpsApiUrl/notice-board/toggle-user-messages'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'allowUserMessages': allow}),
-      ).timeout(const Duration(seconds: 4));
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body);
-        if (data['success'] == true) {
-          noticeBoard = noticeBoard.copyWith(allowUserMessages: allow);
-          notifyListeners();
-          return true;
-        }
-      }
-    } catch (_) {}
-    return false;
-  }
-
-  Future<Map<String, dynamic>> postNoticeBoardMessage(String text) async {
-    final isAdmin = user.role == 'admin' || AuthService.isAdminIdentifier(user.email, user.uid);
-    try {
-      final res = await http.post(
-        Uri.parse('$vpsApiUrl/notice-board/message'),
+        Uri.parse('$vpsBaseUrl/api/tournament/submit-payout-details'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'uid': user.uid,
-          'name': user.displayName.isNotEmpty ? user.displayName : ((user.inGameUid != null && user.inGameUid!.isNotEmpty) ? 'Player #${user.inGameUid}' : 'Player'),
-          'text': text,
-          'role': isAdmin ? 'admin' : 'user',
+          'deviceId': user.uid,
+          'phoneNumber': phoneNumber,
+          'email': email,
+          'upiId': upiId,
         }),
-      ).timeout(const Duration(seconds: 5));
-
+      );
       final data = jsonDecode(res.body);
       if (res.statusCode == 200 && data['success'] == true) {
-        if (data['noticeBoard'] is Map) {
-          noticeBoard = NoticeBoardData.fromJson(Map<String, dynamic>.from(data['noticeBoard']));
-          notifyListeners();
-        }
-        return {'success': true, 'message': 'Message posted!'};
+        await syncUserWithVPS();
+        return {'success': true, 'message': data['message'] ?? 'Payout details submitted!'};
       } else {
-        return {
-          'success': false,
-          'message': data['error'] ?? 'Failed to send message',
-        };
+        return {'success': false, 'message': data['error'] ?? 'Submission failed.'};
       }
     } catch (e) {
       return {'success': false, 'message': 'Network error: $e'};
     }
   }
 
-  Future<bool> adminDeleteNoticeBoardMessage(String messageId) async {
+  // ── Fetch Redeem Packages from VPS ──
+  Future<void> fetchRedeemPackages() async {
     try {
-      final res = await http.delete(
-        Uri.parse('$vpsApiUrl/notice-board/message/$messageId'),
-      ).timeout(const Duration(seconds: 4));
-
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/redeem/packages'));
       if (res.statusCode == 200) {
-        final updatedList = noticeBoard.messages.where((m) => m.id != messageId).toList();
-        noticeBoard = noticeBoard.copyWith(messages: updatedList);
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['packages'] != null) {
+          redeemPackages = (data['packages'] as List)
+              .map((p) => RedeemPackage.fromJson(Map<String, dynamic>.from(p as Map)))
+              .toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching redeem packages: $e');
+    }
+  }
+
+  // ── Fetch User\'s Redeem Requests ──
+  Future<void> fetchMyRedeemRequests() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/redeem/my-requests?deviceId=${user.uid}'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['requests'] != null) {
+          myRedeemRequests = (data['requests'] as List)
+              .map((r) => RedeemRequestItem.fromJson(Map<String, dynamic>.from(r as Map)))
+              .toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching my redeem requests: $e');
+    }
+  }
+
+  // ── Fetch Live Redeem Feed (Social Proof) ──
+  Future<void> fetchLiveRedeemFeed() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/redeem/live-feed'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['feed'] != null) {
+          liveRedeemFeed = (data['feed'] as List)
+              .map((item) => Map<String, dynamic>.from(item as Map))
+              .toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching live redeem feed: $e');
+    }
+  }
+
+  // ── Submit Redeem Code Request (100 Coins = ₹1) ──
+  Future<Map<String, dynamic>> submitRedeemRequest({
+    required int amount,
+    required String email,
+    String phone = '',
+    String upiId = '',
+    String packageId = '',
+  }) async {
+    final pointsNeeded = amount * 100; // 100 Coins = ₹1
+    final currentBalance = user.adCoins;
+    if (currentBalance < pointsNeeded) {
+      return {
+        'success': false,
+        'message': 'आपके वॉलेट में पर्याप्त कॉइन्स नहीं हैं! आवश्यक: $pointsNeeded कॉइन्स (₹$amount), वर्तमान: $currentBalance कॉइन्स।',
+      };
+    }
+
+    isRedeemLoading = true;
+    notifyListeners();
+
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/redeem/request'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'deviceId': user.uid,
+          'displayName': user.displayName,
+          'amount': amount,
+          'email': email,
+          'phone': phone,
+          'upiId': upiId,
+          'packageId': packageId,
+        }),
+      );
+
+      final data = jsonDecode(res.body);
+      isRedeemLoading = false;
+
+      if (res.statusCode == 200 && data['success'] == true) {
+        final newCoins = user.adCoins - pointsNeeded;
+        user.adCoins = newCoins < 0 ? 0 : newCoins;
+        await saveUser();
+        await fetchMyRedeemRequests();
         notifyListeners();
+        return {
+          'success': true,
+          'message': data['message'] ?? 'रिडीम रिक्वेस्ट सबमिट हो गई! 24-48 घंटे में कोड डिलीवर होगा।',
+        };
+      } else {
+        notifyListeners();
+        return {
+          'success': false,
+          'message': data['error'] ?? 'सबमिशन विफल हुआ। कृपया दोबारा प्रयास करें।',
+        };
+      }
+    } catch (e) {
+      isRedeemLoading = false;
+      notifyListeners();
+      return {
+        'success': false,
+        'message': 'नेटवर्क त्रुटि: $e',
+      };
+    }
+  }
+
+  // ── Fetch Live Tournament Leaderboard ──
+  Future<void> fetchLeaderboard() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/tournament/leaderboard'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['config'] != null) {
+          _updateConfig(data['config'] as Map<String, dynamic>);
+        }
+        if (data['season'] != null) {
+          season = (data['season'] as num).toInt();
+        }
+        if (data['success'] == true && data['leaderboard'] != null) {
+          final list = (data['leaderboard'] as List)
+              .map((item) => LeaderboardEntry.fromJson(item as Map<String, dynamic>))
+              .toList();
+          weeklyLeaderboard = list;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching leaderboard: $e');
+    }
+  }
+
+  Future<bool> canPlayFreeToday(String gameId) async {
+    return true; // 100% Unlimited Free Play for all skill games
+  }
+
+  Future<void> markGamePlayedToday(String gameId) async {
+    // No-op: Unlimited free play active
+  }
+
+  // ── Fetch Live Winner Proofs from VPS ──
+  Future<void> fetchWinnerProofs() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/tournament/winner-proofs'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['proofs'] != null) {
+          final list = (data['proofs'] as List)
+              .map((item) => WinnerProofItem.fromJson(item as Map<String, dynamic>))
+              .toList();
+          winnerProofs = list;
+          notifyListeners();
+          return;
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching proofs: $e');
+    }
+  }
+
+  // ── Fetch Past Seasons Winners Archive (For 25th Payout Transparency) ──
+  Future<void> fetchPastWinners() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/tournament/past-winners'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['pastWinners'] != null) {
+          final list = (data['pastWinners'] as List)
+              .map((item) => PastSeasonArchive.fromJson(Map<String, dynamic>.from(item as Map)))
+              .toList();
+          pastWinners = list;
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching past winners: $e');
+    }
+  }
+
+  bool get isDailyNight2XRush {
+    // Daily Night 2X Rush every night from 9:00 PM to 11:00 PM (21:00 to 22:59:59)
+    final now = DateTime.now();
+    return now.hour >= 21 && now.hour < 23;
+  }
+
+  bool get isWeekend2XRush => isDailyNight2XRush;
+
+  int get rushMultiplier => isDailyNight2XRush ? 2 : 1;
+  int get weekendMultiplier => rushMultiplier;
+
+  int get walletPoints => user.adCoins;
+
+  void addGameScore(int score, String gameType) {
+    final addedScore = isWeekend2XRush ? score * 2 : score;
+    user.gameScore += score;
+    user.weeklyScore += addedScore;
+    if (gameType == 'knife_hit' && score > user.knifeHitHighScore) {
+      user.knifeHitHighScore = score;
+    } else if (gameType == 'fruit_slash' && score > user.fruitSlashHighScore) {
+      user.fruitSlashHighScore = score;
+    } else if (gameType == 'speed_math' && score > user.speedMathHighScore) {
+      user.speedMathHighScore = score;
+    }
+    saveUser();
+    syncUserWithVPS(scoreToAdd: addedScore);
+  }
+
+  // ── Add Coins to In-App Wallet ONLY (Disconnected from Leaderboard) ──
+  void addWalletCoins(int coins) {
+    if (coins <= 0) return;
+    user.adCoins += coins;
+    saveUser();
+    notifyListeners();
+    syncUserWithVPS(coinsToAdd: coins);
+  }
+
+  void addAdCoins(int coins) {
+    addWalletCoins(coins);
+  }
+
+  void updateSpeedMathHighScore(int score) {
+    if (score > user.speedMathHighScore) {
+      user.speedMathHighScore = score;
+    }
+    final addedScore = isWeekend2XRush ? score * 2 : score;
+    user.gameScore += score;
+    user.weeklyScore += addedScore;
+    saveUser();
+    syncUserWithVPS(scoreToAdd: addedScore);
+  }
+
+  void updateKnifeHitHighScore(int score) {
+    if (score > user.knifeHitHighScore) {
+      user.knifeHitHighScore = score;
+    }
+    final addedScore = isWeekend2XRush ? score * 2 : score;
+    user.gameScore += score;
+    user.weeklyScore += addedScore;
+    saveUser();
+    syncUserWithVPS(scoreToAdd: addedScore);
+  }
+
+  void updateFruitSlashHighScore(int score) {
+    if (score > user.fruitSlashHighScore) {
+      user.fruitSlashHighScore = score;
+    }
+    final addedScore = isWeekend2XRush ? score * 2 : score;
+    user.gameScore += score;
+    user.weeklyScore += addedScore;
+    saveUser();
+    syncUserWithVPS(scoreToAdd: addedScore);
+  }
+
+  int get numericPrizePool {
+    final cleaned = prizePool.replaceAll(RegExp(r'[^0-9]'), '');
+    return int.tryParse(cleaned) ?? 1000;
+  }
+
+  String getPrizeForRank(int rank) {
+    if (rank == 1) return '₹150 Cash + Code';
+    if (rank == 2) return '₹80 Cash + Code';
+    if (rank == 3) return '₹50 Cash + Code';
+    if (rank >= 4 && rank <= 10) return '₹25 Code';
+    if (rank >= 11 && rank <= 50) return '₹11 Code';
+    if (rank >= 51 && rank <= 100) return '₹2.10 (210 Coins)';
+    return 'Participant';
+  }
+
+  List<LeaderboardEntry> get dynamicWeeklyLeaderboard {
+    // Clone base entries without duplicates of current user
+    final list = weeklyLeaderboard
+        .where((e) =>
+            e.uid != user.uid &&
+            e.name != user.displayName &&
+            !e.name.contains('(YOU)'))
+        .toList();
+
+    // Insert current user with real-time weekly score
+    list.add(LeaderboardEntry(
+      uid: user.uid,
+      name: user.displayName,
+      weeklyScore: user.weeklyScore,
+      rank: 0,
+      prize: '',
+    ));
+
+    // Sort strictly descending by score
+    list.sort((a, b) => b.weeklyScore.compareTo(a.weeklyScore));
+
+    // Assign dynamic ranks 1..N
+    final ranked = <LeaderboardEntry>[];
+    for (int i = 0; i < list.length; i++) {
+      final e = list[i];
+      final rank = i + 1;
+      final isSelf = e.uid == user.uid || e.name == user.displayName;
+      ranked.add(LeaderboardEntry(
+        uid: e.uid,
+        name: isSelf ? '${user.displayName} (YOU)' : e.name,
+        weeklyScore: e.weeklyScore,
+        rank: rank,
+        prize: getPrizeForRank(rank),
+      ));
+    }
+    return ranked;
+  }
+
+  int get userWeeklyRank {
+    final list = dynamicWeeklyLeaderboard;
+    final index = list.indexWhere((e) => e.uid == user.uid || e.name.contains('(YOU)'));
+    if (index != -1) {
+      return list[index].rank;
+    }
+    return list.length;
+  }
+
+  int get rank10ThresholdScore {
+    final list = dynamicWeeklyLeaderboard;
+    if (list.length >= 10) {
+      return list[9].weeklyScore;
+    }
+    return 100;
+  }
+
+  int get pointsNeededForTop10 {
+    final gap = rank10ThresholdScore - user.weeklyScore + 5;
+    return gap > 0 ? gap : 10;
+  }
+
+  // ============================================================================
+  // 🏆 FREE FIRE INDIA TOURNAMENTS ENGINE METHODS
+  // ============================================================================
+  Future<void> fetchFFTournaments({String category = 'ALL'}) async {
+    activeCategory = category;
+    isLoadingTournaments = true;
+    notifyListeners();
+    try {
+      final uri = Uri.parse('$vpsBaseUrl/api/ff/tournaments?category=$category&uid=${user.uid}');
+      final res = await http.get(uri);
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['tournaments'] != null) {
+          final list = (data['tournaments'] as List)
+              .map((t) => FFTournament.fromJson(t as Map<String, dynamic>))
+              .toList();
+          ffTournaments = list;
+        }
+        if (data['coinEconomy'] != null) {
+          coinEconomy = Map<String, dynamic>.from(data['coinEconomy'] as Map);
+        }
+        if (data['branding'] != null) {
+          branding = Map<String, dynamic>.from(data['branding'] as Map);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching tournaments: $e');
+    } finally {
+      isLoadingTournaments = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>> registerTournament({
+    required String tournamentId,
+    required String inGameName,
+    required String inGameId,
+  }) async {
+    try {
+      user.inGameName = inGameName;
+      user.inGameId = inGameId;
+      await saveUser();
+
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/tournaments/register'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'tournamentId': tournamentId,
+          'uid': user.uid,
+          'inGameName': inGameName,
+          'inGameId': inGameId,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        if (data['remainingCoins'] != null) {
+          user.adCoins = (data['remainingCoins'] as num).toInt();
+          await saveUser();
+        }
+        await fetchFFTournaments(category: activeCategory);
+        return {'success': true, 'message': data['message'] ?? 'Slot registered!'};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Registration failed'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> createSquadTeam({
+    required String tournamentId,
+    required String teamName,
+    required String inGameName,
+    required String inGameId,
+  }) async {
+    try {
+      user.inGameName = inGameName;
+      user.inGameId = inGameId;
+      await saveUser();
+
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/teams/create'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'tournamentId': tournamentId,
+          'captainUid': user.uid,
+          'captainInGameName': inGameName,
+          'captainInGameId': inGameId,
+          'teamName': teamName,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        if (data['remainingCoins'] != null) {
+          user.adCoins = (data['remainingCoins'] as num).toInt();
+          await saveUser();
+        }
+        await fetchFFTournaments(category: activeCategory);
+        return {
+          'success': true,
+          'teamCode': data['teamCode'],
+          'message': data['message'],
+        };
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Could not create team'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> joinSquadTeam({
+    required String teamCode,
+    required String inGameName,
+    required String inGameId,
+  }) async {
+    try {
+      user.inGameName = inGameName;
+      user.inGameId = inGameId;
+      await saveUser();
+
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/teams/join'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'teamCode': teamCode.trim().toUpperCase(),
+          'uid': user.uid,
+          'inGameName': inGameName,
+          'inGameId': inGameId,
+        }),
+      );
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        if (data['remainingCoins'] != null) {
+          user.adCoins = (data['remainingCoins'] as num).toInt();
+          await saveUser();
+        }
+        await fetchFFTournaments(category: activeCategory);
+        return {'success': true, 'message': data['message']};
+      } else {
+        return {'success': false, 'message': data['error'] ?? 'Failed to join team'};
+      }
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchRoomCredentials(String tournamentId, String groupId) async {
+    try {
+      final res = await http.get(
+        Uri.parse('$vpsBaseUrl/api/ff/room-credentials/$tournamentId/$groupId?uid=${user.uid}'),
+      );
+      if (res.statusCode == 200) {
+        return jsonDecode(res.body);
+      }
+      return {'success': false, 'message': 'Failed to fetch credentials'};
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> watchAdEarnCoins() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/watch-ad-coin'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'uid': user.uid}),
+      );
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        final coins = (data['coinsEarned'] as num?)?.toInt() ?? 10;
+        user.adCoins += coins;
+        await saveUser();
+        notifyListeners();
+        return {'success': true, 'coinsEarned': coins, 'message': data['message']};
+      }
+      return {'success': false, 'message': 'Ad reward failed'};
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> claimDailyStreak() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/daily-checkin'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'uid': user.uid}),
+      );
+      final data = jsonDecode(res.body);
+      if (res.statusCode == 200 && data['success'] == true) {
+        user.adCoins = (data['totalCoins'] as num?)?.toInt() ?? (user.adCoins + 10);
+        user.streakDays = (data['dayNumber'] as num?)?.toInt() ?? (user.streakDays + 1);
+        user.lastCheckInDate = DateTime.now().toIso8601String();
+        await saveUser();
+        notifyListeners();
+        return {'success': true, 'message': data['message'], 'coins': data['coinsAwarded']};
+      }
+      return {'success': false, 'message': data['error'] ?? 'Check-in failed'};
+    } catch (e) {
+      return {'success': false, 'message': 'Network error: $e'};
+    }
+  }
+
+  Future<void> fetchWorldChat() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/ff/chat'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['messages'] != null) {
+          chatMessages = (data['messages'] as List)
+              .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
+              .toList();
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching chat: $e');
+    }
+  }
+
+  Future<bool> sendChatMessage(String text) async {
+    if (text.trim().isEmpty) return false;
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/ff/chat/send'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'uid': user.uid,
+          'senderName': user.inGameName.isNotEmpty ? user.inGameName : user.displayName,
+          'text': text.trim(),
+        }),
+      );
+      if (res.statusCode == 200) {
+        await fetchWorldChat();
         return true;
       }
-    } catch (_) {}
-    return false;
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<void> fetchMySupportTickets() async {
+    isSupportLoading = true;
+    notifyListeners();
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/support/user/${user.uid}'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['tickets'] != null) {
+          mySupportTickets = (data['tickets'] as List)
+              .map((t) => SupportTicket.fromJson(t as Map<String, dynamic>))
+              .toList();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching support: $e');
+    } finally {
+      isSupportLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> submitSupportTicket(String category, String subject, String message) async {
+    if (message.trim().isEmpty) return false;
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/support/ticket'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'uid': user.uid,
+          'userName': user.inGameName.isNotEmpty ? user.inGameName : user.displayName,
+          'category': category,
+          'subject': subject,
+          'message': message.trim(),
+        }),
+      );
+      if (res.statusCode == 200) {
+        await fetchMySupportTickets();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // ── 🕹️ MINI-GAME ARCADE ZONE ──
+  Future<Map<String, dynamic>> claimMiniGameReward({
+    required String gameId,
+    required int score,
+    bool doubleReward = false,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/minigame/claim-reward'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'deviceId': user.uid,
+          'gameId': gameId,
+          'score': score,
+          'doubleReward': doubleReward,
+        }),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['success'] == true) {
+          final earned = (data['coinsEarned'] as num?)?.toInt() ?? 0;
+          if (earned > 0) {
+            user.adCoins = (data['totalCoins'] as num?)?.toInt() ?? (user.adCoins + earned);
+            user.miniGameCoinsToday = (data['miniGameCoinsToday'] as num?)?.toInt() ?? (user.miniGameCoinsToday + earned);
+            await saveUser();
+            notifyListeners();
+          }
+        }
+        return data;
+      }
+      return {'success': false, 'message': 'Network error. Try again.'};
+    } catch (e) {
+      debugPrint('claimMiniGameReward error: $e');
+      return {'success': false, 'message': 'Error: $e'};
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchMiniGameStatus() async {
+    try {
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/minigame/status/${user.uid}'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['success'] == true) {
+          user.miniGameCoinsToday = (data['miniGameCoinsToday'] as num?)?.toInt() ?? user.miniGameCoinsToday;
+          notifyListeners();
+        }
+        return data;
+      }
+      return {'success': false};
+    } catch (e) {
+      debugPrint('fetchMiniGameStatus error: $e');
+      return {'success': false};
+    }
   }
 }
