@@ -6,6 +6,9 @@ import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import 'games/katana_hit_screen.dart';
 import 'games/gloo_wall_runner_screen.dart';
+import 'games/fruit_slash_screen.dart';
+import 'games/speed_math_screen.dart';
+import 'games/tic_tac_toe_screen.dart';
 
 class PlayZoneScreen extends StatefulWidget {
   final AppState appState;
@@ -73,6 +76,30 @@ class _PlayZoneScreenState extends State<PlayZoneScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => GlooWallRunnerScreen(appState: widget.appState)),
+    );
+    _refreshStatus();
+  }
+
+  void _openFruitSlash() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => FruitSlashScreen(appState: widget.appState)),
+    );
+    _refreshStatus();
+  }
+
+  void _openSpeedMath() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => SpeedMathScreen(appState: widget.appState)),
+    );
+    _refreshStatus();
+  }
+
+  void _openTicTacToe() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => TicTacToeScreen(appState: widget.appState)),
     );
     _refreshStatus();
   }
@@ -347,6 +374,48 @@ class _PlayZoneScreenState extends State<PlayZoneScreen> {
                 accentColor: AppTheme.cyanAccent,
                 iconData: Icons.directions_run,
                 onTap: _openGlooWallGame,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Game 3: Fruit Slash
+              _buildGameCard(
+                title: '🍉 FRUIT SLASH (फल काटो)',
+                subtitle: 'स्वाइप करके फल काटें, बम से बचें और अनलिमिटेड कॉइन्स कमाएं!',
+                highScore: user.fruitSlashHighScore,
+                badgeText: 'HOT',
+                badgeColor: const Color(0xFFF97316),
+                accentColor: const Color(0xFFF97316),
+                iconData: Icons.sports_martial_arts,
+                onTap: _openFruitSlash,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Game 4: Speed Math
+              _buildGameCard(
+                title: '➕ SPEED MATH (स्पीड मैथ)',
+                subtitle: '10 सेकंड में गणित के आसान सवालों का जवाब देकर कॉइन्स जीतें!',
+                highScore: user.speedMathHighScore,
+                badgeText: 'QUIZ',
+                badgeColor: const Color(0xFF8B5CF6),
+                accentColor: const Color(0xFF8B5CF6),
+                iconData: Icons.calculate,
+                onTap: _openSpeedMath,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Game 5: Tic Tac Toe Arena
+              _buildGameCard(
+                title: '⭕ TIC TAC TOE (जीरो-काटा)',
+                subtitle: 'फ्री फायर साइबर बॉट के खिलाफ 3x3 ग्रिड जीतें और रिवॉर्ड पाएं!',
+                highScore: user.ticTacToeHighScore,
+                badgeText: 'CLASSIC',
+                badgeColor: AppTheme.successGreen,
+                accentColor: AppTheme.successGreen,
+                iconData: Icons.grid_3x3,
+                onTap: _openTicTacToe,
               ),
 
               const SizedBox(height: 22),

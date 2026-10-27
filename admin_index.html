@@ -240,14 +240,127 @@
 
   <!-- TOP QUICK NAVIGATION BAR -->
   <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; background:#1E293B; padding:10px 14px; border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
-    <a href="#sec-tournaments" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">🔥 Tournaments</a>
+    <a href="#sec-prize-pool" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--gold); color:var(--gold);">💰 Prize Pool & Top 3</a>
     <a href="#sec-app-mgmt" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--gold); color:var(--gold);">📱 Popup Banner & YouTube Video</a>
+    <a href="#sec-tournaments" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">🔥 Tournaments</a>
+    <a href="#sec-world-chat" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--cyan); color:var(--cyan);">💬 World Chat Moderation</a>
     <a href="#sec-minigame" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--cyan); color:var(--cyan);">🕹️ Mini-Game Arcade</a>
     <a href="#sec-fcm" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--saffron); color:var(--saffron);">📢 FCM Push Broadcast</a>
     <a href="#sec-redeems" class="btn btn-outline" style="padding:6px 12px; font-size:12px; border-color:var(--green); color:var(--green);">🎁 Redeem Payouts</a>
     <a href="#sec-support" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">💬 Support Desk</a>
     <a href="#sec-users" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">👥 Users</a>
     <a href="#sec-economy" class="btn btn-outline" style="padding:6px 12px; font-size:12px;">⚙️ Economy</a>
+  </div>
+
+  <!-- MODULE: 💰 WEEKLY LEADERBOARD PRIZE POOL & TOP 3 SPLIT -->
+  <div id="sec-prize-pool" class="card" style="border: 2px solid var(--gold); background: linear-gradient(180deg, #1E1B4B 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:18px;">💰 WEEKLY LEADERBOARD PRIZE POOL & TOP 3 SPLIT</span>
+        <span class="badge badge-gold" id="currentPrizePoolBadge">₹1,000 LIVE</span>
+      </div>
+      <button class="btn btn-gold" onclick="savePrizePoolSettings()">💾 Save Prize Pool</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+      App ke Leaderboard aur Tournaments screen par dikhne wala <b>Weekly Prize Pool</b> aur <b>Top 3 Players Prize Distribution</b> yahan se set karein! Top 3 par aapke Pro Indian Bot Players rehte hain aur real players unke neeche rank 4+ par compete karte hain.
+    </p>
+    <div class="grid-2">
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
+        <label style="color:#fff; font-weight:bold; font-size:13px; display:block; margin-bottom:6px;">🏆 Total Weekly Prize Pool (रुपये में):</label>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <input type="number" id="prizePoolInput" value="1000" style="font-size:16px; font-weight:bold; color:var(--gold);" oninput="updatePrizePreview()">
+          <button class="btn btn-outline" style="font-size:12px;" onclick="setPrizePreset(1000)">₹1,000</button>
+          <button class="btn btn-outline" style="font-size:12px;" onclick="setPrizePreset(2500)">₹2,500</button>
+          <button class="btn btn-outline" style="font-size:12px;" onclick="setPrizePreset(5000)">₹5,000</button>
+        </div>
+        <div style="display:flex; gap:10px;">
+          <div style="flex:1;">
+            <label style="color:var(--text-muted); font-size:11px;">🥇 Rank 1 % (Default: 50%):</label>
+            <input type="number" id="rank1PctInput" value="50" oninput="updatePrizePreview()">
+          </div>
+          <div style="flex:1;">
+            <label style="color:var(--text-muted); font-size:11px;">🥈 Rank 2 % (Default: 30%):</label>
+            <input type="number" id="rank2PctInput" value="30" oninput="updatePrizePreview()">
+          </div>
+          <div style="flex:1;">
+            <label style="color:var(--text-muted); font-size:11px;">🥉 Rank 3 % (Default: 20%):</label>
+            <input type="number" id="rank3PctInput" value="20" oninput="updatePrizePreview()">
+          </div>
+        </div>
+      </div>
+      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); display:flex; flex-direction:column; justify-content:center;">
+        <h4 style="color:var(--cyan); font-size:14px; margin-bottom:10px;">📊 Live App Top 3 Payout Preview</h4>
+        <div style="background:#0F172A; padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.05); font-family:monospace; font-size:13px; line-height:1.7;">
+          <div>🥇 <b>Rank 1:</b> <span id="r1Prev" style="color:var(--gold); font-weight:bold;">₹500</span> (Bot Safe - ₹0 Risk)</div>
+          <div>🥈 <b>Rank 2:</b> <span id="r2Prev" style="color:var(--cyan); font-weight:bold;">₹300</span> (Bot Safe - ₹0 Risk)</div>
+          <div>🥉 <b>Rank 3:</b> <span id="r3Prev" style="color:#A78BFA; font-weight:bold;">₹200</span> (Bot Safe - ₹0 Risk)</div>
+          <div style="color:var(--green); font-size:11.5px; margin-top:6px;">👤 <b>Rank 4+:</b> Real Players compete for Entry Bonuses & Coins</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODULE 7: 📱 IN-APP MANAGEMENT (POPUP BANNER & "HOW TO PLAY" VIDEO) -->
+  <div id="sec-app-mgmt" class="card" style="border: 3px solid var(--gold); background: linear-gradient(180deg, #1C1917 0%, #131B2A 100%);">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:18px;">📱 IN-APP MANAGEMENT: POPUP BANNER & "HOW TO PLAY" YOUTUBE VIDEO</span>
+      </div>
+      <button class="btn btn-gold" onclick="saveAppSettings()">💾 Save In-App Settings</button>
+    </div>
+    <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 16px;">
+      App open hone par user ko turant dikhne wala <b>Popup Event Banner</b> aur naye players ke liye <b>"How to Play" YouTube Video Tutorial</b> link yahan se set karein!
+    </p>
+    <div class="grid-2">
+      <!-- 1. POPUP BANNER SETTINGS -->
+      <div style="background:#1A2333; padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">
+        <h4 style="color:var(--gold); font-size:16px; margin-bottom:12px;">🖼️ 1. App Startup Popup Event Banner</h4>
+        <div class="form-group">
+          <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
+            <input type="checkbox" id="popupEnabled" style="width:20px; height:20px;">
+            <span style="color:#fff; font-weight:bold; font-size:14px;">Enable Popup Banner on App Open</span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Banner Image URL</label>
+          <input type="text" id="popupImageUrl" placeholder="https://vps.swgayanbhumi.in/uploads/...">
+        </div>
+        <div class="form-group">
+          <label>Upload Banner Image (PNG/JPG)</label>
+          <input type="file" id="popupImageFile" accept="image/*" onchange="uploadPopupBannerImage()">
+          <div id="popupUploadStatus" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Upload custom event banner directly from your device</div>
+        </div>
+        <div class="form-group">
+          <label>Banner Click / Redirect URL (Optional)</label>
+          <input type="text" id="popupActionUrl" placeholder="e.g. https://t.me/booyahrewards">
+        </div>
+        <img id="popupPreview" src="" style="display:none; width:100%; height:140px; object-fit:cover; border-radius:8px; margin-top:8px; border:1px solid var(--gold);">
+      </div>
+
+      <!-- 2. HOW TO PLAY VIDEO TUTORIAL -->
+      <div style="background:#1A2333; padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.12);">
+        <h4 style="color:var(--cyan); font-size:16px; margin-bottom:12px;">🎬 2. "How to Play" YouTube Video Tutorial</h4>
+        <div class="form-group">
+          <label>YouTube Video Link</label>
+          <div style="display:flex; gap:8px;">
+            <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=...">
+            <button class="btn btn-outline" style="white-space:nowrap; padding:0 14px;" onclick="testPlayVideo()">▶️ Test Link</button>
+          </div>
+          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Yeh video app kholne par aur Home Screen ke "How to Play" button se chalegi.</div>
+        </div>
+        <div class="form-group">
+          <label>Tutorial Title</label>
+          <input type="text" id="videoTitle" placeholder="Free Fire Tournament Kaise Khelein & Code Kaise Jeetein">
+        </div>
+        <div class="form-group">
+          <label>Tutorial Description</label>
+          <textarea id="videoDesc" rows="3" placeholder="Slot book karne se lekar Custom Room join karne ka poora tareeqa!"></textarea>
+        </div>
+        <div style="margin-top:10px;">
+          <button class="btn btn-gold" style="width:100%;" onclick="saveAppSettings()">💾 Save Banner & Video Settings</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- MODULE 1: TOURNAMENT & ROOM CONTROL -->
@@ -341,63 +454,31 @@
     </div>
   </div>
 
-  <!-- MODULE 7: 📱 IN-APP MANAGEMENT (POPUP BANNER & "HOW TO PLAY" VIDEO) -->
-  <div id="sec-app-mgmt" class="card" style="border: 2px solid var(--gold); background: linear-gradient(180deg, #1C1917 0%, #131B2A 100%);">
+  <!-- MODULE: 💬 LIVE WORLD CHAT MODERATION & PINNED NOTICE -->
+  <div id="sec-world-chat" class="card" style="border: 2px solid var(--cyan); background: linear-gradient(180deg, #0F172A 0%, #131B2A 100%);">
     <div class="card-title">
       <div style="display:flex; align-items:center; gap:8px;">
-        <span>📱 IN-APP MANAGEMENT (POPUP BANNER & "HOW TO PLAY" VIDEO)</span>
+        <span>💬 LIVE WORLD CHAT MODERATION & PINNED NOTICE</span>
+        <span class="badge badge-live" id="chatCountBadge">0 Msgs</span>
       </div>
-      <button class="btn btn-gold" onclick="saveAppSettings()">💾 Save App Settings</button>
+      <button class="btn btn-outline" style="border-color:var(--cyan); color:var(--cyan);" onclick="fetchWorldChatAdmin()">🔄 Refresh Chat</button>
     </div>
     <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 16px;">
-      App open hone par user ko aane wala <b>Popup Event Banner</b> aur naye players ke liye <b>"How to Play" YouTube Video Tutorial</b> link yahan se control karein!
+      World Chat ke sabse upar dikhne wala <b>Pinned Announcement Banner</b> set karein, abusive messages ko 1-Click me delete karein aur spammers ko chat se <b>Ban / Unban</b> karein!
     </p>
-    <div class="grid-2">
-      <!-- 1. POPUP BANNER SETTINGS -->
-      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-        <h4 style="color:var(--gold); font-size:15px; margin-bottom:12px;">🖼️ App Open Popup Event Banner</h4>
-        <div class="form-group">
-          <label style="cursor:pointer; display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="popupEnabled" style="width:18px; height:18px;">
-            <span style="color:#fff; font-weight:bold;">Enable Popup Banner on App Startup</span>
-          </label>
-        </div>
-        <div class="form-group">
-          <label>Banner Image URL</label>
-          <input type="text" id="popupImageUrl" placeholder="https://vps.swgayanbhumi.in/uploads/...">
-        </div>
-        <div class="form-group">
-          <label>Upload Banner Image</label>
-          <input type="file" id="popupImageFile" accept="image/*" onchange="uploadPopupBannerImage()">
-          <div id="popupUploadStatus" style="font-size:11px; color:var(--text-muted); margin-top:4px;">Upload custom event banner (PNG/JPG)</div>
-        </div>
-        <div class="form-group">
-          <label>Banner Action URL / Redirect Link (Optional)</label>
-          <input type="text" id="popupActionUrl" placeholder="e.g. https://t.me/booyahrewards">
-        </div>
-        <img id="popupPreview" src="" style="display:none; width:100%; height:120px; object-fit:cover; border-radius:8px; margin-top:8px;">
-      </div>
 
-      <!-- 2. HOW TO PLAY VIDEO TUTORIAL -->
-      <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-        <h4 style="color:var(--cyan); font-size:15px; margin-bottom:12px;">🎬 "How to Play" YouTube Video Guide</h4>
-        <div class="form-group">
-          <label>YouTube Video Link</label>
-          <div style="display:flex; gap:8px;">
-            <input type="text" id="videoUrl" placeholder="https://www.youtube.com/watch?v=...">
-            <button class="btn btn-outline" style="white-space:nowrap; padding:0 12px;" onclick="testPlayVideo()">▶️ Test Link</button>
-          </div>
-          <div style="font-size:11px; color:var(--text-muted); margin-top:4px;">Yeh video har naye user ko pehli baar app kholne par dikhegi aur Home screen par bhi button rahega.</div>
-        </div>
-        <div class="form-group">
-          <label>Tutorial Title</label>
-          <input type="text" id="videoTitle" placeholder="Free Fire Tournament Kaise Khelein & Code Kaise Jeetein">
-        </div>
-        <div class="form-group">
-          <label>Tutorial Description</label>
-          <textarea id="videoDesc" rows="3" placeholder="Slot book karne se lekar Custom Room join karne ka poora tareeqa!"></textarea>
-        </div>
+    <!-- Pinned Notice Box -->
+    <div style="background:#1A2333; padding:16px; border-radius:10px; border:1px solid rgba(255,255,255,0.08); margin-bottom:16px;">
+      <h4 style="color:var(--cyan); font-size:15px; margin-bottom:10px;">📢 Pinned Chat Announcement (App ke upar chalega)</h4>
+      <div style="display:flex; gap:10px;">
+        <input type="text" id="pinnedChatText" placeholder="e.g. 🔥 Mega Cup match 8:00 PM start hoga! Fair play rakhein.">
+        <button class="btn btn-gold" style="white-space:nowrap;" onclick="savePinnedChatNotice()">💾 Save Notice</button>
       </div>
+    </div>
+
+    <!-- Live Messages Feed -->
+    <div style="background:#0B0F19; border-radius:10px; padding:12px; max-height:360px; overflow-y:auto; border:1px solid rgba(255,255,255,0.08);" id="adminChatContainer">
+      <div style="color:var(--text-muted); text-align:center; padding:20px;">Loading chat messages...</div>
     </div>
   </div>
 
@@ -1318,30 +1399,83 @@
       } catch (e) { alert('Server error: ' + e.message); }
     }
 
+    // ── PRIZE POOL CONTROLLER ──
+    function updatePrizePreview() {
+      var pool = parseInt(document.getElementById('prizePoolInput').value, 10) || 1000;
+      var r1 = parseInt(document.getElementById('rank1PctInput').value, 10) || 50;
+      var r2 = parseInt(document.getElementById('rank2PctInput').value, 10) || 30;
+      var r3 = parseInt(document.getElementById('rank3PctInput').value, 10) || 20;
+      document.getElementById('r1Prev').innerText = '₹' + Math.round(pool * (r1 / 100)).toLocaleString('en-IN');
+      document.getElementById('r2Prev').innerText = '₹' + Math.round(pool * (r2 / 100)).toLocaleString('en-IN');
+      document.getElementById('r3Prev').innerText = '₹' + Math.round(pool * (r3 / 100)).toLocaleString('en-IN');
+      document.getElementById('currentPrizePoolBadge').innerText = '₹' + pool.toLocaleString('en-IN') + ' LIVE';
+    }
+
+    function setPrizePreset(amt) {
+      document.getElementById('prizePoolInput').value = amt;
+      updatePrizePreview();
+    }
+
+    async function savePrizePoolSettings() {
+      var pool = parseInt(document.getElementById('prizePoolInput').value, 10) || 1000;
+      var r1 = parseInt(document.getElementById('rank1PctInput').value, 10) || 50;
+      var r2 = parseInt(document.getElementById('rank2PctInput').value, 10) || 30;
+      var r3 = parseInt(document.getElementById('rank3PctInput').value, 10) || 20;
+
+      try {
+        var res = await fetch('/api/admin/set-prize-pool', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ prizePool: pool, rank1Percent: r1, rank2Percent: r2, rank3Percent: r3 })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ वीकली प्राइज़ पूल सफलतापूर्वक ₹' + pool.toLocaleString('en-IN') + ' पर सेट हो गया!');
+          updatePrizePreview();
+        } else {
+          alert('त्रुटि: ' + (data.message || 'सेव नहीं हो सका'));
+        }
+      } catch (e) {
+        alert('नेटवर्क त्रुटि: ' + e.message);
+      }
+    }
+
     // ── APP MANAGEMENT (POPUP BANNER & VIDEO TUTORIAL) ──
     async function fetchAppConfig() {
       try {
         var res = await fetch('/api/app-config');
         var data = await res.json();
-        if (data.success && data.appSettings) {
-          var pop = data.appSettings.popupBanner || {};
-          document.getElementById('popupEnabled').checked = !!pop.enabled;
-          document.getElementById('popupImageUrl').value = pop.imageUrl || '';
-          document.getElementById('popupActionUrl').value = pop.actionUrl || '';
-          if (pop.imageUrl) {
-            document.getElementById('popupPreview').src = pop.imageUrl;
-            document.getElementById('popupPreview').style.display = 'block';
+        if (data.success) {
+          if (data.weeklyPrizePool) {
+            document.getElementById('prizePoolInput').value = data.weeklyPrizePool;
+            if (data.prizeDistribution) {
+              document.getElementById('rank1PctInput').value = data.prizeDistribution.rank1Percent || 50;
+              document.getElementById('rank2PctInput').value = data.prizeDistribution.rank2Percent || 30;
+              document.getElementById('rank3PctInput').value = data.prizeDistribution.rank3Percent || 20;
+            }
+            updatePrizePreview();
           }
-          var vid = data.appSettings.howToPlayVideo || {};
-          document.getElementById('videoUrl').value = vid.youtubeUrl || '';
-          document.getElementById('videoTitle').value = vid.title || '';
-          document.getElementById('videoDesc').value = vid.description || '';
 
-          var mg = data.appSettings.miniGameConfig || {};
-          document.getElementById('mgEnabled').checked = mg.enabled !== false;
-          if (mg.cooldownSeconds) document.getElementById('mgCooldownSeconds').value = mg.cooldownSeconds;
-          if (mg.minScoreForCoin) document.getElementById('mgMinScore').value = mg.minScoreForCoin;
-          if (mg.rewardPerSession) document.getElementById('mgRewardPerSession').value = mg.rewardPerSession;
+          if (data.appSettings) {
+            var pop = data.appSettings.popupBanner || {};
+            document.getElementById('popupEnabled').checked = !!pop.enabled;
+            document.getElementById('popupImageUrl').value = pop.imageUrl || '';
+            document.getElementById('popupActionUrl').value = pop.actionUrl || '';
+            if (pop.imageUrl) {
+              document.getElementById('popupPreview').src = pop.imageUrl;
+              document.getElementById('popupPreview').style.display = 'block';
+            }
+            var vid = data.appSettings.howToPlayVideo || {};
+            document.getElementById('videoUrl').value = vid.youtubeUrl || '';
+            document.getElementById('videoTitle').value = vid.title || '';
+            document.getElementById('videoDesc').value = vid.description || '';
+
+            var mg = data.appSettings.miniGameConfig || {};
+            document.getElementById('mgEnabled').checked = mg.enabled !== false;
+            if (mg.cooldownSeconds) document.getElementById('mgCooldownSeconds').value = mg.cooldownSeconds;
+            if (mg.minScoreForCoin) document.getElementById('mgMinScore').value = mg.minScoreForCoin;
+            if (mg.rewardPerSession) document.getElementById('mgRewardPerSession').value = mg.rewardPerSession;
+          }
         }
       } catch (e) { console.error('App config error:', e); }
     }
@@ -1442,6 +1576,84 @@
       } catch (e) { alert('Server error: ' + e.message); }
     }
 
+    // ── WORLD CHAT ADMIN MODERATION ──
+    async function fetchWorldChatAdmin() {
+      try {
+        var res = await fetch('/api/ff/chat');
+        var data = await res.json();
+        if (data.success) {
+          if (data.pinned && data.pinned.text) {
+            document.getElementById('pinnedChatText').value = data.pinned.text;
+          }
+          var msgs = data.messages || [];
+          document.getElementById('chatCountBadge').innerText = msgs.length + ' Msgs';
+          var container = document.getElementById('adminChatContainer');
+          if (msgs.length === 0) {
+            container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:20px;">No messages yet.</div>';
+            return;
+          }
+          var html = '';
+          msgs.slice().reverse().forEach(function(m) {
+            html += '<div style="display:flex; justify-content:space-between; align-items:center; background:#131B2A; padding:8px 12px; border-radius:8px; margin-bottom:8px; border:1px solid rgba(255,255,255,0.06);">' +
+              '<div>' +
+                '<span style="color:var(--gold); font-weight:bold; font-size:12px;">' + (m.senderName || 'Gamer') + '</span> ' +
+                '<span style="color:var(--text-muted); font-size:10px; margin-left:6px;">' + new Date(m.timestamp).toLocaleTimeString() + '</span>' +
+                '<div style="color:#fff; font-size:13px; margin-top:2px;">' + m.text + '</div>' +
+              '</div>' +
+              '<div style="display:flex; gap:6px;">' +
+                '<button class="btn btn-danger" style="padding:4px 8px; font-size:11px;" onclick="deleteChatMessage(\'' + m.id + '\')">🗑️ Delete</button>' +
+                '<button class="btn btn-outline" style="padding:4px 8px; font-size:11px; border-color:#EF4444; color:#EF4444;" onclick="banUserChat(\'' + m.uid + '\')">🚫 Ban</button>' +
+              '</div>' +
+            '</div>';
+          });
+          container.innerHTML = html;
+        }
+      } catch (e) { console.error('Chat admin error:', e); }
+    }
+
+    async function savePinnedChatNotice() {
+      var text = document.getElementById('pinnedChatText').value.trim();
+      try {
+        var res = await fetch('/api/admin/ff/chat/pinned', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ text: text, enabled: true })
+        });
+        var data = await res.json();
+        if (data.success) alert('✅ ' + data.message);
+        else alert('Error: ' + data.error);
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function deleteChatMessage(msgId) {
+      if (!confirm('Kya aap yeh message delete karna chahte hain?')) return;
+      try {
+        var res = await fetch('/api/admin/ff/chat/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ msgId: msgId })
+        });
+        var data = await res.json();
+        if (data.success) fetchWorldChatAdmin();
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
+    async function banUserChat(uid) {
+      if (!confirm('Kya aap is user (' + uid + ') ko World Chat se ban karna chahte hain?')) return;
+      try {
+        var res = await fetch('/api/admin/ff/chat/ban-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
+          body: JSON.stringify({ uid: uid })
+        });
+        var data = await res.json();
+        if (data.success) {
+          alert('✅ User ko World Chat se ban kar diya gaya!');
+          fetchWorldChatAdmin();
+        }
+      } catch (e) { alert('Error: ' + e.message); }
+    }
+
     function refreshAll(force) {
       fetchStats();
       fetchTournaments();
@@ -1449,6 +1661,7 @@
       fetchRedeems();
       fetchNotifications();
       fetchAppConfig();
+      fetchWorldChatAdmin();
     }
 
     // Initial Load & 15s refresh

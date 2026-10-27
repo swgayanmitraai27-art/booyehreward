@@ -9,6 +9,7 @@ class UserModel {
   int knifeHitHighScore;
   int fruitSlashHighScore;
   int speedMathHighScore;
+  int ticTacToeHighScore;
   int weeklyScore;
   int spinCount;
   String lastSpinDate;
@@ -38,6 +39,7 @@ class UserModel {
     this.knifeHitHighScore = 0,
     this.fruitSlashHighScore = 0,
     this.speedMathHighScore = 0,
+    this.ticTacToeHighScore = 0,
     this.weeklyScore = 0,
     this.spinCount = 0,
     this.lastSpinDate = '',
@@ -70,6 +72,7 @@ class UserModel {
       knifeHitHighScore: 0,
       fruitSlashHighScore: 0,
       speedMathHighScore: 0,
+      ticTacToeHighScore: 0,
       weeklyScore: 0,
       spinCount: 0,
       lastSpinDate: '',
@@ -100,6 +103,7 @@ class UserModel {
       knifeHitHighScore: (json['knifeHitHighScore'] as num?)?.toInt() ?? 0,
       fruitSlashHighScore: (json['fruitSlashHighScore'] as num?)?.toInt() ?? 0,
       speedMathHighScore: (json['speedMathHighScore'] as num?)?.toInt() ?? 0,
+      ticTacToeHighScore: (json['ticTacToeHighScore'] as num?)?.toInt() ?? 0,
       weeklyScore: (json['weeklyScore'] as num?)?.toInt() ?? 0,
       spinCount: (json['spinCount'] as num?)?.toInt() ?? 0,
       lastSpinDate: json['lastSpinDate'] as String? ?? '',
@@ -131,6 +135,7 @@ class UserModel {
     int? knifeHitHighScore,
     int? fruitSlashHighScore,
     int? speedMathHighScore,
+    int? ticTacToeHighScore,
     int? weeklyScore,
     int? spinCount,
     String? lastSpinDate,
@@ -160,6 +165,7 @@ class UserModel {
       knifeHitHighScore: knifeHitHighScore ?? this.knifeHitHighScore,
       fruitSlashHighScore: fruitSlashHighScore ?? this.fruitSlashHighScore,
       speedMathHighScore: speedMathHighScore ?? this.speedMathHighScore,
+      ticTacToeHighScore: ticTacToeHighScore ?? this.ticTacToeHighScore,
       weeklyScore: weeklyScore ?? this.weeklyScore,
       spinCount: spinCount ?? this.spinCount,
       lastSpinDate: lastSpinDate ?? this.lastSpinDate,
@@ -192,6 +198,7 @@ class UserModel {
       'knifeHitHighScore': knifeHitHighScore,
       'fruitSlashHighScore': fruitSlashHighScore,
       'speedMathHighScore': speedMathHighScore,
+      'ticTacToeHighScore': ticTacToeHighScore,
       'weeklyScore': weeklyScore,
       'spinCount': spinCount,
       'lastSpinDate': lastSpinDate,

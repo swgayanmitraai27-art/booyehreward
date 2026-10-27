@@ -50,25 +50,100 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _checkAndShowStartupPopups() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final hasSeenGuide = prefs.getBool('has_seen_esports_tutorial_v1') ?? false;
+      await widget.appState.fetchAppConfig();
+      if (!mounted) return;
 
-      if (!hasSeenGuide) {
-        if (!mounted) return;
-        await _showHowToPlayVideoGuideDialog();
-        await prefs.setBool('has_seen_esports_tutorial_v1', true);
+      // 1. Check for Admin Startup Popup Event Banner FIRST
+      final banner = widget.appState.appSettings?['popupBanner'];
+      if (banner != null && banner['enabled'] == true && (banner['imageUrl'] as String? ?? '').isNotEmpty) {
+        _showPopupEventBannerDialog(banner);
         return;
       }
 
-      // If user has already seen guide, check for Admin Popup Event Banner
-      final banner = widget.appState.appSettings?['popupBanner'];
-      if (banner != null && banner['enabled'] == true && (banner['imageUrl'] as String? ?? '').isNotEmpty) {
-        if (!mounted) return;
-        _showPopupEventBannerDialog(banner);
+      // 2. If no popup banner, check if user needs to see the tutorial video guide
+      final prefs = await SharedPreferences.getInstance();
+      final hasSeenGuide = prefs.getBool('has_seen_esports_tutorial_v1') ?? false;
+      if (!hasSeenGuide) {
+        await _showHowToPlayVideoGuideDialog();
+        await prefs.setBool('has_seen_esports_tutorial_v1', true);
       }
     } catch (e) {
       debugPrint('Startup popup error: $e');
     }
+  }
+
+  void _showInAppNotificationsDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+          side: const BorderSide(color: AppTheme.cyanAccent, width: 1.5),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.campaign, color: AppTheme.cyanAccent, size: 26),
+            const SizedBox(width: 8),
+            Text('सूचनाएं (Notifications)', style: AppTheme.gamingTitle(fontSize: 18)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgDark,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.appState.tournamentNotice,
+                      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.bgDark,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.security, color: AppTheme.cyanAccent, size: 22),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '🛡️ फेयर प्ले पॉलिसी: मैच शुरू होने से 15 मिनट पहले रूम आईडी व पासवर्ड चेक करें। हैक या चीटिंग पूरी तरह प्रतिबंधित है।',
+                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.black),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('ठीक है'),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showHowToPlayVideoGuideDialog() async {
@@ -373,6 +448,20 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
 
               const SizedBox(width: 4),
+
+              // 🎬 YouTube Video Tutorial Guide
+              IconButton(
+                icon: const Icon(Icons.smart_display, color: Colors.redAccent, size: 23),
+                tooltip: 'वीडियो गाइड (How to Play)',
+                onPressed: _showHowToPlayVideoGuideDialog,
+              ),
+
+              // 🔔 In-App Announcements / Notifications
+              IconButton(
+                icon: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyanAccent, size: 22),
+                tooltip: 'सूचनाएं (Notifications)',
+                onPressed: _showInAppNotificationsDialog,
+              ),
 
               // 🎮 Arcade Play Zone Icon (Direct 1-Click Game Launcher)
               IconButton(

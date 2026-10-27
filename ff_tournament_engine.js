@@ -631,12 +631,60 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
     });
   });
 
-  // ── 8. LIVE WORLD CHAT (5s RATE LIMIT + GAMERS LOUNGE) ──────────────────────
+  // ── 8. LIVE WORLD CHAT (PINNED ANNOUNCEMENT + BAN / DELETE MODERATION) ──
   app.get('/api/ff/chat', (req, res) => {
     res.json({
       success: true,
-      messages: (db.ff_chat || []).slice(-150)
+      messages: (db.ff_chat || []).slice(-150),
+      pinned: db.pinnedChatNotice || { text: '🔥 Booyah Rewards में आपका स्वागत है! फेयर प्ले रखें और रूम आईडी टाइम पर चेक करें।', enabled: true }
     });
+  });
+
+  app.get('/api/ff/chat/pinned', (req, res) => {
+    res.json({
+      success: true,
+      pinned: db.pinnedChatNotice || { text: '', enabled: false }
+    });
+  });
+
+  app.post('/api/admin/ff/chat/pinned', (req, res) => {
+    const { text, enabled } = req.body;
+    db.pinnedChatNotice = {
+      text: (text || '').trim(),
+      enabled: enabled !== false,
+      updatedAt: new Date().toISOString()
+    };
+    saveDB();
+    res.json({ success: true, message: 'वर्ल्ड चैट पिन नोटिस अपडेट हो गया!', pinned: db.pinnedChatNotice });
+  });
+
+  app.post('/api/admin/ff/chat/delete', (req, res) => {
+    const { msgId } = req.body;
+    if (!msgId) return res.status(400).json({ success: false, error: 'Message ID required' });
+    if (!db.ff_chat) db.ff_chat = [];
+    db.ff_chat = db.ff_chat.filter(m => m.id !== msgId);
+    saveDB();
+    res.json({ success: true, message: 'मैसेज डिलीट कर दिया गया!' });
+  });
+
+  app.post('/api/admin/ff/chat/ban-user', (req, res) => {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ success: false, error: 'User ID required' });
+    if (!db.bannedChatUsers) db.bannedChatUsers = [];
+    if (!db.bannedChatUsers.includes(uid)) {
+      db.bannedChatUsers.push(uid);
+      saveDB();
+    }
+    res.json({ success: true, message: `User ${uid} को चैट से बैन कर दिया गया!` });
+  });
+
+  app.post('/api/admin/ff/chat/unban-user', (req, res) => {
+    const { uid } = req.body;
+    if (!uid) return res.status(400).json({ success: false, error: 'User ID required' });
+    if (!db.bannedChatUsers) db.bannedChatUsers = [];
+    db.bannedChatUsers = db.bannedChatUsers.filter(u => u !== uid);
+    saveDB();
+    res.json({ success: true, message: `User ${uid} को अनबैन कर दिया गया!` });
   });
 
   const lastChatTime = {};
@@ -646,10 +694,15 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
       return res.status(400).json({ success: false, error: 'Message text required.' });
     }
 
+    // Check if user is banned by admin
+    if (db.bannedChatUsers && db.bannedChatUsers.includes(uid)) {
+      return res.status(403).json({ success: false, error: '🚫 आपको एडमिन द्वारा वर्ल्ड चैट से बैन किया गया है।' });
+    }
+
     // 5-second anti-spam rate limit
     const now = Date.now();
     if (lastChatTime[uid] && (now - lastChatTime[uid] < 5000)) {
-      return res.status(429).json({ success: false, error: 'Please wait 5 seconds before sending another message!' });
+      return res.status(429).json({ success: false, error: 'कृपया अगला मैसेज भेजने से पहले 5 सेकंड रुकें!' });
     }
     lastChatTime[uid] = now;
 

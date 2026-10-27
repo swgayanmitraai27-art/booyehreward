@@ -202,15 +202,18 @@ class AppState extends ChangeNotifier {
 
   late UserModel user;
   bool isAuthenticated = false;
-  int season = 1;
-  String tournamentType = 'daily';
+  int season = 2;
+  String tournamentType = 'weekly';
   bool get isDailyTournament => tournamentType == 'daily';
   String prizePool = '₹1,000';
+  String rank1Prize = '₹500';
+  String rank2Prize = '₹300';
+  String rank3Prize = '₹200';
   List<Map<String, dynamic>> prizesBreakdown = [];
   List<LeaderboardEntry> weeklyLeaderboard = [];
   List<WinnerProofItem> winnerProofs = [];
   List<PastSeasonArchive> pastWinners = [];
-  String tournamentNotice = '📢 दैनिक चैंपियनशिप लाइव! हर रोज़ रात 12:00 बजे ₹1,000 का प्राइज़ पूल!';
+  String tournamentNotice = '📢 वीकली चैंपियनशिप लाइव! इस हफ़्ते ₹1,000 का प्राइज़ पूल!';
 
   // ── 🏆 FREE FIRE INDIA STATE ──
   List<FFTournament> ffTournaments = [];
@@ -299,8 +302,23 @@ class AppState extends ChangeNotifier {
       final res = await http.get(url).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data['success'] == true && data['appSettings'] != null) {
-          appSettings = Map<String, dynamic>.from(data['appSettings']);
+        if (data['success'] == true) {
+          if (data['appSettings'] != null) {
+            appSettings = Map<String, dynamic>.from(data['appSettings']);
+          }
+          if (data['weeklyPrizePool'] != null) {
+            prizePool = '₹${(data['weeklyPrizePool'] as num).toInt()}';
+          }
+          if (data['prizeDistribution'] != null) {
+            final p = data['prizeDistribution'] as Map<String, dynamic>;
+            final pool = (data['weeklyPrizePool'] as num?)?.toInt() ?? 1000;
+            final r1 = (p['rank1Percent'] as num?)?.toInt() ?? 50;
+            final r2 = (p['rank2Percent'] as num?)?.toInt() ?? 30;
+            final r3 = (p['rank3Percent'] as num?)?.toInt() ?? 20;
+            rank1Prize = '₹${(pool * r1 ~/ 100)}';
+            rank2Prize = '₹${(pool * r2 ~/ 100)}';
+            rank3Prize = '₹${(pool * r3 ~/ 100)}';
+          }
           notifyListeners();
         }
       }
@@ -392,6 +410,104 @@ class AppState extends ChangeNotifier {
       }).catchError((_) {});
     }
     notifyListeners();
+  }
+
+  String pinnedChatNotice = '🔥 Booyah Rewards में आपका स्वागत है! फेयर प्ले रखें और रूम आईडी टाइम पर चेक करें।';
+
+  // ── USER SIGNUP WITH NAME, MOBILE, EMAIL, PASSWORD, REFERRAL ──
+  Future<Map<String, dynamic>> signupUser({
+    required String name,
+    required String phone,
+    required String email,
+    required String password,
+    String inGameName = '',
+    String inGameId = '',
+    String referralCode = '',
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/auth/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'name': name.trim(),
+          'phoneNumber': phone.trim(),
+          'email': email.trim(),
+          'password': password.trim(),
+          'inGameName': inGameName.trim(),
+          'inGameId': inGameId.trim(),
+          'referralCode': referralCode.trim(),
+        }),
+      );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && data['success'] == true && data['user'] != null) {
+        user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        await saveUser();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_email', email.trim());
+        await prefs.setString('auth_password', password.trim());
+        await prefs.setBool('is_logged_in', true);
+        notifyListeners();
+        return {'success': true, 'message': data['message'] ?? 'साइन-अप सफल!'};
+      }
+      return {'success': false, 'message': data['message'] ?? 'साइन-अप विफल रहा।'};
+    } catch (e) {
+      return {'success': false, 'message': 'नेटवर्क त्रुटि: $e'};
+    }
+  }
+
+  // ── USER LOGIN WITH EMAIL/PHONE & PASSWORD ──
+  Future<Map<String, dynamic>> loginUser({
+    required String identifier,
+    required String password,
+  }) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$vpsBaseUrl/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'identifier': identifier.trim(),
+          'password': password.trim(),
+        }),
+      );
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (res.statusCode == 200 && data['success'] == true && data['user'] != null) {
+        user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+        await saveUser();
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_email', identifier.trim());
+        await prefs.setString('auth_password', password.trim());
+        await prefs.setBool('is_logged_in', true);
+        notifyListeners();
+        return {'success': true, 'message': data['message'] ?? 'लॉगिन सफल!'};
+      }
+      return {'success': false, 'message': data['message'] ?? 'गलत पासवर्ड या खाता नहीं मिला।'};
+    } catch (e) {
+      return {'success': false, 'message': 'नेटवर्क त्रुटि: $e'};
+    }
+  }
+
+  // ── UPDATE FREE FIRE IN-GAME DETAILS ──
+  Future<bool> updateFreeFireDetails(String ign, String uid) async {
+    user.inGameName = ign.trim();
+    user.inGameId = uid.trim();
+    await saveUser();
+    notifyListeners();
+
+    try {
+      await http.post(
+        Uri.parse('$vpsBaseUrl/api/auth/update-ff-profile'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'uid': user.uid,
+          'inGameName': user.inGameName,
+          'inGameId': user.inGameId,
+        }),
+      );
+      return true;
+    } catch (e) {
+      debugPrint('Error updating FF profile: $e');
+      return false;
+    }
   }
 
   // ── Sync Guest User with VPS Backend (Device ID based, No Password Needed) ──
@@ -626,11 +742,17 @@ class AppState extends ChangeNotifier {
   // ── Fetch Live Tournament Leaderboard ──
   Future<void> fetchLeaderboard() async {
     try {
-      final res = await http.get(Uri.parse('$vpsBaseUrl/api/tournament/leaderboard'));
+      final res = await http.get(Uri.parse('$vpsBaseUrl/api/leaderboard'));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
-        if (data['config'] != null) {
-          _updateConfig(data['config'] as Map<String, dynamic>);
+        if (data['prizePool'] != null) {
+          prizePool = data['prizePool'].toString();
+        }
+        if (data['prizes'] != null) {
+          final p = data['prizes'] as Map<String, dynamic>;
+          if (p['rank1'] != null) rank1Prize = p['rank1'].toString();
+          if (p['rank2'] != null) rank2Prize = p['rank2'].toString();
+          if (p['rank3'] != null) rank3Prize = p['rank3'].toString();
         }
         if (data['season'] != null) {
           season = (data['season'] as num).toInt();
@@ -1058,6 +1180,9 @@ class AppState extends ChangeNotifier {
           chatMessages = (data['messages'] as List)
               .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
               .toList();
+          if (data['pinned'] != null && data['pinned']['text'] != null) {
+            pinnedChatNotice = data['pinned']['text'].toString();
+          }
           notifyListeners();
         }
       }
@@ -1157,6 +1282,7 @@ class AppState extends ChangeNotifier {
           if (earned > 0) {
             user.adCoins = (data['totalCoins'] as num?)?.toInt() ?? (user.adCoins + earned);
             user.miniGameCoinsToday = (data['miniGameCoinsToday'] as num?)?.toInt() ?? (user.miniGameCoinsToday + earned);
+            user.weeklyScore += score + (earned * 5);
             await saveUser();
             notifyListeners();
           }
@@ -1168,6 +1294,16 @@ class AppState extends ChangeNotifier {
       debugPrint('claimMiniGameReward error: $e');
       return {'success': false, 'message': 'Error: $e'};
     }
+  }
+
+  Future<void> logoutUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('is_logged_in');
+    await prefs.remove('auth_email');
+    await prefs.remove('auth_password');
+    user = UserModel.guest();
+    await saveUser();
+    notifyListeners();
   }
 
   Future<Map<String, dynamic>> fetchMiniGameStatus() async {

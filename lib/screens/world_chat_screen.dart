@@ -95,7 +95,9 @@ class _WorldChatScreenState extends State<WorldChatScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '📢 Free Fire India: Share your Squad Code here to team up with real players!',
+                        widget.appState.pinnedChatNotice.isNotEmpty
+                            ? widget.appState.pinnedChatNotice
+                            : '📢 Free Fire India: Share your Squad Code here to team up with real players!',
                         style: GoogleFonts.inter(fontSize: 11.5, color: Colors.white, fontWeight: FontWeight.w600),
                       ),
                     ),

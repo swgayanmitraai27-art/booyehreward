@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' hide AppState;
 import '../services/ad_service.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
-import 'daily_tasks_screen.dart';
+import 'play_zone_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   final AppState appState;
@@ -266,9 +267,10 @@ class _WalletScreenState extends State<WalletScreen> {
       listenable: widget.appState,
       builder: (context, _) {
         final user = widget.appState.user;
-        final int userCoins = user.adCoins;
-        final double inRupees = userCoins / 100.0;
-        final double progressToMinWithdrawal = (userCoins / 5000.0).clamp(0.0, 1.0);
+        final int winCoins = user.winningCoins;
+        final int entryCoins = user.adCoins;
+        final double winInRupees = winCoins / 100.0;
+        final double progressToMinWithdrawal = (winCoins / 5000.0).clamp(0.0, 1.0);
 
         return Scaffold(
           backgroundColor: AppTheme.bgDark,
@@ -281,7 +283,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryGold, size: 26),
                 const SizedBox(width: 8),
                 Text(
-                  'IN-APP WALLET',
+                  'BOOYAH WALLET (वॉलेट)',
                   style: GoogleFonts.rajdhani(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
@@ -295,9 +297,9 @@ class _WalletScreenState extends State<WalletScreen> {
           body: ListView(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             children: [
-              // ── 💰 MAIN BALANCE HERO CARD ─────────────────────────────────
+              // ── 🏆 COIN 1: WINNING COINS (100% WITHDRAWABLE) ──
               Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
                     colors: [Color(0xFF854D0E), Color(0xFFCA8A04), Color(0xFFEAB308)],
@@ -319,25 +321,31 @@ class _WalletScreenState extends State<WalletScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'TOTAL WALLET BALANCE',
-                          style: GoogleFonts.rajdhani(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1,
-                            color: Colors.black.withValues(alpha: 0.8),
-                          ),
+                        Row(
+                          children: [
+                            const Icon(Icons.emoji_events, color: Colors.black, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              '🏆 WINNING COINS (विनिंग कॉइन्स)',
+                              style: GoogleFonts.rajdhani(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
                         ),
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.7),
+                            color: Colors.black.withValues(alpha: 0.75),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: Text(
-                            '100 COINS = ₹1',
-                            style: GoogleFonts.rajdhani(
-                              fontSize: 11,
+                          child: const Text(
+                            '100% WITHDRAWABLE',
+                            style: TextStyle(
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.primaryGold,
                             ),
@@ -351,9 +359,9 @@ class _WalletScreenState extends State<WalletScreen> {
                       textBaseline: TextBaseline.alphabetic,
                       children: [
                         Text(
-                          '$userCoins',
+                          '$winCoins',
                           style: GoogleFonts.rajdhani(
-                            fontSize: 42,
+                            fontSize: 38,
                             fontWeight: FontWeight.w900,
                             color: Colors.black,
                             height: 1.0,
@@ -361,24 +369,24 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'COINS',
+                          'WIN COINS',
                           style: GoogleFonts.rajdhani(
-                            fontSize: 18,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                             color: Colors.black.withValues(alpha: 0.75),
                           ),
                         ),
                         const Spacer(),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                           decoration: BoxDecoration(
                             color: Colors.black,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '₹${inRupees.toStringAsFixed(2)} Real Value',
+                            '₹${winInRupees.toStringAsFixed(2)} Real Cash',
                             style: GoogleFonts.rajdhani(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.primaryGold,
                             ),
@@ -386,7 +394,7 @@ class _WalletScreenState extends State<WalletScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     // Progress to Minimum ₹50 Withdrawal
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -397,28 +405,28 @@ class _WalletScreenState extends State<WalletScreen> {
                             Text(
                               '₹50 मिनिमम विड्रॉल लक्ष्य:',
                               style: GoogleFonts.inter(
-                                fontSize: 11.5,
+                                fontSize: 11,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black.withValues(alpha: 0.85),
                               ),
                             ),
                             Text(
-                              '${(progressToMinWithdrawal * 100).toInt()}% ($userCoins / 5,000 Coins)',
+                              '${(progressToMinWithdrawal * 100).toInt()}% ($winCoins / 5,000 Coins)',
                               style: GoogleFonts.rajdhani(
-                                fontSize: 12.5,
+                                fontSize: 12,
                                 fontWeight: FontWeight.w900,
                                 color: Colors.black,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 5),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8),
                           child: LinearProgressIndicator(
                             value: progressToMinWithdrawal,
-                            minHeight: 8,
-                            backgroundColor: Colors.black.withValues(alpha: 0.3),
+                            minHeight: 7,
+                            backgroundColor: Colors.black.withValues(alpha: 0.25),
                             valueColor: const AlwaysStoppedAnimation<Color>(Colors.black),
                           ),
                         ),
@@ -430,66 +438,107 @@ class _WalletScreenState extends State<WalletScreen> {
 
               const SizedBox(height: 14),
 
-              // ── ℹ️ WALLET VS TOURNAMENT EXPLANATION (CRITICAL) ─────────────
+              // ── 🪙 COIN 2: MATCH ENTRY / BONUS COINS ──
               Container(
-                padding: const EdgeInsets.all(14),
+                padding: const EdgeInsets.all(18),
                 decoration: BoxDecoration(
-                  color: AppTheme.bgCard,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5)),
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF0F766E), Color(0xFF0D9488), Color(0xFF14B8A6)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.cyanAccent.withValues(alpha: 0.25),
+                      blurRadius: 16,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Icon(Icons.info_outline_rounded, color: AppTheme.primaryGold, size: 20),
+                        Row(
+                          children: [
+                            const Icon(Icons.sports_esports, color: Colors.black, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              '🪙 MATCH ENTRY COINS (मैच कॉइन्स)',
+                              style: GoogleFonts.rajdhani(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 0.5,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.75),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            'MATCH FEES USE ONLY',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.cyanAccent,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          '$entryCoins',
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.black,
+                            height: 1.0,
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          'वॉलेट और टूर्नामेंट स्कोर का अंतर:',
+                          'ENTRY COINS',
                           style: GoogleFonts.rajdhani(
                             fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: AppTheme.primaryGold,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black.withValues(alpha: 0.75),
+                          ),
+                        ),
+                        const Spacer(),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Text(
+                            '🎮 टूर्नामेंट खेलें',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.cyanAccent,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('🪙 ', style: TextStyle(fontSize: 16)),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white, height: 1.4),
-                              children: const [
-                                TextSpan(text: 'वॉलेट बैलेंस: ', style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
-                                TextSpan(text: 'Spin Wheel, Scratch Card और डेली टूर्नामेंट प्राइज़ पूल के रिवॉर्ड्स सीधे आपके वॉलेट में सुरक्षित जमा रहते हैं।'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text('🏆 ', style: TextStyle(fontSize: 16)),
-                        Expanded(
-                          child: RichText(
-                            text: TextSpan(
-                              style: GoogleFonts.inter(fontSize: 12, color: Colors.white, height: 1.4),
-                              children: [
-                                const TextSpan(text: 'टूर्नामेंट स्कोर (दैनिक): ', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF60A5FA))),
-                                TextSpan(text: 'आज का स्कोर (${user.weeklyScore} PTS) केवल आज की रैंकिंग के लिए है। हर रात 12:00 बजे यह रीसेट होता है ताकि अगले दिन हर खिलाड़ी को नया मौका मिले!'),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      '• मिनी-गेम खेलने, वीडियो एड्स देखने और टास्क से अर्जित कॉइन्स।\n• इनसे आप सीधे Free Fire India टूर्नामेंट्स की एंट्री ले सकते हैं!',
+                      style: TextStyle(fontSize: 11, color: Colors.black87, height: 1.35),
                     ),
                   ],
                 ),
@@ -497,9 +546,9 @@ class _WalletScreenState extends State<WalletScreen> {
 
               const SizedBox(height: 18),
 
-              // ── ⚡ QUICK DAILY EARNINGS ────────────────────────────────────
+              // ── ⚡ 3 QUICK EARNING ACTIONS ──
               Text(
-                'EARN MORE COINS TODAY',
+                '⚡ EARN MORE COINS (कॉइन्स कमाएं)',
                 style: GoogleFonts.rajdhani(
                   fontSize: 16,
                   fontWeight: FontWeight.w900,
@@ -508,12 +557,14 @@ class _WalletScreenState extends State<WalletScreen> {
                 ),
               ),
               const SizedBox(height: 10),
+
               Row(
                 children: [
+                  // 1. Arcade Play Zone
                   Expanded(
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => DailyTasksScreen(appState: widget.appState)));
+                        Navigator.push(context, MaterialPageRoute(builder: (_) => PlayZoneScreen(appState: widget.appState)));
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
@@ -523,29 +574,39 @@ class _WalletScreenState extends State<WalletScreen> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('🎡', style: TextStyle(fontSize: 24)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('SPIN WHEEL', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
-                                  const Text('10 Daily Spins', style: TextStyle(fontSize: 10.5, color: Colors.white70)),
-                                ],
-                              ),
-                            ),
+                            const Text('🎮', style: TextStyle(fontSize: 22)),
+                            const SizedBox(height: 6),
+                            Text('आर्केड ज़ोन', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
+                            const Text('5 गेम्स खेलें', style: TextStyle(fontSize: 10, color: Colors.white70)),
                           ],
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(width: 10),
+                  const SizedBox(width: 8),
+
+                  // 2. Direct Watch & Earn (+10)
                   Expanded(
                     child: InkWell(
                       onTap: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (_) => DailyTasksScreen(appState: widget.appState)));
+                        final messenger = ScaffoldMessenger.of(context);
+                        AdService.showRewardedAd(
+                          context: context,
+                          onRewarded: () async {
+                            final res = await widget.appState.watchAdEarnCoins();
+                            if (res['success'] == true) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  backgroundColor: AppTheme.successGreen,
+                                  content: Text('🎉 +${res['coinsEarned']} Coins वॉलेट में जुड़ गए!'),
+                                ),
+                              );
+                            }
+                          },
+                        );
                       },
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
@@ -553,21 +614,85 @@ class _WalletScreenState extends State<WalletScreen> {
                         decoration: BoxDecoration(
                           color: AppTheme.bgCard,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
+                          border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.4)),
                         ),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('💳', style: TextStyle(fontSize: 24)),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('SCRATCH CARDS', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
-                                  const Text('10 Daily Cards', style: TextStyle(fontSize: 10.5, color: Colors.white70)),
-                                ],
-                              ),
+                            const Text('🎬', style: TextStyle(fontSize: 22)),
+                            const SizedBox(height: 6),
+                            Text('वीडियो देखें', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.successGreen)),
+                            const Text('+10 कॉइन्स पाएं', style: TextStyle(fontSize: 10, color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+
+                  // 3. Refer & Earn
+                  Expanded(
+                    child: InkWell(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            backgroundColor: AppTheme.bgCard,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            title: Text('👥 रेफर करें और कमाएं', style: AppTheme.gamingTitle(fontSize: 18)),
+                            content: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Text('अपना रेफरल कोड दोस्तों के साथ शेयर करें। जब वे साइन अप करेंगे तो दोनों को बोनस कॉइन्स मिलेंगे!', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                const SizedBox(height: 14),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.bgDark,
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: AppTheme.primaryGold),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(user.referralCode, style: GoogleFonts.rajdhani(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
+                                      IconButton(
+                                        icon: const Icon(Icons.copy, color: Colors.white70),
+                                        onPressed: () {
+                                          Clipboard.setData(ClipboardData(text: user.referralCode));
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('रेफरल कोड कॉपी हो गया!')));
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
+                            actions: [
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.black),
+                                onPressed: () => Navigator.pop(ctx),
+                                child: const Text('ठीक है'),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgCard,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.4)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('👥', style: TextStyle(fontSize: 22)),
+                            const SizedBox(height: 6),
+                            Text('रेफर कोड', style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.cyanAccent)),
+                            const Text('+20 कॉइन्स/फ्रेंड', style: TextStyle(fontSize: 10, color: Colors.white70)),
                           ],
                         ),
                       ),
@@ -600,7 +725,7 @@ class _WalletScreenState extends State<WalletScreen> {
               const SizedBox(height: 10),
 
               ...widget.appState.redeemPackages.map((pkg) {
-                final bool canRedeem = userCoins >= pkg.points;
+                final bool canRedeem = winCoins >= pkg.points;
                 return Container(
                   margin: const EdgeInsets.only(bottom: 10),
                   padding: const EdgeInsets.all(14),

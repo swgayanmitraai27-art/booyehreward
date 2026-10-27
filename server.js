@@ -133,6 +133,128 @@ function saveDB() {
   }
 }
 
+// ── 0. USER AUTHENTICATION APIS (SIGNUP, LOGIN, PROFILE) ──
+app.post('/api/auth/signup', (req, res) => {
+  const { name, phoneNumber, email, password, inGameName, inGameId, referralCode } = req.body;
+  if (!name || !phoneNumber || !email || !password) {
+    return res.status(400).json({ success: false, message: 'नाम, मोबाइल, ईमेल और पासवर्ड अनिवार्य हैं!' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+  const cleanPhone = phoneNumber.trim();
+
+  for (const uid in db.users) {
+    const existing = db.users[uid];
+    if (existing.email && existing.email.toLowerCase() === cleanEmail) {
+      return res.status(400).json({ success: false, message: 'यह ईमेल आईडी पहले से पंजीकृत है!' });
+    }
+    if (existing.phoneNumber && existing.phoneNumber === cleanPhone) {
+      return res.status(400).json({ success: false, message: 'यह फ़ोन नंबर पहले से पंजीकृत है!' });
+    }
+  }
+
+  const deviceId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+  const rCode = (100000 + (Date.now() % 900000)).toString();
+
+  let welcomeCoins = 20;
+  let referrerUid = null;
+
+  if (referralCode && referralCode.trim().length > 0) {
+    const cleanRef = referralCode.trim();
+    for (const uid in db.users) {
+      if (db.users[uid].referralCode === cleanRef) {
+        referrerUid = uid;
+        db.users[uid].adCoins = (db.users[uid].adCoins || 0) + 20; // +20 for referrer
+        welcomeCoins += 10; // Extra +10 bonus for referred user (30 total)
+        break;
+      }
+    }
+  }
+
+  db.users[deviceId] = {
+    uid: deviceId,
+    displayName: name.trim(),
+    name: name.trim(),
+    phoneNumber: cleanPhone,
+    email: cleanEmail,
+    password: password.trim(),
+    inGameName: inGameName ? inGameName.trim() : name.trim(),
+    inGameId: inGameId ? inGameId.trim() : '',
+    adCoins: welcomeCoins,
+    winningCoins: 0,
+    totalWins: 0,
+    totalKills: 0,
+    totalAdsWatched: 0,
+    referralCode: rCode,
+    referredBy: referrerUid ? referralCode.trim() : '',
+    createdAt: new Date().toISOString(),
+    lastActive: new Date().toISOString()
+  };
+
+  saveDB();
+  console.log(`[AUTH] New user registered: ${name} (${cleanEmail}, Phone: ${cleanPhone})`);
+
+  res.json({
+    success: true,
+    message: 'खाता सफलतापूर्वक बन गया!',
+    user: db.users[deviceId]
+  });
+});
+
+app.post('/api/auth/login', (req, res) => {
+  const { identifier, password } = req.body;
+  if (!identifier || !password) {
+    return res.status(400).json({ success: false, message: 'ईमेल/फ़ोन और पासवर्ड दर्ज करें!' });
+  }
+
+  const cleanIdent = identifier.trim().toLowerCase();
+  const cleanPass = password.trim();
+
+  let foundUser = null;
+  for (const uid in db.users) {
+    const u = db.users[uid];
+    if (
+      (u.email && u.email.toLowerCase() === cleanIdent) ||
+      (u.phoneNumber && u.phoneNumber === cleanIdent) ||
+      (u.uid === cleanIdent)
+    ) {
+      if (u.password === cleanPass) {
+        foundUser = u;
+        break;
+      } else {
+        return res.status(400).json({ success: false, message: 'गलत पासवर्ड! कृपया दोबारा जांचें।' });
+      }
+    }
+  }
+
+  if (!foundUser) {
+    return res.status(404).json({ success: false, message: 'खाता नहीं मिला! कृपया साइन-अप करें।' });
+  }
+
+  foundUser.lastActive = new Date().toISOString();
+  saveDB();
+
+  res.json({
+    success: true,
+    message: 'लॉगिन सफल!',
+    user: foundUser
+  });
+});
+
+app.post('/api/auth/update-ff-profile', (req, res) => {
+  const { uid, inGameName, inGameId } = req.body;
+  if (!uid || !db.users[uid]) {
+    return res.status(404).json({ success: false, message: 'User not found' });
+  }
+
+  const u = db.users[uid];
+  if (inGameName) u.inGameName = inGameName.trim();
+  if (inGameId) u.inGameId = inGameId.trim();
+  saveDB();
+
+  res.json({ success: true, message: 'फ्री फायर प्रोफाइल अपडेट हो गया!', user: u });
+});
+
 // ── 1. USER WALLET & PROFILE SYNC (ATOMIC & PERSISTENT) ──
 app.post('/api/tournament/sync-user', (req, res) => {
   const { deviceId, displayName, coinsToAdd, referralCode, inGameName, inGameId } = req.body;
@@ -264,32 +386,166 @@ app.post('/api/admin/upload-banner', upload.single('banner'), (req, res) => {
   res.json({ success: true, bannerUrl, filename: req.file.filename });
 });
 
-// ── 4. ESPORTS LEADERBOARD ──
-app.get('/api/leaderboard', (req, res) => {
-  const usersList = Object.values(db.users || {});
-  usersList.sort((a, b) => {
-    if ((b.totalWins || 0) !== (a.totalWins || 0)) {
-      return (b.totalWins || 0) - (a.totalWins || 0);
+// ── 4. ESPORTS LEADERBOARD WITH SMART PRO-BOT SHIELD & DYNAMIC PRIZE POOL ──
+const PRO_BOT_POOLS = [
+  [
+    { uid: 'pro_ff_901', name: '⚡ ʀᴀsᴛᴀʀ_𝟿𝟿', inGameId: '2948102941', inGameName: 'RASTAR_99', totalWins: 64, totalKills: 480 },
+    { uid: 'pro_ff_902', name: '亗 ᴋɪʟʟᴇʀ 亗', inGameId: '1827401928', inGameName: 'KILLER_PRO', totalWins: 52, totalKills: 395 },
+    { uid: 'pro_ff_903', name: '★ 𝕬𝖞𝖚𝖘𝖍_𝕱𝕱 ★', inGameId: '3019283741', inGameName: 'AYUSH_OP', totalWins: 45, totalKills: 330 }
+  ],
+  [
+    { uid: 'pro_ff_904', name: '࿐☠️ ɴɪɴᴊᴀ ☠️࿐', inGameId: '4120938471', inGameName: 'NINJA_GOD', totalWins: 68, totalKills: 510 },
+    { uid: 'pro_ff_905', name: '༺LeGenD༻', inGameId: '2819047192', inGameName: 'LEGEND_FF', totalWins: 55, totalKills: 410 },
+    { uid: 'pro_ff_906', name: '亗 BADBOY_07 亗', inGameId: '5192837412', inGameName: 'BADBOY_07', totalWins: 47, totalKills: 345 }
+  ],
+  [
+    { uid: 'pro_ff_907', name: '⚡ 𝙰𝙼𝙰𝙽_𝙵𝙵 ⚡', inGameId: '1948204918', inGameName: 'AMAN_PRO', totalWins: 62, totalKills: 460 },
+    { uid: 'pro_ff_908', name: '亗 𝚁𝙾𝙷𝙸𝚃 亗', inGameId: '3829104712', inGameName: 'ROHIT_FF', totalWins: 50, totalKills: 380 },
+    { uid: 'pro_ff_909', name: '★ 𝚅𝙸𝙺𝚁𝙰𝙼 ★', inGameId: '4910283741', inGameName: 'VIKRAM_GOD', totalWins: 43, totalKills: 320 }
+  ],
+  [
+    { uid: 'pro_ff_910', name: '꧁༒☬TUK_TUK☬༒꧂', inGameId: '3829174028', inGameName: 'TUK_TUK_BOY', totalWins: 65, totalKills: 490 },
+    { uid: 'pro_ff_911', name: '⚡ VIPER_007 ⚡', inGameId: '2938102948', inGameName: 'VIPER_HEADSHOT', totalWins: 53, totalKills: 405 },
+    { uid: 'pro_ff_912', name: '亗 DARK_HORSE 亗', inGameId: '1928374619', inGameName: 'DARK_HORSE', totalWins: 46, totalKills: 335 }
+  ]
+];
+
+function getWeekSeedNumber() {
+  const d = new Date();
+  const dUtc = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = dUtc.getUTCDay() || 7;
+  dUtc.setUTCDate(dUtc.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(dUtc.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((dUtc - yearStart) / 86400000) + 1) / 7);
+  return dUtc.getUTCFullYear() * 100 + weekNo;
+}
+
+app.get(['/api/leaderboard', '/api/tournament/leaderboard'], (req, res) => {
+  const prizePool = db.config.weeklyPrizePool || 1000;
+  const r1Percent = (db.config.prizeDistribution && db.config.prizeDistribution.rank1Percent) || 50;
+  const r2Percent = (db.config.prizeDistribution && db.config.prizeDistribution.rank2Percent) || 30;
+  const r3Percent = (db.config.prizeDistribution && db.config.prizeDistribution.rank3Percent) || 20;
+
+  const rank1Prize = Math.round(prizePool * (r1Percent / 100));
+  const rank2Prize = Math.round(prizePool * (r2Percent / 100));
+  const rank3Prize = Math.round(prizePool * (r3Percent / 100));
+
+  // Filter real users
+  const realUsers = Object.values(db.users || {}).filter(u => u && !u.uid.startsWith('pro_ff_') && !u.uid.startsWith('bot_'));
+  
+  // Compute weekly score for real users if not set
+  realUsers.forEach(u => {
+    if (!u.weeklyScore) {
+      u.weeklyScore = ((u.totalWins || 0) * 100) + ((u.totalKills || 0) * 10) + ((u.adCoins || 0) * 2) + ((u.winningCoins || 0) * 10);
     }
-    if ((b.winningCoins || 0) !== (a.winningCoins || 0)) {
-      return (b.winningCoins || 0) - (a.winningCoins || 0);
-    }
-    return (b.totalKills || 0) - (a.totalKills || 0);
   });
 
-  const leaderboard = usersList.slice(0, 100).map((u, idx) => ({
-    rank: idx + 1,
+  realUsers.sort((a, b) => (b.weeklyScore || 0) - (a.weeklyScore || 0));
+
+  // Determine top real score
+  const maxRealScore = realUsers.length > 0 ? (realUsers[0].weeklyScore || 0) : 0;
+
+  // Pick top 3 pro bots for this week
+  const weekSeed = getWeekSeedNumber();
+  const poolIndex = Math.abs(weekSeed) % PRO_BOT_POOLS.length;
+  const activeBots = PRO_BOT_POOLS[poolIndex];
+
+  // Dynamic bot scores: always stay comfortably ahead of real player
+  const botScores = [
+    Math.max(maxRealScore + 1850, 14200),
+    Math.max(maxRealScore + 1120, 11450),
+    Math.max(maxRealScore + 540, 8950)
+  ];
+
+  const top3List = [
+    {
+      rank: 1,
+      uid: activeBots[0].uid,
+      name: activeBots[0].name,
+      inGameId: activeBots[0].inGameId,
+      inGameName: activeBots[0].inGameName,
+      totalWins: activeBots[0].totalWins,
+      totalKills: activeBots[0].totalKills,
+      winningCoins: 0,
+      weeklyScore: botScores[0],
+      prize: `₹${rank1Prize.toLocaleString('en-IN')}`,
+      avatar: 'assets/imgasest/booyah_hero_logo.png'
+    },
+    {
+      rank: 2,
+      uid: activeBots[1].uid,
+      name: activeBots[1].name,
+      inGameId: activeBots[1].inGameId,
+      inGameName: activeBots[1].inGameName,
+      totalWins: activeBots[1].totalWins,
+      totalKills: activeBots[1].totalKills,
+      winningCoins: 0,
+      weeklyScore: botScores[1],
+      prize: `₹${rank2Prize.toLocaleString('en-IN')}`,
+      avatar: 'assets/imgasest/booyah_hero_logo.png'
+    },
+    {
+      rank: 3,
+      uid: activeBots[2].uid,
+      name: activeBots[2].name,
+      inGameId: activeBots[2].inGameId,
+      inGameName: activeBots[2].inGameName,
+      totalWins: activeBots[2].totalWins,
+      totalKills: activeBots[2].totalKills,
+      winningCoins: 0,
+      weeklyScore: botScores[2],
+      prize: `₹${rank3Prize.toLocaleString('en-IN')}`,
+      avatar: 'assets/imgasest/booyah_hero_logo.png'
+    }
+  ];
+
+  // Add real players starting from Rank 4
+  const realLeaderboard = realUsers.slice(0, 97).map((u, idx) => ({
+    rank: idx + 4,
     uid: u.uid,
-    name: u.inGameName || u.displayName || `Gamer_${idx + 1}`,
+    name: u.inGameName || u.displayName || u.name || `Player_${idx + 4}`,
     inGameId: u.inGameId || '',
     totalWins: u.totalWins || 0,
     totalKills: u.totalKills || 0,
     winningCoins: u.winningCoins || 0,
-    weeklyScore: (u.totalWins || 0) * 100 + (u.totalKills || 0) * 10,
+    weeklyScore: u.weeklyScore || 0,
+    prize: (idx + 4 <= 10) ? '₹25 एंट्री बोनस' : '10 एंट्री कॉइन्स',
     avatar: 'assets/imgasest/booyah_hero_logo.png'
   }));
 
-  res.json({ success: true, leaderboard });
+  const fullLeaderboard = [...top3List, ...realLeaderboard];
+
+  res.json({
+    success: true,
+    prizePool: `₹${prizePool.toLocaleString('en-IN')}`,
+    prizePoolAmount: prizePool,
+    season: db.config.season || 2,
+    prizes: {
+      rank1: `₹${rank1Prize.toLocaleString('en-IN')}`,
+      rank2: `₹${rank2Prize.toLocaleString('en-IN')}`,
+      rank3: `₹${rank3Prize.toLocaleString('en-IN')}`
+    },
+    leaderboard: fullLeaderboard
+  });
+});
+
+// Admin Prize Pool Setter
+app.post('/api/admin/set-prize-pool', (req, res) => {
+  const { prizePool, rank1Percent, rank2Percent, rank3Percent } = req.body;
+  if (prizePool !== undefined) {
+    db.config.weeklyPrizePool = parseInt(prizePool, 10) || 1000;
+  }
+  if (!db.config.prizeDistribution) db.config.prizeDistribution = {};
+  if (rank1Percent !== undefined) db.config.prizeDistribution.rank1Percent = parseInt(rank1Percent, 10) || 50;
+  if (rank2Percent !== undefined) db.config.prizeDistribution.rank2Percent = parseInt(rank2Percent, 10) || 30;
+  if (rank3Percent !== undefined) db.config.prizeDistribution.rank3Percent = parseInt(rank3Percent, 10) || 20;
+  saveDB();
+  res.json({
+    success: true,
+    weeklyPrizePool: db.config.weeklyPrizePool,
+    prizeDistribution: db.config.prizeDistribution,
+    message: 'वीकली प्राइज़ पूल सफलतापूर्वक अपडेट हो गया!'
+  });
 });
 
 // ── 3. HOOK FREE FIRE INDIA TOURNAMENTS ENGINE ──
@@ -304,6 +560,8 @@ try {
 app.get('/api/app-config', (req, res) => {
   res.json({
     success: true,
+    weeklyPrizePool: db.config.weeklyPrizePool || 1000,
+    prizeDistribution: db.config.prizeDistribution || { rank1Percent: 50, rank2Percent: 30, rank3Percent: 20 },
     appSettings: db.config.appSettings,
     coinEconomy: db.config.coinEconomy,
     socialLinks: db.config.socialLinks,
@@ -383,6 +641,7 @@ app.post('/api/minigame/claim-reward', (req, res) => {
     u.adCoins = (u.adCoins || 0) + earned;
     u.totalMiniGameSessions = (u.totalMiniGameSessions || 0) + 1;
     u.miniGameCoinsToday = (u.miniGameCoinsToday || 0) + earned;
+    u.weeklyScore = (u.weeklyScore || 0) + scoreNum + (earned * 5);
     saveDB();
   }
 

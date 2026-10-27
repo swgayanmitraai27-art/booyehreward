@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,6 +6,7 @@ import '../models/tournament_model.dart';
 import '../services/ad_service.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
+import 'leaderboard_screen.dart';
 
 class TournamentLobbyScreen extends StatefulWidget {
   final AppState appState;
@@ -633,6 +634,78 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                 ),
               ),
 
+              // ── 🏆 WEEKLY LEADERBOARD PRIZE POOL HERO BANNER ──
+              InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => LeaderboardScreen(appState: widget.appState)),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(14, 8, 14, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF311042), Color(0xFF1E1B4B), Color(0xFF0F172A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppTheme.primaryGold, width: 1.5),
+                    boxShadow: [
+                      BoxShadow(color: AppTheme.primaryGold.withValues(alpha: 0.18), blurRadius: 12),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryGold.withValues(alpha: 0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 24),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '🏆 इस हफ़्ते टॉप करें और ${widget.appState.prizePool} जीतें!',
+                                  style: GoogleFonts.rajdhani(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.primaryGold,
+                                  ),
+                                ),
+                                const Text(
+                                  'गेम खेलें, स्कोर बढ़ाएं और टॉप 3 में नकद इनाम पाएं!',
+                                  style: TextStyle(fontSize: 10.5, color: AppTheme.cyanAccent),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Icon(Icons.arrow_forward_ios, color: AppTheme.primaryGold, size: 14),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildMiniPrizeTag('🥇 1st', widget.appState.rank1Prize, AppTheme.primaryGold),
+                          _buildMiniPrizeTag('🥈 2nd', widget.appState.rank2Prize, AppTheme.cyanAccent),
+                          _buildMiniPrizeTag('🥉 3rd', widget.appState.rank3Prize, const Color(0xFFA78BFA)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               // ── CATEGORY FILTER TABS ──
               Container(
                 height: 48,
@@ -1084,6 +1157,25 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniPrizeTag(String rank, String amount, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(rank, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+          const SizedBox(width: 4),
+          Text(amount, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
         ],
       ),
     );
