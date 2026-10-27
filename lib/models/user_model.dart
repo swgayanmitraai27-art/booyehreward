@@ -25,6 +25,8 @@ class UserModel {
   int totalWins;
   int totalKills;
   bool hasPlayedFirstMatch;
+  int tournamentsPlayed;
+  bool referralRewardClaimed;
   int miniGameCoinsToday;
   String miniGameDate;
 
@@ -55,6 +57,8 @@ class UserModel {
     this.totalWins = 0,
     this.totalKills = 0,
     this.hasPlayedFirstMatch = false,
+    this.tournamentsPlayed = 0,
+    this.referralRewardClaimed = false,
     this.miniGameCoinsToday = 0,
     this.miniGameDate = '',
   });
@@ -67,7 +71,7 @@ class UserModel {
       displayName: 'Player_$randomId',
       email: '',
       phoneNumber: '',
-      adCoins: 20, // 20 Welcome coins
+      adCoins: 0, // 0 Welcome coins (must earn by playing/watching ads)
       gameScore: 0,
       knifeHitHighScore: 0,
       fruitSlashHighScore: 0,
@@ -88,6 +92,8 @@ class UserModel {
       totalWins: 0,
       totalKills: 0,
       hasPlayedFirstMatch: false,
+      tournamentsPlayed: 0,
+      referralRewardClaimed: false,
     );
   }
 
@@ -97,7 +103,7 @@ class UserModel {
       displayName: json['displayName'] as String? ?? 'Player',
       email: json['email'] as String? ?? '',
       phoneNumber: json['phoneNumber'] as String? ?? '',
-      adCoins: (json['adCoins'] as num?)?.toInt() ?? 20,
+      adCoins: (json['adCoins'] as num?)?.toInt() ?? 0,
       winningCoins: (json['winningCoins'] as num?)?.toInt() ?? 0,
       gameScore: (json['gameScore'] as num?)?.toInt() ?? 0,
       knifeHitHighScore: (json['knifeHitHighScore'] as num?)?.toInt() ?? 0,
@@ -119,6 +125,8 @@ class UserModel {
       totalWins: (json['totalWins'] as num?)?.toInt() ?? 0,
       totalKills: (json['totalKills'] as num?)?.toInt() ?? 0,
       hasPlayedFirstMatch: json['hasPlayedFirstMatch'] as bool? ?? false,
+      tournamentsPlayed: (json['tournamentsPlayed'] as num?)?.toInt() ?? 0,
+      referralRewardClaimed: json['referralRewardClaimed'] as bool? ?? false,
       miniGameCoinsToday: (json['miniGameCoinsToday'] as num?)?.toInt() ?? 0,
       miniGameDate: json['miniGameDate'] as String? ?? '',
     );
@@ -216,6 +224,8 @@ class UserModel {
       'totalWins': totalWins,
       'totalKills': totalKills,
       'hasPlayedFirstMatch': hasPlayedFirstMatch,
+      'tournamentsPlayed': tournamentsPlayed,
+      'referralRewardClaimed': referralRewardClaimed,
     };
   }
 

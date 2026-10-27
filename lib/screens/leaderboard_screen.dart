@@ -8,6 +8,7 @@ import '../services/ad_service.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import 'wallet_screen.dart';
+import '../widgets/referral_status_dialog.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // How the list works:
@@ -231,14 +232,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: AppTheme.bgCard,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Apply Referral Code', style: AppTheme.gamingTitle(fontSize: 18)),
+        title: Text('रेफरल कोड दर्ज करें', style: AppTheme.gamingTitle(fontSize: 18)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Share your code: ${widget.appState.user.referralCode} to get 25 points when a friend joins!', style: const TextStyle(color: AppTheme.primaryGold, fontSize: 13, fontWeight: FontWeight.bold)),
+            Text('अपना कोड शेयर करें: ${widget.appState.user.referralCode}\n(जब दोस्त 5 मैच खेलेगा तब आपको +50 कॉइन्स मिलेंगे!)', style: const TextStyle(color: AppTheme.primaryGold, fontSize: 12, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
-            const Text('Enter a friend\'s 6-digit code to get +25 Welcome Points:', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
+            const Text('दोस्त का 6-अंकों का कोड दर्ज करें (+10 बोनस कॉइन्स):', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
             const SizedBox(height: 8),
             TextField(
               controller: controller,
@@ -247,7 +248,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
               decoration: InputDecoration(
                 filled: true,
                 fillColor: AppTheme.bgDark,
-                hintText: 'Friend\'s Code',
+                hintText: 'दोस्त का रेफरल कोड',
                 hintStyle: const TextStyle(color: AppTheme.textMuted),
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: AppTheme.primaryGold)),
               ),
@@ -255,7 +256,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel', style: TextStyle(color: AppTheme.textMuted))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('रद्द करें', style: TextStyle(color: AppTheme.textMuted))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: AppTheme.bgDark),
             onPressed: () async {
@@ -266,14 +267,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(success ? 'Referral code applied! +25 Points Bonus Added!' : 'Invalid code or already used.'),
+                      content: Text(success ? 'रेफरल कोड लग गया! +10 बोनस कॉइन्स प्राप्त हुए!' : 'अमान्य कोड या पहले से उपयोग किया गया है।'),
                       backgroundColor: success ? AppTheme.bgCard : AppTheme.errorRed,
                     ),
                   );
                 }
               }
             },
-            child: const Text('Apply Code', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('कोड लगाएं', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1281,46 +1282,49 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                'REFER & EARN (+25 PTS)',
-                                style: GoogleFonts.rajdhani(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
-                                  color: AppTheme.primaryGold,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryGold.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  user.referralCode,
+                      child: InkWell(
+                        onTap: () => ReferralStatusDialog.show(context, widget.appState),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'REFER & EARN (+50 COINS)',
                                   style: GoogleFonts.rajdhani(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: 0.5,
                                     color: AppTheme.primaryGold,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            user.referredBy.isNotEmpty
-                                ? 'Referred by: ${user.referredBy} (+25 PTS Claimed) ✅'
-                                : 'Enter friend\'s code or invite players to earn points!',
-                            style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
-                          ),
-                        ],
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryGold.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    user.referralCode,
+                                    style: GoogleFonts.rajdhani(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryGold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              user.referredBy.isNotEmpty
+                                  ? 'Referred by: ${user.referredBy} (+10 Coins Bonus) ✅'
+                                  : 'Share code: +50 Coins when friend plays 5 matches!',
+                              style: GoogleFonts.inter(fontSize: 11, color: AppTheme.textMuted),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(width: 6),

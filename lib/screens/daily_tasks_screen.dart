@@ -75,7 +75,7 @@ class _DailyTasksScreenState extends State<DailyTasksScreen> {
 
   Future<void> _shareTournamentOnWhatsApp() async {
     final messenger = ScaffoldMessenger.of(context);
-    final text = '🔥 Free Fire India Esports Tournament App! 100% Free Entry custom rooms mein khelo aur Google Play Redeem Codes jeeto! Download now & use my referral code: ${widget.appState.user.referralCode} for +20 Bonus Coins! 🚀';
+    final text = '🔥 Free Fire India Esports Tournament App! 100% Free Entry custom rooms mein khelo aur Google Play Redeem Codes jeeto! Download now & use my referral code: ${widget.appState.user.referralCode} for +10 Bonus Coins! 🚀';
     final url = 'https://api.whatsapp.com/send?text=${Uri.encodeComponent(text)}';
     try {
       final uri = Uri.parse(url);

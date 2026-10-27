@@ -156,7 +156,7 @@ app.post('/api/auth/signup', (req, res) => {
   const deviceId = `usr_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
   const rCode = (100000 + (Date.now() % 900000)).toString();
 
-  let welcomeCoins = 20;
+  let welcomeCoins = 0;
   let referrerUid = null;
 
   if (referralCode && referralCode.trim().length > 0) {
@@ -164,8 +164,8 @@ app.post('/api/auth/signup', (req, res) => {
     for (const uid in db.users) {
       if (db.users[uid].referralCode === cleanRef) {
         referrerUid = uid;
-        db.users[uid].adCoins = (db.users[uid].adCoins || 0) + 20; // +20 for referrer
-        welcomeCoins += 10; // Extra +10 bonus for referred user (30 total)
+        welcomeCoins = (db.config.coinEconomy && db.config.coinEconomy.referredUserBonus) || 10;
+        console.log(`[REFERRAL SIGNUP] User entered referral code ${cleanRef}. Awarded +${welcomeCoins} bonus coins to new user. Referrer ${uid} will receive reward after 5 tournament matches.`);
         break;
       }
     }
@@ -185,6 +185,8 @@ app.post('/api/auth/signup', (req, res) => {
     totalWins: 0,
     totalKills: 0,
     totalAdsWatched: 0,
+    tournamentsPlayed: 0,
+    referralRewardClaimed: false,
     referralCode: rCode,
     referredBy: referrerUid ? referralCode.trim() : '',
     createdAt: new Date().toISOString(),
@@ -198,6 +200,67 @@ app.post('/api/auth/signup', (req, res) => {
     success: true,
     message: 'खाता सफलतापूर्वक बन गया!',
     user: db.users[deviceId]
+  });
+});
+
+// ── 👥 REFERRAL TRACKING API (TRANSPARENCY & 5-MATCH STATUS) ──
+app.get('/api/referral/my-referrals', (req, res) => {
+  const uid = req.query.uid || req.query.deviceId;
+  if (!uid || !db.users[uid]) {
+    return res.status(404).json({ success: false, error: 'User not found' });
+  }
+
+  const user = db.users[uid];
+  const myRefCode = user.referralCode;
+  const targetMatches = (db.config.coinEconomy && db.config.coinEconomy.referralMatchesTarget) || 5;
+  const rewardCoins = (db.config.coinEconomy && db.config.coinEconomy.referralReward) || 50;
+
+  const referrals = [];
+  let totalCoinsEarned = 0;
+  let pendingFriends = 0;
+  let unlockedFriends = 0;
+
+  for (const otherUid in db.users) {
+    if (otherUid === uid) continue;
+    const other = db.users[otherUid];
+    if (other.referredBy && (other.referredBy === myRefCode || other.referredBy === uid)) {
+      const matches = Number(other.tournamentsPlayed || 0);
+      const isUnlocked = matches >= targetMatches || other.referralRewardClaimed === true;
+      const rem = Math.max(0, targetMatches - matches);
+
+      if (isUnlocked) {
+        totalCoinsEarned += rewardCoins;
+        unlockedFriends++;
+      } else {
+        pendingFriends++;
+      }
+
+      referrals.push({
+        uid: other.uid,
+        name: other.displayName || other.name || `Player_${other.uid.slice(-4)}`,
+        inGameName: other.inGameName || '',
+        matchesPlayed: matches,
+        targetMatches: targetMatches,
+        remainingMatches: rem,
+        isUnlocked: isUnlocked,
+        status: isUnlocked ? 'UNLOCKED' : 'PENDING',
+        statusText: isUnlocked
+          ? `✅ +${rewardCoins} कॉइन्स मिल चुके हैं!`
+          : `⏳ ${matches}/${targetMatches} मैच खेले (${rem} मैच बाकी)`,
+        joinedAt: other.createdAt || ''
+      });
+    }
+  }
+
+  res.json({
+    success: true,
+    myReferralCode: myRefCode,
+    targetMatches,
+    rewardPerReferral: rewardCoins,
+    totalCoinsEarned,
+    pendingFriends,
+    unlockedFriends,
+    referrals
   });
 });
 
@@ -262,19 +325,37 @@ app.post('/api/tournament/sync-user', (req, res) => {
 
   if (!db.users[deviceId]) {
     const rCode = (100000 + (Date.now() % 900000)).toString();
+    let initialCoins = 0;
+    let validReferrer = null;
+
+    if (referralCode && referralCode.trim().length > 0) {
+      const cleanRef = referralCode.trim();
+      for (const uid in db.users) {
+        if (db.users[uid].referralCode === cleanRef && uid !== deviceId) {
+          validReferrer = uid;
+          const userBonus = (db.config.coinEconomy && db.config.coinEconomy.referredUserBonus) || 10;
+          initialCoins = userBonus; // New user gets bonus ONLY with valid referral code
+          console.log(`[REFERRAL SYNC] User ${deviceId} used referral ${cleanRef}. Awarded +${userBonus} coins to user. Referrer ${uid} will receive reward after 5 tournament matches.`);
+          break;
+        }
+      }
+    }
+
     db.users[deviceId] = {
       uid: deviceId,
       displayName: displayName || `Player_${deviceId.slice(-4)}`,
       inGameName: inGameName || displayName || `Player_${deviceId.slice(-4)}`,
       inGameId: inGameId || '',
-      adCoins: (db.config.coinEconomy && db.config.coinEconomy.welcomeBonus) || 20,
+      adCoins: initialCoins,
       winningCoins: 0,
       totalWins: 0,
       totalKills: 0,
       totalAdsWatched: 0,
+      tournamentsPlayed: 0,
+      referralRewardClaimed: false,
       hasPlayedFirstMatch: false,
       referralCode: rCode,
-      referredBy: referralCode || '',
+      referredBy: validReferrer ? referralCode.trim() : '',
       createdAt: new Date().toISOString(),
       lastActive: new Date().toISOString()
     };
@@ -284,8 +365,19 @@ app.post('/api/tournament/sync-user', (req, res) => {
     if (displayName) u.displayName = displayName;
     if (inGameName) u.inGameName = inGameName;
     if (inGameId) u.inGameId = inGameId;
-    if (referralCode && !u.referredBy && referralCode !== u.referralCode) {
-      u.referredBy = referralCode;
+    if (referralCode && !u.referredBy && referralCode.trim() !== u.referralCode) {
+      const cleanRef = referralCode.trim();
+      for (const uid in db.users) {
+        if (db.users[uid].referralCode === cleanRef && uid !== deviceId) {
+          u.referredBy = cleanRef;
+          const userBonus = (db.config.coinEconomy && db.config.coinEconomy.referredUserBonus) || 10;
+          u.adCoins = (u.adCoins || 0) + userBonus;
+          u.tournamentsPlayed = u.tournamentsPlayed || 0;
+          u.referralRewardClaimed = false;
+          console.log(`[EXISTING USER REFERRAL] User ${deviceId} linked referral ${cleanRef}. Awarded +${userBonus} coins to user. Referrer ${uid} will receive reward after 5 tournament matches.`);
+          break;
+        }
+      }
     }
     if (coinsToAdd && Number(coinsToAdd) > 0) {
       u.adCoins = (u.adCoins || 0) + Number(coinsToAdd);

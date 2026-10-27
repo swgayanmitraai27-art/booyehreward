@@ -564,12 +564,20 @@
           <input type="number" id="ecoLimit" value="15">
         </div>
         <div class="form-group">
-          <label>New User Welcome Bonus Coins</label>
-          <input type="number" id="ecoWelcome" value="20">
+          <label>New User Welcome Bonus (Without Referral)</label>
+          <input type="number" id="ecoWelcome" value="0">
         </div>
         <div class="form-group">
-          <label>Referral Bonus (Unlocked only after friend plays 1st match)</label>
+          <label>New User Bonus (When using Friend's Referral Code)</label>
+          <input type="number" id="ecoUserBonus" value="10">
+        </div>
+        <div class="form-group">
+          <label>Referrer Reward Coins (Unlocked after friend plays 5 matches)</label>
           <input type="number" id="ecoRef" value="50">
+        </div>
+        <div class="form-group">
+          <label>Required Tournament Matches for Referral Unlock</label>
+          <input type="number" id="ecoMatchesTarget" value="5">
         </div>
       </div>
       <div>
@@ -866,8 +874,10 @@
         if (data.coinEconomy) {
           document.getElementById('ecoAd').value = data.coinEconomy.adCoinReward || 10;
           document.getElementById('ecoLimit').value = data.coinEconomy.dailyAdLimit || 15;
-          document.getElementById('ecoWelcome').value = data.coinEconomy.welcomeBonus || 20;
+          document.getElementById('ecoWelcome').value = (data.coinEconomy.welcomeBonus !== undefined) ? data.coinEconomy.welcomeBonus : 0;
+          document.getElementById('ecoUserBonus').value = data.coinEconomy.referredUserBonus || 10;
           document.getElementById('ecoRef').value = data.coinEconomy.referralReward || 50;
+          document.getElementById('ecoMatchesTarget').value = data.coinEconomy.referralMatchesTarget || 5;
         }
       } catch (e) { console.error('Tournaments error:', e); }
     }
@@ -1379,7 +1389,9 @@
       var ad = document.getElementById('ecoAd').value;
       var limit = document.getElementById('ecoLimit').value;
       var welcome = document.getElementById('ecoWelcome').value;
+      var userBonus = document.getElementById('ecoUserBonus').value;
       var ref = document.getElementById('ecoRef').value;
+      var matchesTarget = document.getElementById('ecoMatchesTarget').value;
       var yt = document.getElementById('socYt').value;
       var insta = document.getElementById('socInsta').value;
       var tg = document.getElementById('socTg').value;
@@ -1389,7 +1401,14 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-admin-source': 'vps-web-dashboard' },
           body: JSON.stringify({
-            coinEconomy: { adCoinReward: Number(ad), dailyAdLimit: Number(limit), welcomeBonus: Number(welcome), referralReward: Number(ref) },
+            coinEconomy: {
+              adCoinReward: Number(ad),
+              dailyAdLimit: Number(limit),
+              welcomeBonus: Number(welcome),
+              referredUserBonus: Number(userBonus),
+              referralReward: Number(ref),
+              referralMatchesTarget: Number(matchesTarget)
+            },
             socialLinks: { youtube: yt, instagram: insta, telegram: tg }
           })
         });

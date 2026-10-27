@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart' hide AppState;
 import '../services/ad_service.dart';
 import '../services/app_state.dart';
 import '../theme/app_theme.dart';
 import 'play_zone_screen.dart';
+import '../widgets/referral_status_dialog.dart';
 
 class WalletScreen extends StatefulWidget {
   final AppState appState;
@@ -633,51 +633,7 @@ class _WalletScreenState extends State<WalletScreen> {
                   // 3. Refer & Earn
                   Expanded(
                     child: InkWell(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (ctx) => AlertDialog(
-                            backgroundColor: AppTheme.bgCard,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            title: Text('👥 रेफर करें और कमाएं', style: AppTheme.gamingTitle(fontSize: 18)),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('अपना रेफरल कोड दोस्तों के साथ शेयर करें। जब वे साइन अप करेंगे तो दोनों को बोनस कॉइन्स मिलेंगे!', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                                const SizedBox(height: 14),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.bgDark,
-                                    borderRadius: BorderRadius.circular(10),
-                                    border: Border.all(color: AppTheme.primaryGold),
-                                  ),
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Text(user.referralCode, style: GoogleFonts.rajdhani(fontSize: 22, fontWeight: FontWeight.bold, color: AppTheme.primaryGold)),
-                                      IconButton(
-                                        icon: const Icon(Icons.copy, color: Colors.white70),
-                                        onPressed: () {
-                                          Clipboard.setData(ClipboardData(text: user.referralCode));
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('रेफरल कोड कॉपी हो गया!')));
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.black),
-                                onPressed: () => Navigator.pop(ctx),
-                                child: const Text('ठीक है'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                      onTap: () => ReferralStatusDialog.show(context, widget.appState),
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         padding: const EdgeInsets.all(12),

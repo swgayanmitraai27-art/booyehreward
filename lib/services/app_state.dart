@@ -374,6 +374,7 @@ class AppState extends ChangeNotifier {
     await fetchFFTournaments();
     await fetchWorldChat();
     await fetchMySupportTickets();
+    await fetchMyReferrals();
   }
 
   Future<void> saveUser() async {
@@ -530,8 +531,12 @@ class AppState extends ChangeNotifier {
           final sUser = data['user'];
           user.weeklyScore = (sUser['weeklyScore'] as num?)?.toInt() ?? user.weeklyScore;
           final sCoins = (sUser['adCoins'] as num?)?.toInt();
-          if (sCoins != null && sCoins > user.adCoins) {
+          if (sCoins != null) {
             user.adCoins = sCoins;
+          }
+          final sWinCoins = (sUser['winningCoins'] as num?)?.toInt();
+          if (sWinCoins != null) {
+            user.winningCoins = sWinCoins;
           }
           if (sUser['referralCode'] != null) {
             user.referralCode = sUser['referralCode'].toString();
@@ -578,15 +583,47 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  // ── 👥 REFERRAL TRACKING STATE & API ──
+  List<Map<String, dynamic>> myReferrals = [];
+  int referralTargetMatches = 5;
+  int referralRewardPerUser = 50;
+  int totalReferralCoinsEarned = 0;
+  int pendingReferralsCount = 0;
+  int unlockedReferralsCount = 0;
+
+  Future<void> fetchMyReferrals() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$vpsBaseUrl/api/referral/my-referrals?uid=${user.uid}'),
+      );
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true) {
+          referralTargetMatches = (data['targetMatches'] as num?)?.toInt() ?? 5;
+          referralRewardPerUser = (data['rewardPerReferral'] as num?)?.toInt() ?? 50;
+          totalReferralCoinsEarned = (data['totalCoinsEarned'] as num?)?.toInt() ?? 0;
+          pendingReferralsCount = (data['pendingFriends'] as num?)?.toInt() ?? 0;
+          unlockedReferralsCount = (data['unlockedFriends'] as num?)?.toInt() ?? 0;
+          if (data['referrals'] is List) {
+            myReferrals = List<Map<String, dynamic>>.from(data['referrals']);
+          }
+          notifyListeners();
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching my referrals: $e');
+    }
+  }
+
   // ── Apply Referral Code ──
   Future<bool> applyReferralCode(String code) async {
     final cleanCode = code.trim();
-    if (cleanCode.isEmpty || cleanCode == user.referralCode) return false;
+    if (cleanCode.isEmpty || cleanCode == user.referralCode || user.referredBy.isNotEmpty) return false;
     user.referredBy = cleanCode;
-    user.weeklyScore += 25;
-    user.adCoins += 25;
+    user.adCoins += 10; // +10 Bonus coins for entering friend's code
     await saveUser();
-    await syncUserWithVPS(coinsToAdd: 25, referralCode: cleanCode);
+    await syncUserWithVPS(referralCode: cleanCode);
+    await fetchMyReferrals();
     notifyListeners();
     return true;
   }

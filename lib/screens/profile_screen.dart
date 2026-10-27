@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import 'legal_policy_screen.dart';
 import 'support_screen.dart';
 import 'wallet_screen.dart';
+import '../widgets/referral_status_dialog.dart';
 
 class ProfileScreen extends StatefulWidget {
   final AppState appState;
@@ -277,7 +278,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      '• Friend registers with your code -> Gets +20 Welcome Coins!\n• Friend plays their 1st match -> You get +50 Coins!',
+                      '• दोस्त आपके कोड से साइन-अप करेगा -> उसे तुरंत +10 बोनस कॉइन्स मिलेंगे!\n• दोस्त 5 टूर्नामेंट मैच खेलेगा -> आपको +50 कॉइन्स आपके वॉलेट में मिलेंगे!',
                       style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.4),
                     ),
                     const SizedBox(height: 14),
@@ -322,6 +323,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           onPressed: _shareReferralCode,
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.primaryGold,
+                        side: const BorderSide(color: AppTheme.primaryGold),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      icon: const Icon(Icons.people_alt_outlined, size: 18),
+                      label: Text('👥 आमंत्रित दोस्तों का स्टेटस देखें (Live Tracking)', style: GoogleFonts.rajdhani(fontSize: 13, fontWeight: FontWeight.bold)),
+                      onPressed: () => ReferralStatusDialog.show(context, widget.appState),
                     ),
                   ],
                 ),

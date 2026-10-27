@@ -20,7 +20,7 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
     db.config.coinEconomy = {
       adCoinReward: 10,       // 1 Rewarded Ad = 10 Coins
       dailyAdLimit: 15,       // Max 15 rewarded ads per day
-      welcomeBonus: 20,       // 20 Welcome Coins on signup
+      welcomeBonus: 0,        // 0 Welcome Coins on signup (must play/watch to earn)
       referralReward: 50,     // 50 Coins to referrer (only after friend plays 1st match)
       redeemRate: 10          // 10 Coins = ₹1 (e.g. 100 Coins = ₹10 Redeem Code)
     };
@@ -40,6 +40,30 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
       tagline: 'India Ka Apna Battle Royale',
       subTagline: 'India Ka Apna Esports Platform'
     };
+  }
+
+  // ── 🎯 5-MATCH REFERRAL REWARD ENGINE ──
+  function checkAndRewardReferrer(user, db) {
+    if (!user || !user.referredBy || user.referralRewardClaimed) return;
+    const TARGET_MATCHES = (db.config.coinEconomy && db.config.coinEconomy.referralMatchesTarget) || 5;
+    if ((user.tournamentsPlayed || 0) >= TARGET_MATCHES) {
+      user.referralRewardClaimed = true;
+      const refCodeOrUid = user.referredBy.trim();
+      let refUser = db.users[refCodeOrUid];
+      if (!refUser) {
+        for (const uid in db.users) {
+          if (db.users[uid].referralCode === refCodeOrUid) {
+            refUser = db.users[uid];
+            break;
+          }
+        }
+      }
+      if (refUser) {
+        const bonusCoins = (db.config.coinEconomy && db.config.coinEconomy.referralReward) || 50;
+        refUser.adCoins = (refUser.adCoins || 0) + bonusCoins;
+        console.log(`[REFERRAL 5-MATCH GOAL! 🎉] User ${user.displayName || user.uid} played ${user.tournamentsPlayed} matches! Credited +${bonusCoins} Coins to Referrer ${refUser.displayName || refUser.uid}`);
+      }
+    }
   }
 
   // Auto-seed Default Tournaments if none exist
@@ -274,7 +298,7 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
       db.users[uid] = {
         uid,
         displayName: inGameName,
-        adCoins: db.config.coinEconomy.welcomeBonus || 20,
+        adCoins: (db.config.coinEconomy && db.config.coinEconomy.welcomeBonus) || 0,
         inGameName,
         inGameId: inGameId || '',
         totalWins: 0,
@@ -383,16 +407,9 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
       }
     }
 
-    // ── 🎯 ANTI-CHEAT REFERRAL UNLOCK: REWARD REFERRER ONLY AFTER 1ST MATCH PLAYED ──
-    if (user.referredBy && !user.hasPlayedFirstMatch) {
-      user.hasPlayedFirstMatch = true;
-      const refUid = user.referredBy;
-      if (db.users[refUid]) {
-        const bonusCoins = db.config.coinEconomy.referralReward || 50;
-        db.users[refUid].adCoins = (db.users[refUid].adCoins || 0) + bonusCoins;
-        console.log(`[REFERRAL UNLOCKED] User ${uid} played 1st match! Credited ${bonusCoins} Coins to Referrer ${refUid}`);
-      }
-    }
+    // ── 🎯 5-MATCH REFERRAL TRACKER & UNLOCK ──
+    user.tournamentsPlayed = (user.tournamentsPlayed || 0) + 1;
+    checkAndRewardReferrer(user, db);
 
     saveDB();
     console.log(`[FF REGISTER] User ${uid} (${inGameName}) registered for ${tourn.title} -> ${targetGroup.groupName} Slot #${assignedSlot}`);
@@ -429,6 +446,8 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
     const teamCode = `BOY-${codeNum}`;
 
     user.adCoins -= entryFee;
+    user.tournamentsPlayed = (user.tournamentsPlayed || 0) + 1;
+    checkAndRewardReferrer(user, db);
 
     const newTeam = {
       teamCode,
@@ -488,6 +507,8 @@ module.exports = function setupFFTournamentEngine(app, db, saveDB, upload) {
     }
 
     user.adCoins -= entryFee;
+    user.tournamentsPlayed = (user.tournamentsPlayed || 0) + 1;
+    checkAndRewardReferrer(user, db);
     team.members.push({
       uid,
       inGameName,
