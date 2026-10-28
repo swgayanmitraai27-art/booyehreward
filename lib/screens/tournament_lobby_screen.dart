@@ -598,36 +598,81 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
           backgroundColor: AppTheme.bgDark,
           body: Column(
             children: [
-              // ── TAGLINE BADGE ──
+              // ── 🔥 FREE FIRE INDIA HERO BADGE ──
               Container(
                 margin: const EdgeInsets.fromLTRB(14, 6, 14, 2),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
+                  gradient: const LinearGradient(
                     colors: [
-                      AppTheme.saffronOrange.withValues(alpha: 0.15),
+                      Color(0xFF1E1B4B),
                       AppTheme.bgCard,
-                      AppTheme.indiaGreen.withValues(alpha: 0.15),
+                      Color(0xFF0F172A),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.bolt, color: AppTheme.primaryGold, size: 16),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'India Ka Apna Esports Platform. Zero Entry Fee, Infinite Glory!',
-                        style: GoogleFonts.inter(
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white,
-                          letterSpacing: 0.3,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(6),
+                      child: Image.asset(
+                        'assets/imgasest/free_fire_india_logo.png',
+                        height: 28,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                          Icons.local_fire_department,
+                          color: AppTheme.saffronOrange,
+                          size: 26,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'FREE FIRE INDIA',
+                                style: GoogleFonts.rajdhani(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.1,
+                                  color: AppTheme.primaryGold,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.saffronOrange,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'OFFICIAL ESPORTS',
+                                  style: TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          Text(
+                            'India Ka Apna Esports Platform • Zero Entry Fee, Unlimited Glory!',
+                            style: GoogleFonts.inter(
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white70,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -988,8 +1033,10 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                                                   ),
                                                   icon: const Icon(Icons.vpn_key, size: 18),
                                                   label: Text(
-                                                    'GET ROOM ID & PASSWORD (15M BEFORE)',
+                                                    'रूम ID व पासवर्ड देखें (15M पहले)',
                                                     style: GoogleFonts.rajdhani(fontSize: 14, fontWeight: FontWeight.bold),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
                                                   ),
                                                   onPressed: () => _revealRoomCredentials(t),
                                                 ),
@@ -1122,6 +1169,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
               children: [
                 Text(
                   mainText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.rajdhani(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -1131,6 +1180,8 @@ class _TournamentLobbyScreenState extends State<TournamentLobbyScreen> {
                 ),
                 Text(
                   subText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     fontSize: 10.5,
                     color: Colors.white70,

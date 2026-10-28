@@ -302,17 +302,14 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                '₹1,000 डेली चैंपियनशिप प्राइज़ पूल वितरण (Top 100 Ranks):',
+                '${widget.appState.prizePool} वीकली प्राइज़ पूल (केवल टॉप 3 विजेता):',
                 style: GoogleFonts.inter(fontSize: 13, color: AppTheme.primaryGold, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
               ...[
-                {'title': '🥇 Rank 1', 'prize': '₹150 Cash + Code', 'desc': '1 Player'},
-                {'title': '🥈 Rank 2', 'prize': '₹80 Cash + Code', 'desc': '1 Player'},
-                {'title': '🥉 Rank 3', 'prize': '₹50 Cash + Code', 'desc': '1 Player'},
-                {'title': '🎖️ Rank 4 - 10', 'prize': '₹25 Code each', 'desc': '7 Players (₹175)'},
-                {'title': '🎖️ Rank 11 - 50', 'prize': '₹11 Code each', 'desc': '40 Players (₹440)'},
-                {'title': '👤 Rank 51 - 100', 'prize': '₹2.10 (210 Coins)', 'desc': '50 Real Players (Wallet Credit)'},
+                {'title': '🥇 Rank 1 (विजेता #1)', 'prize': '${widget.appState.rank1Prize} Cash / Code', 'desc': '50% प्राइज़ पूल शेयर'},
+                {'title': '🥈 Rank 2 (विजेता #2)', 'prize': '${widget.appState.rank2Prize} Cash / Code', 'desc': '30% प्राइज़ पूल शेयर'},
+                {'title': '🥉 Rank 3 (विजेता #3)', 'prize': '${widget.appState.rank3Prize} Cash / Code', 'desc': '20% प्राइज़ पूल शेयर'},
               ].map((item) {
                 final isHighlight = item['title']!.contains('51') || item['title']!.contains('Rank 1');
                 return Container(
@@ -788,11 +785,19 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
             title: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.leaderboard_rounded,
-                    color: AppTheme.primaryGold, size: 26),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: Image.asset(
+                    'assets/imgasest/free_fire_india_logo.png',
+                    height: 24,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.leaderboard_rounded,
+                        color: AppTheme.primaryGold, size: 24),
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Text(
-                  widget.appState.isDailyTournament ? 'DAILY LEADERBOARD' : 'WEEKLY LEADERBOARD',
+                  'FREE FIRE INDIA LEADERBOARD',
                   style: GoogleFonts.rajdhani(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -962,12 +967,9 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                       scrollDirection: Axis.horizontal,
                       child: Row(
                         children: [
-                          _buildPrizeChip('🥇 Rank 1', _getPrizeForRank(1), isHighlight: true),
-                          _buildPrizeChip('🥈 Rank 2', _getPrizeForRank(2), isHighlight: true),
-                          _buildPrizeChip('🥉 Rank 3', _getPrizeForRank(3), isHighlight: true),
-                          _buildPrizeChip('#4 - 10', _getPrizeForRank(4)),
-                          _buildPrizeChip('#11 - 50', _getPrizeForRank(11)),
-                          _buildPrizeChip('#51 - 100', _getPrizeForRank(51), isHighlight: true),
+                          _buildPrizeChip('🥇 Rank 1 (50%)', widget.appState.rank1Prize, isHighlight: true),
+                          _buildPrizeChip('🥈 Rank 2 (30%)', widget.appState.rank2Prize, isHighlight: true),
+                          _buildPrizeChip('🥉 Rank 3 (20%)', widget.appState.rank3Prize, isHighlight: true),
                         ],
                       ),
                     ),
@@ -1490,6 +1492,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                           Expanded(
                             child: Text(
                               item.name,
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.inter(
                                 fontSize: 14,
@@ -1637,7 +1640,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                 ),
               ),
 
-              // ── 🏆 DAILY CHAMPIONSHIP RULES ──────────────────────────────
+              // ── 🏆 FREE FIRE INDIA WEEKLY CHAMPIONSHIP RULES ──────────────────────
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 padding: const EdgeInsets.all(16),
@@ -1651,10 +1654,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.emoji_events_rounded, color: AppTheme.primaryGold, size: 22),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.asset(
+                            'assets/imgasest/free_fire_india_logo.png',
+                            height: 22,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(Icons.emoji_events_rounded, color: AppTheme.primaryGold, size: 22),
+                          ),
+                        ),
                         const SizedBox(width: 8),
                         Text(
-                          'दैनिक चैंपियनशिप नियम एवं प्राइज़ वितरण',
+                          'फ्री फायर इंडिया साप्ताहिक चैंपियंस नियम',
                           style: GoogleFonts.rajdhani(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -1666,10 +1677,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '🏆 हर रोज़ ₹1,000 प्राइज़ पूल: दैनिक लीडरबोर्ड में टॉप 100 रैंक वाले खिलाड़ियों को इनाम मिलता है!\n'
-                      '⏰ दैनिक रीसेट: हर रात 12:00 AM (00:00:00 IST) पर लीडरबोर्ड का दैनिक स्कोर रीसेट होता है ताकि हर खिलाड़ी को रोज़ाना नया मौका मिले!\n'
-                      '💰 वॉलेट सुरक्षा: स्पिन व्हील, स्क्रैच कार्ड और दैनिक टूर्नामेंट का कमाया हुआ बैलेंस आपके वॉलेट में हमेशा सुरक्षित रहता है और कभी रीसेट नहीं होता।\n'
-                      '⚡ आवश्यक नियम: इनाम पाने के लिए कम से कम 1 गेम खेलकर स्कोर बनाना ज़रूरी है (0 स्कोर पर कोई प्राइज़ नहीं मिलता)। मन लगाकर खेलें और रोज़ जीतें! 🚀',
+                      '🏆 कुल ${widget.appState.prizePool} प्राइज़ पूल: केवल हफ़्ते के टॉप 3 विजेता खिलाड़ियों में बाँटा जाता है! (1st: ${widget.appState.rank1Prize}, 2nd: ${widget.appState.rank2Prize}, 3rd: ${widget.appState.rank3Prize})\n'
+                      '⏰ साप्ताहिक रीसेट: हर रविवार रात 11:59 PM (IST) पर लीडरबोर्ड का साप्ताहिक स्कोर रीसेट होता है और नए हफ़्ते की ताज़ा प्रतियोगिता शुरू होती है!\n'
+                      '🎮 स्कोर कैसे बढ़ाएं: टूर्नामेंट्स खेलकर, मिनी-गेम्स (कटाना स्ट्राइक, ग्लू वॉल, फ्रूट स्लैश) जीतकर और विंग/ऐड कॉइन्स इकट्ठा करके अपना लीडरबोर्ड स्कोर बढ़ाएं!\n'
+                      '💰 वॉलेट सुरक्षा: आपका कमाया हुआ वॉलेट बैलेंस और कॉइन्स हमेशा सुरक्षित रहते हैं और कभी रीसेट नहीं होते। मन लगाकर खेलें और हर हफ़्ते जीतें! 🚀',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         color: Colors.white.withValues(alpha: 0.9),

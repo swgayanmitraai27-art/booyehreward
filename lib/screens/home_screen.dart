@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -72,6 +74,21 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<List<Map<String, dynamic>>> _fetchBroadcastNotifications() async {
+    try {
+      final res = await http.get(Uri.parse('https://vps.swgayanbhumi.in/api/notifications'));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        if (data['success'] == true && data['notifications'] is List) {
+          return List<Map<String, dynamic>>.from(data['notifications']);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching notifications: $e');
+    }
+    return [];
+  }
+
   void _showInAppNotificationsDialog() {
     showDialog(
       context: context,
@@ -88,58 +105,105 @@ class _HomeScreenState extends State<HomeScreen> {
             Text('सूचनाएं (Notifications)', style: AppTheme.gamingTitle(fontSize: 18)),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.bgDark,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 22),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.appState.tournamentNotice,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<List<Map<String, dynamic>>>(
+            future: _fetchBroadcastNotifications(),
+            builder: (context, snapshot) {
+              final notifs = snapshot.data ?? [];
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (notifs.isNotEmpty) ...[
+                      Text(
+                        '📢 लाइव ब्रॉडकास्ट संदेश:',
+                        style: GoogleFonts.rajdhani(
+                          color: AppTheme.primaryGold,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      ...notifs.map((n) => Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppTheme.bgDark,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.6)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              n['title'] ?? 'सूचना',
+                              style: const TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              n['message'] ?? '',
+                              style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3),
+                            ),
+                          ],
+                        ),
+                      )),
+                      const SizedBox(height: 8),
+                    ],
+
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgDark,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 22),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              widget.appState.tournamentNotice,
+                              style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.35),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.bgDark,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.4)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.security, color: AppTheme.cyanAccent, size: 22),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      '🛡️ फेयर प्ले पॉलिसी: मैच शुरू होने से 15 मिनट पहले रूम आईडी व पासवर्ड चेक करें। हैक या चीटिंग पूरी तरह प्रतिबंधित है।',
-                      style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.bgDark,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.cyanAccent.withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.security, color: AppTheme.cyanAccent, size: 22),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '🛡️ फेयर प्ले पॉलिसी: मैच शुरू होने से 15 मिनट पहले रूम आईडी व पासवर्ड चेक करें। हैक या चीटिंग पूरी तरह प्रतिबंधित है।',
+                              style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.35),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                  ],
+                ),
+              );
+            },
+          ),
         ),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.black),
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('ठीक है'),
+            child: const Text('ठीक है (OK)', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -369,134 +433,177 @@ class _HomeScreenState extends State<HomeScreen> {
           appBar: AppBar(
             backgroundColor: AppTheme.bgDark,
             elevation: 0,
+            titleSpacing: 10,
             automaticallyImplyLeading: false,
             title: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(6),
                   child: Image.asset(
-                    'assets/imgasest/booyah_hero_logo.png',
-                    height: 32,
-                    width: 32,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.emoji_events,
-                      size: 26,
-                      color: AppTheme.primaryGold,
+                    'assets/imgasest/free_fire_india_logo.png',
+                    height: 28,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Image.asset(
+                      'assets/imgasest/booyah_hero_logo.png',
+                      height: 28,
+                      width: 28,
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'BOOYAH REWARDS',
-                      style: GoogleFonts.rajdhani(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        color: AppTheme.primaryGold,
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'BOOYAH REWARDS',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.rajdhani(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.0,
+                          color: AppTheme.primaryGold,
+                        ),
                       ),
-                    ),
-                    Text(
-                      'India Ka Apna Esports Platform',
-                      style: GoogleFonts.inter(
-                        fontSize: 9,
-                        letterSpacing: 0.5,
-                        color: AppTheme.cyanAccent,
-                        fontWeight: FontWeight.w600,
+                      Text(
+                        '🔥 Free Fire India Esports',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.inter(
+                          fontSize: 8.5,
+                          letterSpacing: 0.3,
+                          color: AppTheme.cyanAccent,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
             actions: [
               // 💰 Wallet Coins Chip (1-Click Open Wallet)
-              InkWell(
-                onTap: () {
-                  setState(() => _currentIndex = 3); // Switch to Wallet
-                },
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                  decoration: BoxDecoration(
-                    color: AppTheme.bgCard,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.6)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.monetization_on, color: AppTheme.primaryGold, size: 16),
-                      const SizedBox(width: 5),
-                      Text(
-                        '${user.adCoins}',
-                        style: GoogleFonts.rajdhani(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryGold,
+              Center(
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _currentIndex = 3); // Switch to Wallet
+                  },
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgCard,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.6)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.monetization_on, color: AppTheme.primaryGold, size: 15),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${user.adCoins}',
+                          style: GoogleFonts.rajdhani(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryGold,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 2),
-                      const Icon(Icons.add_circle, color: AppTheme.successGreen, size: 14),
-                    ],
+                        const SizedBox(width: 2),
+                        const Icon(Icons.add_circle, color: AppTheme.successGreen, size: 13),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
-              const SizedBox(width: 4),
-
-              // 🎬 YouTube Video Tutorial Guide
-              IconButton(
-                icon: const Icon(Icons.smart_display, color: Colors.redAccent, size: 23),
-                tooltip: 'वीडियो गाइड (How to Play)',
-                onPressed: _showHowToPlayVideoGuideDialog,
-              ),
+              const SizedBox(width: 2),
 
               // 🔔 In-App Announcements / Notifications
               IconButton(
+                constraints: const BoxConstraints(),
+                padding: const EdgeInsets.all(6),
                 icon: const Icon(Icons.notifications_active_outlined, color: AppTheme.cyanAccent, size: 22),
                 tooltip: 'सूचनाएं (Notifications)',
                 onPressed: _showInAppNotificationsDialog,
               ),
 
-              // 🎮 Arcade Play Zone Icon (Direct 1-Click Game Launcher)
-              IconButton(
-                icon: const Icon(Icons.sports_esports, color: Color(0xFFA855F7), size: 24),
-                tooltip: 'Play Zone',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => PlayZoneScreen(appState: widget.appState)),
-                  );
+              // ⋯ More Menu (YouTube Guide, Play Zone, Leaderboard, Support)
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white70, size: 22),
+                padding: const EdgeInsets.all(6),
+                constraints: const BoxConstraints(),
+                color: AppTheme.bgCard,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                ),
+                onSelected: (value) {
+                  if (value == 'youtube') {
+                    _showHowToPlayVideoGuideDialog();
+                  } else if (value == 'playzone') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => PlayZoneScreen(appState: widget.appState)),
+                    );
+                  } else if (value == 'leaderboard') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => LeaderboardScreen(appState: widget.appState)),
+                    );
+                  } else if (value == 'support') {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => SupportScreen(appState: widget.appState)),
+                    );
+                  }
                 },
-              ),
-
-              // 🏆 Esports Champions Leaderboard Icon
-              IconButton(
-                icon: const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 24),
-                tooltip: 'Champions Leaderboard',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => LeaderboardScreen(appState: widget.appState)),
-                  );
-                },
-              ),
-
-              // 🎧 100% In-App Support Icon (Direct Help Desk)
-              IconButton(
-                icon: const Icon(Icons.headset_mic, color: AppTheme.cyanAccent, size: 24),
-                tooltip: 'Customer Support',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => SupportScreen(appState: widget.appState)),
-                  );
-                },
+                itemBuilder: (ctx) => [
+                  PopupMenuItem(
+                    value: 'youtube',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.smart_display, color: Colors.redAccent, size: 20),
+                        const SizedBox(width: 10),
+                        Text('वीडियो गाइड (How to Play)', style: GoogleFonts.rajdhani(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'playzone',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.sports_esports, color: Color(0xFFA855F7), size: 20),
+                        const SizedBox(width: 10),
+                        Text('प्ले ज़ोन (Play Zone)', style: GoogleFonts.rajdhani(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'leaderboard',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.emoji_events, color: AppTheme.primaryGold, size: 20),
+                        const SizedBox(width: 10),
+                        Text('लीडरबोर्ड (Leaderboard)', style: GoogleFonts.rajdhani(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'support',
+                    child: Row(
+                      children: [
+                        const Icon(Icons.headset_mic, color: AppTheme.cyanAccent, size: 20),
+                        const SizedBox(width: 10),
+                        Text('सपोर्ट (Support)', style: GoogleFonts.rajdhani(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14)),
+                      ],
+                    ),
+                  ),
+                ],
               ),
 
               const SizedBox(width: 6),

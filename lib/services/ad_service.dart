@@ -87,6 +87,18 @@ class AdService {
       return;
     }
 
+    final completer = Completer<void>();
+    bool completed = false;
+    void finish() {
+      if (!completed) {
+        completed = true;
+        if (!completer.isCompleted) {
+          completer.complete();
+        }
+        onDismissed?.call();
+      }
+    }
+
     // 1. If preloaded ad is ready, show it instantly!
     if (_preloadedInterstitial != null) {
       final ad = _preloadedInterstitial!;
@@ -95,19 +107,24 @@ class AdService {
       ad.fullScreenContentCallback = FullScreenContentCallback(
         onAdDismissedFullScreenContent: (ad) {
           ad.dispose();
-          onDismissed?.call();
           _preloadInterstitial();
+          finish();
         },
         onAdFailedToShowFullScreenContent: (ad, error) {
-          debugPrint('Interstitial failed to show: $error');
+          debugPrint('Interstitial failed to show: ');
           ad.dispose();
-          onDismissed?.call();
           _preloadInterstitial();
+          finish();
         },
       );
 
-      await ad.show();
-      return;
+      try {
+        await ad.show();
+      } catch (e) {
+        debugPrint('Error showing preloaded interstitial: ');
+        finish();
+      }
+      return completer.future;
     }
 
     // 2. If no ad is preloaded yet, actively load & show on-demand with fallback
@@ -120,24 +137,33 @@ class AdService {
           ad.fullScreenContentCallback = FullScreenContentCallback(
             onAdDismissedFullScreenContent: (ad) {
               ad.dispose();
-              onDismissed?.call();
               _preloadInterstitial();
+              finish();
             },
             onAdFailedToShowFullScreenContent: (ad, error) {
+              debugPrint('Interstitial failed to show: ');
               ad.dispose();
-              onDismissed?.call();
               _preloadInterstitial();
+              finish();
             },
           );
-          ad.show();
+          ad.show().catchError((e) {
+            debugPrint('Error showing on-demand interstitial: ');
+            finish();
+          });
         },
         onAdFailedToLoad: (LoadAdError error) {
-          debugPrint('On-demand interstitial load failed: ${error.message}');
+          debugPrint('On-demand interstitial load failed: ');
           _preloadInterstitial();
-          onDismissed?.call();
+          finish();
         },
       ),
     );
+
+    // Timeout safety fallback: never block user for more than 4 seconds
+    Timer(const Duration(seconds: 4), finish);
+
+    return completer.future;
   }
 
   // ─── Rewarded Ad: Preload ───────────────────────────────────────────────────

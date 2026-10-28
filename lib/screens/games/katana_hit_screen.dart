@@ -458,12 +458,26 @@ class _KatanaHitScreenState extends State<KatanaHitScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0B0F19),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await AdService.showInterstitialAd();
+        if (context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0B0F19),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              await AdService.showInterstitialAd();
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+          title: Text(
           '🔥 KATANA STRIKE',
           style: GoogleFonts.rajdhani(
             fontSize: 20,
@@ -718,8 +732,9 @@ class _KatanaHitScreenState extends State<KatanaHitScreen>
             ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }
 
 // ── Custom Painter for Target & Embedded Knives ──

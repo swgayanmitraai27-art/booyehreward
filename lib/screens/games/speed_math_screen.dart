@@ -323,8 +323,15 @@ class _SpeedMathScreenState extends State<SpeedMathScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF070B14),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await AdService.showInterstitialAd();
+        if (context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF070B14),
       body: SafeArea(
         child: Column(
           children: [
@@ -355,7 +362,10 @@ class _SpeedMathScreenState extends State<SpeedMathScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () async {
+                      await AdService.showInterstitialAd();
+                      if (context.mounted) Navigator.pop(context);
+                    },
                   ),
                   Row(
                     children: [
@@ -514,6 +524,7 @@ class _SpeedMathScreenState extends State<SpeedMathScreen> {
           ],
         ),
       ),
-    );
+    ),
+  );
   }
 }

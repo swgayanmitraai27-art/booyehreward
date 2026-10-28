@@ -601,7 +601,7 @@ app.get(['/api/leaderboard', '/api/tournament/leaderboard'], (req, res) => {
     totalKills: u.totalKills || 0,
     winningCoins: u.winningCoins || 0,
     weeklyScore: u.weeklyScore || 0,
-    prize: (idx + 4 <= 10) ? '₹25 एंट्री बोनस' : '10 एंट्री कॉइन्स',
+    prize: '',
     avatar: 'assets/imgasest/booyah_hero_logo.png'
   }));
 
@@ -903,6 +903,40 @@ app.post('/api/admin/redeem-action', (req, res) => {
 
   saveDB();
   res.json({ success: true, message: `Request updated to ${reqItem.status}!`, request: reqItem });
+});
+
+// ── 4B. NOTIFICATIONS & FCM BROADCAST ──
+app.post('/api/user/fcm-token', (req, res) => {
+  const { uid, token } = req.body;
+  if (!uid || !token) return res.status(400).json({ success: false, message: 'UID and token required' });
+  if (!db.fcmTokens) db.fcmTokens = {};
+  db.fcmTokens[uid] = token;
+  if (db.users && db.users[uid]) {
+    db.users[uid].fcmToken = token;
+  }
+  saveDB();
+  res.json({ success: true, message: 'FCM Token registered successfully' });
+});
+
+app.post('/api/admin/broadcast-notification', (req, res) => {
+  const { title, message } = req.body;
+  if (!title || !message) return res.status(400).json({ success: false, message: 'Title and message required' });
+  if (!db.notifications) db.notifications = [];
+  const notif = {
+    id: 'notif_' + Date.now(),
+    title,
+    message,
+    sentAt: new Date().toISOString(),
+    recipientCount: Object.keys(db.fcmTokens || {}).length || Object.keys(db.users || {}).length
+  };
+  db.notifications.unshift(notif);
+  if (db.notifications.length > 50) db.notifications = db.notifications.slice(0, 50);
+  saveDB();
+  res.json({ success: true, message: 'Push notification broadcasted successfully to all users!', notification: notif });
+});
+
+app.get('/api/notifications', (req, res) => {
+  res.json({ success: true, notifications: db.notifications || [] });
 });
 
 // ── 5. START SERVER ──

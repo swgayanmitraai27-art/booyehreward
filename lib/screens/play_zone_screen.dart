@@ -65,42 +65,62 @@ class _PlayZoneScreenState extends State<PlayZoneScreen> {
   }
 
   void _openKatanaGame() async {
+    await AdService.showInterstitialAd();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => KatanaHitScreen(appState: widget.appState)),
     );
+    if (!mounted) return;
+    await AdService.showInterstitialAd();
     _refreshStatus();
   }
 
   void _openGlooWallGame() async {
+    await AdService.showInterstitialAd();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => GlooWallRunnerScreen(appState: widget.appState)),
     );
+    if (!mounted) return;
+    await AdService.showInterstitialAd();
     _refreshStatus();
   }
 
   void _openFruitSlash() async {
+    await AdService.showInterstitialAd();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => FruitSlashScreen(appState: widget.appState)),
     );
+    if (!mounted) return;
+    await AdService.showInterstitialAd();
     _refreshStatus();
   }
 
   void _openSpeedMath() async {
+    await AdService.showInterstitialAd();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => SpeedMathScreen(appState: widget.appState)),
     );
+    if (!mounted) return;
+    await AdService.showInterstitialAd();
     _refreshStatus();
   }
 
   void _openTicTacToe() async {
+    await AdService.showInterstitialAd();
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => TicTacToeScreen(appState: widget.appState)),
     );
+    if (!mounted) return;
+    await AdService.showInterstitialAd();
     _refreshStatus();
   }
 

@@ -935,13 +935,10 @@ class AppState extends ChangeNotifier {
   }
 
   String getPrizeForRank(int rank) {
-    if (rank == 1) return '₹150 Cash + Code';
-    if (rank == 2) return '₹80 Cash + Code';
-    if (rank == 3) return '₹50 Cash + Code';
-    if (rank >= 4 && rank <= 10) return '₹25 Code';
-    if (rank >= 11 && rank <= 50) return '₹11 Code';
-    if (rank >= 51 && rank <= 100) return '₹2.10 (210 Coins)';
-    return 'Participant';
+    if (rank == 1) return '$rank1Prize Cash / Code';
+    if (rank == 2) return '$rank2Prize Cash / Code';
+    if (rank == 3) return '$rank3Prize Cash / Code';
+    return '';
   }
 
   List<LeaderboardEntry> get dynamicWeeklyLeaderboard {

@@ -458,12 +458,26 @@ class _GlooWallRunnerScreenState extends State<GlooWallRunnerScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        await AdService.showInterstitialAd();
+        if (context.mounted) Navigator.pop(context);
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () async {
+              await AdService.showInterstitialAd();
+              if (context.mounted) Navigator.pop(context);
+            },
+          ),
+          title: Text(
           '⚡ GLOO WALL RUSH',
           style: GoogleFonts.rajdhani(
             fontSize: 20,
@@ -752,6 +766,7 @@ class _GlooWallRunnerScreenState extends State<GlooWallRunnerScreen>
             ),
         ],
       ),
-    );
+    ),
+  );
   }
 }
