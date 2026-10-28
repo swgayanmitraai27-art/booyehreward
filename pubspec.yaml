@@ -1,7 +1,7 @@
 name: booyah_rewards
 description: "Free Fire India - India Ka Apna Esports Platform. Zero Entry Fee, Infinite Glory!"
 publish_to: 'none'
-version: 1.3.8+38
+version: 1.4.0+40
 
 environment:
   sdk: ^3.11.4

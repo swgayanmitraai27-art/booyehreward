@@ -408,7 +408,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               Center(
                 child: Text(
-                  'BOOYAH REWARDS • v1.3.9+39\nIndia Ka Apna Esports Platform. Zero Entry Fee, Infinite Glory!\nCommunity Tournament Platform • Not affiliated with Garena',
+                  'BOOYAH REWARDS • v1.4.0+40\nIndia Ka Apna Esports Platform. Zero Entry Fee, Infinite Glory!\nCommunity Tournament Platform • Not affiliated with Garena',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.inter(fontSize: 10.5, color: Colors.white38, height: 1.4),
                 ),
