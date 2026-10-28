@@ -38,6 +38,5 @@ flutter:
 
   assets:
     - assets/imgasest/
-    - imgasest/
     - shorebird.yaml
     - assets/sounds/
